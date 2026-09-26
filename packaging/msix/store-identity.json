@@ -1,6 +1,6 @@
 {
   "_comment": "Replace with the values from Partner Center → your app → Product identity before building for the Store. The placeholders work for local test installs (-Sign).",
-  "IdentityName": "VidArchiverGui.Dev",
-  "Publisher": "CN=VidArchiverGuiDev",
-  "PublisherDisplayName": "Vid Archiver GUI contributors"
+  "IdentityName": "disibio.VidArchiverGUI",
+  "Publisher": "CN=F143D3CC-579A-46E3-BC19-E4BF9BEA59FF",
+  "PublisherDisplayName": "disibio"
 }

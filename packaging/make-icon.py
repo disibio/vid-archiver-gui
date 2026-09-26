@@ -5,6 +5,7 @@ Usage: python packaging/make-icon.py   (needs Pillow)
   src/VidArchiverGui.App/Assets/icon.png    Linux menu entry (512 px)
   packaging/macos/AppIcon.icns              macOS app bundle
   packaging/msix/Assets/*.png               Microsoft Store (MSIX) tiles and logos
+  packaging/msix/listing/*.png              Microsoft Store listing logo (uploaded in Partner Center)
 """
 from pathlib import Path
 
@@ -68,6 +69,10 @@ def main() -> None:
     macos.mkdir(parents=True, exist_ok=True)
     icon.save(macos / "AppIcon.icns")
     write_msix_assets(icon, ROOT / "packaging" / "msix" / "Assets")
+    # Partner Center → Store listing → Store logos (uploaded by hand, not part of the package).
+    listing = ROOT / "packaging" / "msix" / "listing"
+    listing.mkdir(parents=True, exist_ok=True)
+    icon.resize((300, 300), Image.LANCZOS).save(listing / "store-logo-300x300.png", optimize=True)
 
 
 def write_msix_assets(icon: Image.Image, out: Path) -> None:
