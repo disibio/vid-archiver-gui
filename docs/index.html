@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vid Archiver GUI</title>
+<meta name="description" content="A free, open-source desktop front end for yt-dlp, with folder rules that pick the destination folder automatically. Windows, macOS and Linux.">
+<link rel="icon" type="image/png" href="icon.png">
+<script>
+try { if (localStorage.getItem('theme') === 'dark') document.documentElement.dataset.theme = 'dark'; } catch (e) {}
+</script>
+<meta property="og:title" content="Vid Archiver GUI">
+<meta property="og:description" content="A desktop front end for yt-dlp, with folder rules that pick the destination folder automatically.">
+<meta property="og:image" content="https://disibio.github.io/vid-archiver-gui/social-preview.png">
+<meta property="og:url" content="https://disibio.github.io/vid-archiver-gui/">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+:root {
+  color-scheme: light;
+  --bg: #ffffff;
+  --bg-alt: #f7f6f4;
+  --text: #1f1f1f;
+  --muted: #5f5b57;
+  --border: #e3e0dc;
+  --accent: #d2640f;
+  --accent-hover: #b8560b;
+  --on-accent: #ffffff;
+  --code-bg: #efedea;
+  --shadow: 0 2px 12px rgba(0,0,0,.08);
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #1b1a19;
+  --bg-alt: #222120;
+  --text: #ebe8e4;
+  --muted: #a39e98;
+  --border: #383532;
+  --accent: #f27818;
+  --accent-hover: #ff8a2e;
+  --on-accent: #1a0f05;
+  --code-bg: #2d2b29;
+  --shadow: 0 2px 12px rgba(0,0,0,.35);
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.6 "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+a { color: var(--accent); }
+a:hover { color: var(--accent-hover); }
+code {
+  font: .9em ui-monospace, Consolas, "SF Mono", monospace;
+  background: var(--code-bg);
+  padding: .1em .3em;
+  border-radius: 3px;
+}
+img { max-width: 100%; height: auto; display: block; }
+.wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+
+/* top bar */
+.bar { border-bottom: 1px solid var(--border); }
+.bar .wrap { display: flex; align-items: center; gap: 20px; height: 56px; }
+.brand { display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--text); text-decoration: none; }
+.brand:hover { color: var(--text); }
+.brand img { width: 24px; height: 24px; }
+.bar nav { margin-left: auto; display: flex; gap: 18px; font-size: 15px; }
+.bar nav a { color: var(--muted); text-decoration: none; }
+.bar nav a:hover { color: var(--text); }
+@media (max-width: 700px) { .bar nav { display: none; } .theme-toggle { margin-left: auto; } }
+.theme-toggle {
+  font: inherit; font-size: 14px; color: var(--text); background: transparent;
+  border: 1px solid var(--border); border-radius: 5px; padding: 3px 10px; cursor: pointer;
+}
+.theme-toggle:hover { border-color: var(--muted); }
+
+/* intro */
+.intro { padding-top: 48px; padding-bottom: 56px; }
+.intro .title { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; }
+.intro .title img { width: 64px; height: 64px; }
+h1 { font-size: clamp(1.9rem, 4vw, 2.5rem); margin: 0; line-height: 1.15; }
+.intro p { max-width: 700px; font-size: 1.05rem; }
+.intro .meta { color: var(--muted); font-size: .95rem; }
+.buttons { display: flex; flex-wrap: wrap; gap: 10px; margin: 20px 0 0; }
+.btn {
+  display: inline-block; padding: 9px 18px; border-radius: 6px; font-weight: 600; text-decoration: none;
+  border: 1px solid transparent;
+}
+.btn-primary { background: var(--accent); color: var(--on-accent); }
+.btn-primary:hover { background: var(--accent-hover); color: var(--on-accent); }
+.btn-plain { border-color: var(--border); color: var(--text); }
+.btn-plain:hover { border-color: var(--muted); color: var(--text); }
+
+.shot { border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow); }
+.intro .shot { margin-top: 36px; }
+.shot-dark { display: none; }
+[data-theme="dark"] .shot-light { display: none; }
+[data-theme="dark"] .shot-dark { display: block; }
+
+/* sections */
+section { padding: 56px 0; }
+section.alt { background: var(--bg-alt); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+h2 { font-size: 1.6rem; margin: 0 0 16px; line-height: 1.25; }
+h3 { font-size: 1.05rem; margin: 0 0 4px; }
+.muted { color: var(--muted); }
+
+.split { display: grid; grid-template-columns: 1fr 1.3fr; gap: 40px; align-items: start; }
+@media (max-width: 820px) { .split { grid-template-columns: 1fr; gap: 24px; } }
+.split ul { padding-left: 20px; margin: 12px 0 0; }
+.split li { margin: 6px 0; }
+
+table { border-collapse: collapse; width: 100%; font-size: 15px; margin-top: 36px; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { font-weight: 600; font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+td code { word-break: break-all; }
+
+.features { display: grid; gap: 24px 40px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.features div { border-top: 2px solid var(--accent); padding-top: 10px; }
+.features p { margin: 0; color: var(--muted); }
+
+.gallery { display: grid; grid-template-columns: repeat(2, 1fr); gap: 28px; }
+@media (max-width: 640px) { .gallery { grid-template-columns: 1fr; } }
+.gallery figure { margin: 0; }
+.gallery figcaption { font-size: 14px; color: var(--muted); margin-top: 8px; }
+
+.platforms { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); margin-bottom: 20px; }
+.platforms div { background: var(--bg-alt); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; }
+.platforms p { margin: 0; color: var(--muted); font-size: 15px; }
+
+footer { padding: 28px 0 40px; color: var(--muted); font-size: 14px; }
+footer a { color: var(--muted); }
+footer a:hover { color: var(--text); }
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <div class="wrap">
+    <a class="brand" href="#"><img src="icon.png" alt="" width="24" height="24">Vid Archiver GUI</a>
+    <nav>
+      <a href="#features">What it does</a>
+      <a href="#rules">Folder rules</a>
+      <a href="#screenshots">Screenshots</a>
+      <a href="#download">Download</a>
+      <a href="https://github.com/disibio/vid-archiver-gui">GitHub</a>
+    </nav>
+    <button class="theme-toggle" type="button" id="theme-toggle">Dark theme</button>
+  </div>
+</div>
+
+<div class="wrap intro">
+  <div class="title">
+    <img src="icon.png" alt="" width="64" height="64">
+    <h1>Vid Archiver GUI</h1>
+  </div>
+  <p>A graphical front end for <a href="https://github.com/yt-dlp/yt-dlp">yt-dlp</a>, inspired by the yt-dlg oleksis
+    fork. It's designed to be dead simple to use and to fix the minor things that annoyed me with other GUIs. The big
+    addition is <strong>folder rules</strong>, which pick the destination folder automatically based on where a video
+    comes from.</p>
+  <p class="meta">Windows, macOS and Linux · Free and open source (Apache 2.0)</p>
+  <div class="buttons">
+    <a class="btn btn-primary" href="https://github.com/disibio/vid-archiver-gui/releases/latest">Download</a>
+    <a class="btn btn-plain" href="https://github.com/disibio/vid-archiver-gui">Source on GitHub</a>
+  </div>
+  <img class="shot shot-light" src="screenshots/downloads-light.png" width="1150" height="780"
+       alt="Downloads tab: four videos, each filed into a folder by a rule">
+  <img class="shot shot-dark" src="screenshots/downloads.png" width="1150" height="780"
+       alt="Downloads tab in the dark theme: four videos, each filed into a folder by a rule">
+</div>
+
+<section id="features" class="alt">
+  <div class="wrap">
+    <h2>What it does</h2>
+    <div class="features">
+      <div><h3>yt-dlp without the command line</h3><p>Paste links, pick a preset and click Start. The app builds the yt-dlp command and shows its progress.</p></div>
+      <div><h3>Presets are yt-dlp options</h3><p>Paste the command you already use. Any yt-dlp option works.</p></div>
+      <div><h3>Folder rules</h3><p>Pick the save folder automatically from the info yt-dlp reports for each link. <a href="#rules">More below</a>.</p></div>
+      <div><h3>A queue</h3><p>Add lots of links and run several downloads side by side.</p></div>
+      <div><h3>Automatic setup</h3><p>Installs yt-dlp on first run, and FFmpeg and deno with one click, verified against the publishers' checksums.</p></div>
+      <div><h3>Updates and rollback</h3><p>Checks for yt-dlp updates daily. If a new release breaks something, roll back with one click.</p></div>
+      <div><h3>Pick your yt-dlp build</h3><p>Stable, nightly, master or your own fork, chosen per preset. youtube-dl works too.</p></div>
+      <div><h3>Readable errors</h3><p>Reads yt-dlp's error output, retries network problems, and tells you what went wrong.</p></div>
+      <div><h3>Private</h3><p>No accounts, analytics or telemetry. Everything stays on your computer.</p></div>
+    </div>
+    <p class="muted" style="margin-top:28px">The <a href="https://github.com/disibio/vid-archiver-gui#readme">README</a>
+      covers everything in more detail.</p>
+  </div>
+</section>
+
+<section id="rules">
+  <div class="wrap">
+    <div class="split">
+      <div>
+        <h2>Folder rules</h2>
+        <p>Rules are checked top to bottom and the first match decides. If nothing matches, the fallback folder is
+          used.</p>
+        <ul>
+          <li>Match on site, domain, channel, playlist, title or URL (Equals, Contains, StartsWith or Regex)</li>
+          <li>Use tokens like <code>{site}</code>, <code>{channel}</code> or any yt-dlp field in the folder path,
+            with fallbacks like <code>{channel|uploader|"Unknown"}</code></li>
+          <li><strong>Test a URL</strong> shows which folder a link would get</li>
+          <li>Set a folder by hand, then click <strong>Remember</strong> to turn it into a rule</li>
+        </ul>
+      </div>
+      <img class="shot" src="screenshots/folder-rules.png" width="1150" height="780" loading="lazy"
+           alt="Folder rules tab">
+    </div>
+    <table>
+      <thead><tr><th>When</th><th>Save to</th></tr></thead>
+      <tbody>
+        <tr><td>Site equals <code>Wikimedia</code></td><td><code>Videos\Open movies\{title}</code></td></tr>
+        <tr><td>Channel contains <code>lecture</code></td><td><code>Videos\Learning\{channel|uploader}</code></td></tr>
+        <tr><td>Domain equals <code>archive.org</code></td><td><code>Music\Internet Archive\{title}</code></td></tr>
+        <tr><td>No rule matched</td><td><code>Videos\{site}\{channel|uploader|"Unknown"}</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="screenshots" class="alt">
+  <div class="wrap">
+    <h2>Screenshots</h2>
+    <div class="gallery">
+      <figure><a href="screenshots/presets.png"><img class="shot" src="screenshots/presets.png" width="1150" height="780" loading="lazy" alt="Presets tab"></a><figcaption>Presets</figcaption></figure>
+      <figure><a href="screenshots/settings.png"><img class="shot" src="screenshots/settings.png" width="1150" height="780" loading="lazy" alt="Settings tab with the setup check"></a><figcaption>Settings, with the first-run setup check</figcaption></figure>
+      <figure><a href="screenshots/downloads.png"><img class="shot" src="screenshots/downloads.png" width="1150" height="780" loading="lazy" alt="Downloads tab in the dark theme"></a><figcaption>Dark theme</figcaption></figure>
+      <figure><a href="screenshots/downloads-light.png"><img class="shot" src="screenshots/downloads-light.png" width="1150" height="780" loading="lazy" alt="Downloads tab in the light theme"></a><figcaption>Light theme</figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<section id="download">
+  <div class="wrap">
+    <h2>Download</h2>
+    <p>Get the latest build from <a href="https://github.com/disibio/vid-archiver-gui/releases/latest">Releases</a>.
+      Builds are self-contained, so you don't need .NET installed.</p>
+    <div class="platforms">
+      <div><h3>Windows 10/11</h3><p>A standalone <code>.exe</code> in a <code>.zip</code>. It isn't code-signed, so
+        SmartScreen may warn on first launch: choose <strong>More info → Run anyway</strong>.</p></div>
+      <div><h3>Linux x64/arm64</h3><p>A <code>.tar.gz</code>. Unpack it and run <code>./install.sh</code>
+        (<code>--remove</code> uninstalls).</p></div>
+      <div><h3>macOS 14+</h3><p>Not notarized, so right-click the app and choose <strong>Open</strong> the first
+        time. Not tested on real hardware yet.</p></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Vid Archiver GUI is written with Claude Opus 5.5 and licensed under Apache 2.0. It's not affiliated with yt-dlp.
+    · <a href="https://github.com/disibio/vid-archiver-gui">GitHub</a>
+    · <a href="https://github.com/disibio/vid-archiver-gui/issues">Issues</a>
+    · <a href="https://github.com/disibio/vid-archiver-gui/blob/main/PRIVACY.md">Privacy</a>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var root = document.documentElement, btn = document.getElementById('theme-toggle');
+  function label() { btn.textContent = root.dataset.theme === 'dark' ? 'Light theme' : 'Dark theme'; }
+  label();
+  btn.addEventListener('click', function () {
+    var dark = root.dataset.theme !== 'dark';
+    if (dark) root.dataset.theme = 'dark'; else delete root.dataset.theme;
+    try { localStorage.setItem('theme', dark ? 'dark' : 'light'); } catch (e) {}
+    label();
+  });
+})();
+</script>
+</body>
+</html>
