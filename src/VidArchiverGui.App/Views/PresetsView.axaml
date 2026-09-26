@@ -1,0 +1,67 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:VidArchiverGui.App.ViewModels"
+             xmlns:m="using:VidArchiverGui.Core.Models"
+             x:Class="VidArchiverGui.App.Views.PresetsView"
+             x:DataType="vm:PresetsViewModel">
+  <Grid ColumnDefinitions="280,*">
+    <DockPanel>
+      <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="4" Margin="0,0,0,6">
+        <Button Classes="small" Content="Add" Command="{Binding AddPresetCommand}" />
+        <Button Classes="small" Content="Duplicate" Command="{Binding DuplicatePresetCommand}" />
+        <Button Classes="small" Content="Delete" Command="{Binding DeletePresetCommand}" />
+        <Button Classes="small" Content="Set default" Command="{Binding SetDefaultCommand}" />
+      </StackPanel>
+      <TextBlock DockPanel.Dock="Top" Text="{Binding DefaultPresetText}" Classes="hint" Margin="0,0,0,6" />
+      <ListBox ItemsSource="{Binding Presets}" SelectedItem="{Binding SelectedPreset}">
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="m:Preset">
+            <TextBlock Text="{Binding Name}" />
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+    </DockPanel>
+
+    <Grid Grid.Column="1" Margin="16,0,0,0" RowDefinitions="Auto,Auto,Auto,*,Auto,Auto" ColumnDefinitions="*,280"
+          IsVisible="{Binding SelectedPreset, Converter={x:Static ObjectConverters.IsNotNull}}">
+      <TextBlock Text="Name" />
+      <TextBlock Grid.Column="1" Text="Downloader" Margin="10,0,0,0" />
+      <TextBox Grid.Row="1" Text="{Binding SelectedPreset.Name}" Margin="0,4,0,10" />
+      <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding EngineChoices}" SelectedItem="{Binding SelectedEngineChoice}"
+                HorizontalAlignment="Stretch" Margin="10,4,0,10"
+                ToolTip.Tip="Options differ between downloaders (e.g. youtube-dl has no --embed-chapters), so a preset is usually written for one of them.">
+        <ComboBox.ItemTemplate>
+          <DataTemplate x:DataType="vm:EngineChoice">
+            <TextBlock Text="{Binding Name}" />
+          </DataTemplate>
+        </ComboBox.ItemTemplate>
+      </ComboBox>
+
+      <TextBlock Grid.Row="2" Text="yt-dlp arguments (paste your command; new lines are fine, # starts a comment)" />
+      <TextBlock Grid.Row="2" Grid.Column="1" Text="How yt-dlp will see them" Margin="10,0,0,0" />
+      <TextBox Grid.Row="3" Text="{Binding SelectedPreset.Arguments}" Classes="mono" AcceptsReturn="True" TextWrapping="Wrap" Margin="0,4,0,0" />
+      <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding ParsedPreview}" Classes="mono" IsReadOnly="True" TextWrapping="NoWrap" Margin="10,4,0,0" />
+
+      <StackPanel Grid.Row="4" Grid.ColumnSpan="2" Margin="0,8,0,0" Spacing="2">
+        <TextBlock Classes="hint"
+                   Text="The app adds the destination folder (-P) from your folder rules, plus progress flags, and passes the URL. Everything else is up to you." />
+        <WrapPanel>
+          <WrapPanel.Styles>
+            <Style Selector="HyperlinkButton">
+              <Setter Property="Padding" Value="0" />
+              <Setter Property="Margin" Value="0,0,16,0" />
+            </Style>
+          </WrapPanel.Styles>
+          <TextBlock Classes="hint" Text="yt-dlp documentation:" VerticalAlignment="Center" Margin="0,0,8,0" />
+          <HyperlinkButton Content="All options" NavigateUri="https://github.com/yt-dlp/yt-dlp#usage-and-options" />
+          <HyperlinkButton Content="Format selection (-f)" NavigateUri="https://github.com/yt-dlp/yt-dlp#format-selection" />
+          <HyperlinkButton Content="Output template (-o)" NavigateUri="https://github.com/yt-dlp/yt-dlp#output-template" />
+        </WrapPanel>
+      </StackPanel>
+      <DockPanel Grid.Row="5" Grid.ColumnSpan="2" Margin="0,8,0,0">
+        <Button DockPanel.Dock="Right" Content="Save presets" Command="{Binding SaveCommand}" Classes="accent" />
+        <TextBlock Text="{Binding Warning}" Classes="error" VerticalAlignment="Center" />
+      </DockPanel>
+    </Grid>
+  </Grid>
+</UserControl>

@@ -1,0 +1,67 @@
+using System.Collections.ObjectModel;
+using System.Text.Json.Serialization;
+using CommunityToolkit.Mvvm.ComponentModel;
+
+namespace VidArchiverGui.Core.Models;
+
+public enum AppTheme
+{
+    System,
+    Light,
+    Dark,
+}
+
+public partial class AppSettings : ObservableObject
+{
+    [ObservableProperty] private AppTheme _theme = AppTheme.Light;
+
+    public ObservableCollection<Preset> Presets { get; set; } = [];
+    public ObservableCollection<RoutingRule> Rules { get; set; } = [];
+
+    [ObservableProperty] private string? _defaultPresetId;
+
+    /// <summary>Used when no rule matches. Supports the same tokens as rule destinations.</summary>
+    [ObservableProperty] private string _fallbackDestination = "";
+
+    public ObservableCollection<Engine> Engines { get; set; } = [];
+
+    [ObservableProperty] private string _defaultEngineId = Engine.StableId;
+
+    /// <summary>Custom ffmpeg executable or folder. Empty = app-managed copy, then PATH.</summary>
+    [ObservableProperty] private string? _ffmpegPath;
+
+    [ObservableProperty] private int _maxConcurrentDownloads = 2;
+    [ObservableProperty] private bool _autoStartDownloads;
+
+    /// <summary>Pause between requests and videos and back off longer on errors (see <see cref="Services.DownloadRunner.GentleArgs"/>).</summary>
+    [ObservableProperty] private bool _gentleDownloads;
+
+    /// <summary>When extraction fails, try the other downloaders of the same kind (installing them if needed).</summary>
+    [ObservableProperty] private bool _autoFallback = true;
+    [ObservableProperty] private bool _autoUpdateYtDlp = true;
+    [ObservableProperty] private DateTimeOffset? _lastYtDlpUpdateCheck;
+
+    /// <summary>
+    /// Engine id → release the user rolled back from. The daily update check skips that release, so a bad version
+    /// isn't re-installed the next day; the next release (or a manual update) installs normally.
+    /// </summary>
+    public Dictionary<string, string> SkippedVersions { get; set; } = [];
+
+    /// <summary>Cookie files and browser specs the user added (installed browsers are detected, not stored).</summary>
+    public ObservableCollection<CookieSource> CookieSources { get; set; } = [];
+
+    /// <summary>Cookie choice last picked on the Downloads tab; null = no cookies.</summary>
+    [ObservableProperty] private string? _lastCookieId;
+
+    public Preset? FindPreset(string? id) => id is null ? null : Presets.FirstOrDefault(p => p.Id == id);
+
+    [JsonIgnore]
+    public Preset DefaultPreset => FindPreset(DefaultPresetId) ?? Presets.First();
+
+    public Engine? FindEngine(string? id) => id is null ? null : Engines.FirstOrDefault(e => e.Id == id);
+
+    [JsonIgnore]
+    public Engine DefaultEngine => FindEngine(DefaultEngineId) ?? Engines.First();
+
+    public Engine EngineFor(Preset preset) => FindEngine(preset.EngineId) ?? DefaultEngine;
+}

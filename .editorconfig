@@ -1,0 +1,6 @@
+root = true
+
+[*.cs]
+# Always use braces for if/else, loops, using and lock statements.
+csharp_prefer_braces = true:warning
+dotnet_diagnostic.IDE0011.severity = warning

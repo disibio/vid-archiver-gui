@@ -1,0 +1,52 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:VidArchiverGui.App.ViewModels"
+        xmlns:v="using:VidArchiverGui.App.Views"
+        x:Class="VidArchiverGui.App.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="Vid Archiver GUI"
+        Icon="/Assets/icon.ico"
+        Width="1150" Height="780" MinWidth="720" MinHeight="480"
+        WindowStartupLocation="CenterScreen">
+  <DockPanel>
+    <Border DockPanel.Dock="Bottom" Padding="12,5" BorderThickness="0,1,0,0" BorderBrush="#40808080">
+      <TextBlock Text="{Binding Status}" FontSize="12" TextTrimming="CharacterEllipsis" />
+    </Border>
+
+    <!-- Setup banner: shown when something downloads need is missing. -->
+    <Border DockPanel.Dock="Top" IsVisible="{Binding Setup.ShowBanner}" Background="#26F2A900" BorderBrush="#F2A900"
+            BorderThickness="0,0,0,1" Padding="12,6">
+      <Grid ColumnDefinitions="*,Auto">
+        <StackPanel VerticalAlignment="Center">
+          <TextBlock Text="{Binding Setup.BannerText}" TextWrapping="Wrap" />
+          <TextBlock Text="{Binding Setup.Message}" FontSize="12" Opacity="0.75" IsVisible="{Binding Setup.IsBusy}" />
+          <ProgressBar Value="{Binding Setup.Progress}" IsVisible="{Binding Setup.IsBusy}" Margin="0,4,0,0" MaxWidth="400" HorizontalAlignment="Left" />
+        </StackPanel>
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" Margin="12,0,0,0" VerticalAlignment="Center">
+          <Button Content="Fix now" Classes="accent" Command="{Binding Setup.FixAllCommand}"
+                  IsVisible="{Binding Setup.CanAutoFix}" IsEnabled="{Binding Setup.IsIdle}" />
+          <Button Content="Details" Command="{Binding Setup.ShowDetailsCommand}" />
+          <Button Content="✕" Command="{Binding Setup.DismissBannerCommand}" ToolTip.Tip="Hide until next start" />
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <TabControl SelectedIndex="{Binding SelectedTab}" Padding="12,8,12,8">
+      <TabItem Header="Downloads">
+        <v:DownloadsView DataContext="{Binding Downloads}" />
+      </TabItem>
+      <TabItem Header="Folder rules">
+        <v:RulesView DataContext="{Binding Rules}" />
+      </TabItem>
+      <TabItem Header="Presets">
+        <v:PresetsView DataContext="{Binding Presets}" />
+      </TabItem>
+      <TabItem Header="Settings">
+        <v:SettingsView DataContext="{Binding Tools}" />
+      </TabItem>
+      <TabItem Header="About">
+        <v:AboutView DataContext="{Binding About}" />
+      </TabItem>
+    </TabControl>
+  </DockPanel>
+</Window>

@@ -1,0 +1,173 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:VidArchiverGui.App.ViewModels"
+             xmlns:m="using:VidArchiverGui.Core.Models"
+             x:Class="VidArchiverGui.App.Views.SettingsView"
+             x:DataType="vm:SettingsViewModel">
+  <ScrollViewer>
+    <StackPanel Spacing="6" MaxWidth="1000" HorizontalAlignment="Left" Margin="0,0,16,16">
+
+      <DockPanel Margin="0,12,0,2">
+        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6" IsEnabled="{Binding Setup.IsIdle}">
+          <Button Content="Install everything missing" Command="{Binding Setup.FixAllCommand}" Classes="accent"
+                  IsVisible="{Binding Setup.CanAutoFix}" />
+          <Button Content="Re-check" Command="{Binding RefreshCommand}" />
+        </StackPanel>
+        <TextBlock Text="Setup check" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
+      </DockPanel>
+      <TextBlock Classes="hint" Text="What downloads need on this computer. Anything missing can usually be installed with one click." />
+      <ItemsControl ItemsSource="{Binding Setup.Items}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:SetupItemViewModel">
+            <Border BorderBrush="#30808080" BorderThickness="0,0,0,1" Padding="0,6">
+              <Grid ColumnDefinitions="28,*,Auto">
+                <Panel VerticalAlignment="Top" Margin="0,1,0,0">
+                  <TextBlock Text="✔" Foreground="#3FA34D" FontWeight="Bold" IsVisible="{Binding IsOk}" />
+                  <TextBlock Text="⚠" Foreground="#D99A00" FontWeight="Bold" IsVisible="{Binding IsWarning}" />
+                  <TextBlock Text="✖" Foreground="#E0524A" FontWeight="Bold" IsVisible="{Binding IsMissing}" />
+                </Panel>
+                <StackPanel Grid.Column="1" Spacing="2">
+                  <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                  <SelectableTextBlock Text="{Binding Detail}" TextWrapping="Wrap" FontSize="12" />
+                  <TextBlock Text="{Binding Why}" Classes="hint" IsVisible="{Binding !IsOk}" />
+                  <SelectableTextBlock Text="{Binding Command}" IsVisible="{Binding HasCommand}" FontSize="12"
+                                       FontFamily="Cascadia Mono, Consolas, Menlo, DejaVu Sans Mono, monospace" />
+                </StackPanel>
+                <Button Grid.Column="2" Content="{Binding ActionText}" Command="{Binding FixCommand}" IsVisible="{Binding HasAction}"
+                        VerticalAlignment="Top" Margin="8,0,0,0"
+                        IsEnabled="{Binding $parent[ItemsControl].((vm:SettingsViewModel)DataContext).Setup.IsIdle}" />
+              </Grid>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+      <ProgressBar Value="{Binding Setup.Progress}" IsVisible="{Binding Setup.IsBusy}" />
+      <SelectableTextBlock Text="{Binding Setup.Message}" FontSize="12" TextWrapping="Wrap" />
+
+      <TextBlock Text="Appearance" Classes="h2" />
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <TextBlock Text="Theme" VerticalAlignment="Center" />
+        <ComboBox ItemsSource="{x:Static vm:SettingsViewModel.Themes}" SelectedItem="{Binding Theme}" MinWidth="160">
+          <ComboBox.ItemTemplate>
+            <DataTemplate x:DataType="m:AppTheme">
+              <TextBlock Text="{Binding Converter={x:Static vm:ThemeNameConverter.Instance}}" />
+            </DataTemplate>
+          </ComboBox.ItemTemplate>
+        </ComboBox>
+      </StackPanel>
+
+      <TextBlock Text="Downloaders" Classes="h2" />
+      <TextBlock Classes="hint"
+                 Text="yt-dlp and its release channels, youtube-dl, or any fork you add as a custom executable. The default is used unless a preset picks another one." />
+      <ListBox ItemsSource="{Binding Engines}" SelectedItem="{Binding SelectedEngine}" MaxHeight="260">
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="vm:EngineRowViewModel">
+            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="{Binding Engine.Name}" FontWeight="SemiBold" />
+                <Border Background="{DynamicResource SystemControlHighlightAccentBrush}" CornerRadius="3" Padding="6,0" IsVisible="{Binding IsDefault}">
+                  <TextBlock Text="default" FontSize="11" Foreground="White" VerticalAlignment="Center" />
+                </Border>
+              </StackPanel>
+              <TextBlock Grid.Column="1" Text="{Binding FlavorText}" Classes="hint" />
+              <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding Status}" Classes="hint" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" />
+            </Grid>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+      <StackPanel Orientation="Horizontal" Spacing="6" IsEnabled="{Binding IsIdle}">
+        <Button Content="{Binding InstallButtonText}" Command="{Binding InstallSelectedCommand}" IsEnabled="{Binding HasSelection}" />
+        <Button Content="Re-download" Command="{Binding ReinstallSelectedCommand}" IsEnabled="{Binding HasSelection}" />
+        <Button Content="{Binding SelectedEngine.RollbackText, FallbackValue=''}" Command="{Binding RollbackSelectedCommand}"
+                IsVisible="{Binding SelectedEngine.CanRollback, FallbackValue=False}"
+                ToolTip.Tip="Go back to the version that was installed before the last update, e.g. when a new release broke something." />
+        <Button Content="Set as default" Command="{Binding SetDefaultCommand}" IsEnabled="{Binding HasSelection}" />
+        <Button Content="Remove" Command="{Binding RemoveSelectedCommand}" IsVisible="{Binding CanRemoveSelected}" />
+        <Button Content="Refresh" Command="{Binding RefreshCommand}" />
+      </StackPanel>
+      <TextBlock Text="{Binding SelectedEngine.Source, FallbackValue=''}" Classes="hint" />
+      <CheckBox Content="Check app-installed downloaders for updates once a day" IsChecked="{Binding Settings.AutoUpdateYtDlp}" />
+      <CheckBox IsChecked="{Binding Settings.AutoFallback}">
+        <TextBlock TextWrapping="Wrap"
+                   Text="When a site can't be read (usually because it changed), automatically try the other downloaders of the same kind, e.g. yt-dlp nightly, which often has the fix first. Ones that aren't installed yet are installed when needed." />
+      </CheckBox>
+
+      <TextBlock Text="Add a custom downloader (fork)" Margin="0,10,0,0" FontWeight="SemiBold" />
+      <Grid ColumnDefinitions="200,*,Auto,190,Auto" IsEnabled="{Binding IsIdle}">
+        <TextBox Text="{Binding NewEngineName}" PlaceholderText="Name" />
+        <TextBox Grid.Column="1" Text="{Binding NewEnginePath}" PlaceholderText="Path to executable" Margin="4,0,0,0" />
+        <Button Grid.Column="2" Content="Browse…" Command="{Binding BrowseNewEngineCommand}" Margin="4,0,0,0" />
+        <ComboBox Grid.Column="3" ItemsSource="{x:Static vm:SettingsViewModel.Flavors}" SelectedItem="{Binding NewEngineFlavor}"
+                  HorizontalAlignment="Stretch" Margin="4,0,0,0" ToolTip.Tip="YtDlp: supports -P and --progress-template. YoutubeDl: the older youtube-dl options." />
+        <Button Grid.Column="4" Content="Add" Command="{Binding AddCustomEngineCommand}" Margin="4,0,0,0" />
+      </Grid>
+
+      <ProgressBar Value="{Binding BusyProgress}" IsVisible="{Binding IsBusy}" Margin="0,8,0,0" />
+      <SelectableTextBlock Text="{Binding ToolOutput}" FontSize="12" TextWrapping="Wrap" />
+
+      <TextBlock Text="Cookies" Classes="h2" />
+      <TextBlock Classes="hint" TextWrapping="Wrap"
+                 Text="Cookies let the downloader act as your logged-in browser, for members-only or age-restricted videos and &quot;Sign in to confirm you're not a bot&quot; errors. Nothing uses cookies unless you pick them in the Cookies list on the Downloads tab (or in a folder rule). Downloading a lot with your account's cookies can get that account rate-limited or flagged, so only use them where needed; a secondary account is safest." />
+      <TextBlock Classes="hint" TextWrapping="Wrap"
+                 Text="Firefox works best. On Windows, Chrome, Edge and other Chromium browsers usually can't be read while open, and newer versions encrypt cookies so yt-dlp can't read them at all; export a cookies.txt file instead." />
+      <TextBlock Text="{Binding DetectedBrowsers}" TextWrapping="Wrap" Margin="0,4,0,0" />
+      <ListBox ItemsSource="{Binding Settings.CookieSources}" SelectedItem="{Binding SelectedCookieSource}" MaxHeight="160"
+               IsVisible="{Binding !!Settings.CookieSources.Count}">
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="m:CookieSource">
+            <Grid ColumnDefinitions="200,80,*">
+              <TextBox Text="{Binding Name}" MinHeight="26" Padding="4,2" />
+              <TextBlock Grid.Column="1" Text="{Binding Kind}" Classes="hint" VerticalAlignment="Center" Margin="8,0" />
+              <TextBlock Grid.Column="2" Text="{Binding Value}" Classes="hint" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+            </Grid>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+      <Button Content="Remove selected" Command="{Binding RemoveCookieSourceCommand}" IsVisible="{Binding !!Settings.CookieSources.Count}"
+              IsEnabled="{Binding SelectedCookieSource, Converter={x:Static ObjectConverters.IsNotNull}}" />
+      <TextBlock Text="Add a cookies.txt file or a specific browser profile" Margin="0,8,0,0" FontWeight="SemiBold" />
+      <Grid ColumnDefinitions="180,110,*,Auto,Auto">
+        <TextBox Text="{Binding NewCookieName}" PlaceholderText="Name" />
+        <ComboBox Grid.Column="1" ItemsSource="{x:Static vm:SettingsViewModel.CookieKinds}" SelectedItem="{Binding NewCookieKind}"
+                  HorizontalAlignment="Stretch" Margin="4,0,0,0" />
+        <TextBox Grid.Column="2" Text="{Binding NewCookieValue}" PlaceholderText="cookies.txt path, or browser spec" Margin="4,0,0,0" />
+        <Button Grid.Column="3" Content="Browse…" Command="{Binding BrowseCookieFileCommand}" Margin="4,0,0,0" />
+        <Button Grid.Column="4" Content="Add" Command="{Binding AddCookieSourceCommand}" Margin="4,0,0,0" />
+      </Grid>
+      <TextBlock Text="{Binding CookieValueHint}" Classes="hint" TextWrapping="Wrap" />
+      <SelectableTextBlock Text="{Binding CookieMessage}" FontSize="12" TextWrapping="Wrap" />
+
+      <TextBlock Text="ffmpeg" Classes="h2" />
+      <SelectableTextBlock Text="{Binding FfmpegStatus}" TextWrapping="Wrap" />
+      <StackPanel Orientation="Horizontal" Spacing="6" IsEnabled="{Binding IsIdle}">
+        <Button Content="Download ffmpeg" Command="{Binding DownloadFfmpegCommand}" IsVisible="{Binding CanDownloadFfmpeg}" />
+        <TextBlock Text="{Binding FfmpegHint}" Classes="hint" VerticalAlignment="Center" IsVisible="{Binding !CanDownloadFfmpeg}" />
+      </StackPanel>
+      <TextBlock Text="Custom ffmpeg executable or folder (leave empty to auto-detect)" Margin="0,6,0,0" />
+      <Grid ColumnDefinitions="*,Auto,Auto">
+        <TextBox Text="{Binding Settings.FfmpegPath}" PlaceholderText="(auto)" />
+        <Button Grid.Column="1" Content="Browse…" Command="{Binding BrowseFfmpegCommand}" Margin="4,0,0,0" />
+        <Button Grid.Column="2" Content="Reset to automatic" Command="{Binding ResetFfmpegCommand}" Margin="4,0,0,0" />
+      </Grid>
+
+      <TextBlock Text="Downloads" Classes="h2" />
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <TextBlock Text="Simultaneous downloads" VerticalAlignment="Center" />
+        <NumericUpDown Value="{Binding Settings.MaxConcurrentDownloads}" Minimum="1" Maximum="10" Increment="1" FormatString="0" Width="130" />
+      </StackPanel>
+      <CheckBox Content="Start downloading as soon as a URL has been routed" IsChecked="{Binding Settings.AutoStartDownloads}" />
+      <CheckBox IsChecked="{Binding Settings.GentleDownloads}">
+        <TextBlock TextWrapping="Wrap"
+                   Text="Download gently: pause between requests and videos, and wait longer before retrying. Slower, but much less likely to be throttled or asked to sign in. Recommended for archiving whole channels, together with 1 simultaneous download." />
+      </CheckBox>
+
+      <TextBlock Text="App data" Classes="h2" />
+      <SelectableTextBlock Text="{Binding DataFolder}" />
+      <TextBlock Classes="hint" Text="{Binding DataFolderHint}" />
+      <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,6,0,0">
+        <Button Content="Open data folder" Command="{Binding OpenDataFolderCommand}" />
+        <Button Content="Save settings" Command="{Binding SaveCommand}" Classes="accent" />
+      </StackPanel>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

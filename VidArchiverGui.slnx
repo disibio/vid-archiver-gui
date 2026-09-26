@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/VidArchiverGui.App/VidArchiverGui.App.csproj" />
+    <Project Path="src/VidArchiverGui.Core/VidArchiverGui.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/VidArchiverGui.Core.Tests/VidArchiverGui.Core.Tests.csproj" />
+  </Folder>
+</Solution>

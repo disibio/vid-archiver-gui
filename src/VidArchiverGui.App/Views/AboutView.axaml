@@ -1,0 +1,76 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:VidArchiverGui.App.ViewModels"
+             x:Class="VidArchiverGui.App.Views.AboutView"
+             x:DataType="vm:AboutViewModel">
+  <UserControl.Styles>
+    <Style Selector="HyperlinkButton">
+      <Setter Property="Padding" Value="0" />
+    </Style>
+  </UserControl.Styles>
+
+  <ScrollViewer>
+    <StackPanel Spacing="6" MaxWidth="900" HorizontalAlignment="Left" Margin="0,0,16,16">
+      <StackPanel Orientation="Horizontal" Spacing="10">
+        <SelectableTextBlock Text="{Binding AppName}" FontSize="26" FontWeight="SemiBold" />
+        <SelectableTextBlock Text="{Binding Version, StringFormat='v{0}'}" VerticalAlignment="Bottom" Margin="0,0,0,4" Classes="hint" FontSize="14" />
+      </StackPanel>
+      <SelectableTextBlock TextWrapping="Wrap"
+                 Text="A cross-platform front-end for yt-dlp that files every download into the right folder using your own rules." />
+      <SelectableTextBlock Text="{Binding BuildSummary}" Classes="hint" />
+      <SelectableTextBlock Text="{Binding Copyright}" Classes="hint" />
+      <StackPanel Orientation="Horizontal" Spacing="4">
+        <SelectableTextBlock Text="Licensed under the" VerticalAlignment="Center" />
+        <HyperlinkButton Content="Apache License 2.0" NavigateUri="https://www.apache.org/licenses/LICENSE-2.0" />
+      </StackPanel>
+
+      <Border BorderBrush="{DynamicResource SystemControlHighlightAccentBrush}" BorderThickness="1" CornerRadius="4" Padding="12,8" Margin="0,10,0,0">
+        <StackPanel Spacing="4">
+          <SelectableTextBlock Text="Written by AI" FontWeight="SemiBold" />
+          <SelectableTextBlock TextWrapping="Wrap" Text="{x:Static vm:AboutViewModel.AiNotice}" />
+        </StackPanel>
+      </Border>
+
+      <SelectableTextBlock Text="Inspired by" Classes="h2" />
+      <SelectableTextBlock TextWrapping="Wrap"
+                 Text="Vid Archiver GUI is inspired by yt-dlg (youtube-dl-gui), the oleksis fork. It is an independent implementation; no code from that project is included." />
+      <HyperlinkButton Content="{x:Static vm:AboutViewModel.InspiredByUrl}" NavigateUri="{x:Static vm:AboutViewModel.InspiredByUrl}" />
+
+      <SelectableTextBlock Text="Downloaded when you use them (not included)" Classes="h2" />
+      <SelectableTextBlock Classes="hint" Text="Fetched from their official releases and checked against published checksums. Each stays under its own license." />
+      <ItemsControl ItemsSource="{Binding Downloaded}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:Credit">
+            <Grid ColumnDefinitions="220,110,*,Auto" Margin="0,2">
+              <SelectableTextBlock Text="{Binding Name}" FontWeight="SemiBold" VerticalAlignment="Center" />
+              <SelectableTextBlock Grid.Column="1" Text="{Binding License}" VerticalAlignment="Center" Classes="hint" />
+              <SelectableTextBlock Grid.Column="2" Text="{Binding Purpose}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,12,0" />
+              <HyperlinkButton Grid.Column="3" Content="{Binding Url}" NavigateUri="{Binding Url}" />
+            </Grid>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+
+      <SelectableTextBlock Text="Built with" Classes="h2" />
+      <ItemsControl ItemsSource="{Binding Bundled}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:Credit">
+            <Grid ColumnDefinitions="220,110,*,Auto" Margin="0,2">
+              <SelectableTextBlock Text="{Binding Name}" FontWeight="SemiBold" VerticalAlignment="Center" />
+              <SelectableTextBlock Grid.Column="1" Text="{Binding License}" VerticalAlignment="Center" Classes="hint" />
+              <SelectableTextBlock Grid.Column="2" Text="{Binding Purpose}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,12,0" />
+              <HyperlinkButton Grid.Column="3" Content="{Binding Url}" NavigateUri="{Binding Url}" />
+            </Grid>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+
+      <Expander Header="License (Apache 2.0, full text)" IsExpanded="{Binding ShowLicense}" HorizontalAlignment="Stretch" Margin="0,12,0,0">
+        <TextBox Text="{Binding LicenseText}" IsReadOnly="True" Classes="mono" Height="300" TextWrapping="NoWrap" AcceptsReturn="True" />
+      </Expander>
+      <Expander Header="Third-party notices (full text)" IsExpanded="{Binding ShowNotices}" HorizontalAlignment="Stretch">
+        <TextBox Text="{Binding NoticesText}" IsReadOnly="True" Classes="mono" Height="400" TextWrapping="NoWrap" AcceptsReturn="True" />
+      </Expander>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

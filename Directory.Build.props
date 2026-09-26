@@ -1,0 +1,16 @@
+<Project>
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <!-- Report .editorconfig style rules (e.g. braces) as build warnings. -->
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <Version>1.0.0-beta</Version>
+    <Product>Vid Archiver GUI</Product>
+  </PropertyGroup>
+  <!-- Keep the build machine's folder paths out of released binaries (debug-file pointers, source paths). -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <PathMap>$(MSBuildThisFileDirectory)=/_/</PathMap>
+  </PropertyGroup>
+</Project>

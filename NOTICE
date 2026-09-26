@@ -1,0 +1,15 @@
+Vid Archiver GUI
+Copyright 2026 The Vid Archiver GUI contributors
+
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+Vid Archiver GUI is written with Claude Opus 5.5.
+
+Inspired by Youtube DLG (youtube-dl-gui), the oleksis fork:
+https://github.com/oleksis/youtube-dl-gui (released under the Unlicense).
+Vid Archiver GUI is an independent implementation; no code from that project is included.
+
+This product includes third-party software under their own licenses; see
+THIRD-PARTY-NOTICES.txt. yt-dlp, youtube-dl and FFmpeg are not included: the app
+can download them from their official releases, and they remain under their own
+licenses.

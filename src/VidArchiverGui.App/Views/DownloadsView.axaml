@@ -1,0 +1,127 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:VidArchiverGui.App.ViewModels"
+             xmlns:m="using:VidArchiverGui.Core.Models"
+             xmlns:svc="using:VidArchiverGui.Core.Services"
+             x:Class="VidArchiverGui.App.Views.DownloadsView"
+             x:DataType="vm:DownloadsViewModel">
+  <UserControl.KeyBindings>
+    <KeyBinding Gesture="Ctrl+Enter" Command="{Binding AddCommand}" />
+    <KeyBinding Gesture="Meta+Enter" Command="{Binding AddCommand}" />
+  </UserControl.KeyBindings>
+
+  <Grid RowDefinitions="Auto,Auto,*,Auto">
+    <!-- URL input -->
+    <Grid ColumnDefinitions="*,Auto">
+      <TextBox Text="{Binding UrlInput}" AcceptsReturn="True" TextWrapping="NoWrap" MinHeight="76"
+               PlaceholderText="Paste one or more URLs (one per line), then click Add or press Ctrl+Enter" />
+      <StackPanel Grid.Column="1" Margin="10,0,0,0" Spacing="6" Width="250">
+        <ComboBox ItemsSource="{Binding Presets}" SelectedItem="{Binding SelectedPreset}" HorizontalAlignment="Stretch">
+          <ComboBox.ItemTemplate>
+            <DataTemplate x:DataType="m:Preset">
+              <TextBlock Text="{Binding Name}" />
+            </DataTemplate>
+          </ComboBox.ItemTemplate>
+        </ComboBox>
+        <ComboBox ItemsSource="{Binding CookieChoices}" SelectedItem="{Binding SelectedCookie}" HorizontalAlignment="Stretch"
+                  ToolTip.Tip="Cookies let the downloader act as your logged-in browser (members-only, age-restricted, &quot;confirm you're not a bot&quot;). They are tied to your account, so only use them when needed.">
+          <ComboBox.ItemTemplate>
+            <DataTemplate x:DataType="svc:CookieChoice">
+              <TextBlock Text="{Binding Name}" />
+            </DataTemplate>
+          </ComboBox.ItemTemplate>
+        </ComboBox>
+        <Button Content="Add" Command="{Binding AddCommand}" Classes="accent"
+                HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+      </StackPanel>
+    </Grid>
+
+    <!-- Toolbar -->
+    <DockPanel Grid.Row="1" Margin="0,10,0,6">
+      <StackPanel Orientation="Horizontal" Spacing="6" DockPanel.Dock="Left">
+        <Button Content="Start all" Command="{Binding StartAllCommand}" />
+        <Button Content="Cancel all" Command="{Binding CancelAllCommand}" />
+        <Button Content="Clear finished" Command="{Binding ClearFinishedCommand}" />
+        <Button Content="Re-apply rules" Command="{Binding ReapplyRulesCommand}"
+                ToolTip.Tip="Route waiting items again using the current folder rules (folders you picked by hand are kept)." />
+      </StackPanel>
+      <TextBlock Text="{Binding Summary}" Classes="hint" VerticalAlignment="Center" HorizontalAlignment="Right" />
+    </DockPanel>
+
+    <!-- Queue -->
+    <ListBox Grid.Row="2" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}">
+      <ListBox.ItemTemplate>
+        <DataTemplate x:DataType="vm:DownloadItemViewModel">
+          <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto" Margin="0,4" Background="Transparent">
+            <Grid.ContextMenu>
+              <ContextMenu>
+                <MenuItem Header="Copy URL" Command="{Binding CopyUrlCommand}" />
+                <MenuItem Header="Copy title" Command="{Binding CopyTitleCommand}" />
+                <MenuItem Header="Copy folder path" Command="{Binding CopyFolderCommand}" />
+                <Separator />
+                <MenuItem Header="Add this URL again" Command="{Binding AddAgainCommand}" />
+                <MenuItem Header="Open folder" Command="{Binding OpenFolderCommand}" />
+                <Separator />
+                <MenuItem Header="Remove" Command="{Binding RemoveCommand}" />
+              </ContextMenu>
+            </Grid.ContextMenu>
+
+            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+              <TextBlock Text="{Binding StateText}" VerticalAlignment="Center" Margin="0,0,8,0" FontSize="12" />
+              <Button Classes="small" Content="Start" Command="{Binding StartCommand}" IsVisible="{Binding CanStart}" />
+              <Button Classes="small" Content="Cancel" Command="{Binding CancelCommand}" IsVisible="{Binding CanCancel}" />
+              <Button Classes="small" Content="Copy URL" Command="{Binding CopyUrlCommand}" />
+              <Button Classes="small" Content="Open folder" Command="{Binding OpenFolderCommand}" />
+              <Button Classes="small" Content="✕" Command="{Binding RemoveCommand}" ToolTip.Tip="Remove from list (right-click for more)" />
+            </StackPanel>
+
+            <SelectableTextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding Url}" FontSize="12" Opacity="0.8"
+                                 TextTrimming="CharacterEllipsis" Margin="0,1,0,0" />
+
+            <TextBlock Grid.Row="2" Grid.ColumnSpan="2" Text="{Binding Details}" Classes="hint" Margin="0,2,0,4" />
+
+            <Grid Grid.Row="3" Grid.ColumnSpan="2" ColumnDefinitions="Auto,*,Auto,Auto,220,170" IsEnabled="{Binding CanEdit}">
+              <TextBlock Text="Save to" VerticalAlignment="Center" Margin="0,0,8,0" FontSize="12" />
+              <TextBox Grid.Column="1" Text="{Binding Destination}" FontSize="12" MinHeight="28" Padding="6,3" />
+              <Button Grid.Column="2" Classes="small" Content="Browse…" Command="{Binding BrowseCommand}" Margin="4,0,0,0" />
+              <Button Grid.Column="3" Classes="small" Content="Remember" Command="{Binding RememberCommand}" Margin="4,0,0,0"
+                      IsEnabled="{Binding CanRemember}"
+                      ToolTip.Tip="Create a folder rule so this channel (or playlist) always goes to this folder." />
+              <ComboBox Grid.Column="4" ItemsSource="{Binding Presets}" SelectedItem="{Binding Preset}" Margin="6,0,0,0"
+                        HorizontalAlignment="Stretch" FontSize="12" MinHeight="28">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate x:DataType="m:Preset">
+                    <TextBlock Text="{Binding Name}" />
+                  </DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
+              <ComboBox Grid.Column="5" ItemsSource="{Binding CookieChoices}" SelectedItem="{Binding SelectedCookie}" Margin="4,0,0,0"
+                        HorizontalAlignment="Stretch" FontSize="12" MinHeight="28" ToolTip.Tip="Cookies for this download">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate x:DataType="svc:CookieChoice">
+                    <TextBlock Text="{Binding Name}" />
+                  </DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
+            </Grid>
+
+            <Grid Grid.Row="4" Grid.ColumnSpan="2" ColumnDefinitions="*,Auto" Margin="0,6,0,0" IsVisible="{Binding ShowProgress}">
+              <ProgressBar Value="{Binding Progress}" IsIndeterminate="{Binding IsIndeterminate}" Minimum="0" Maximum="100" MinHeight="6" VerticalAlignment="Center" />
+              <TextBlock Grid.Column="1" Text="{Binding ProgressText}" FontSize="12" Margin="10,0,0,0" MinWidth="330" />
+            </Grid>
+
+            <TextBlock Grid.Row="5" Grid.ColumnSpan="2" Text="{Binding Error}" Classes="error" FontSize="12" Margin="0,4,0,0"
+                       IsVisible="{Binding Error, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+          </Grid>
+        </DataTemplate>
+      </ListBox.ItemTemplate>
+    </ListBox>
+
+    <!-- Log of the selected item -->
+    <Expander Grid.Row="3" Header="Log (selected item)" Margin="0,8,0,0" HorizontalAlignment="Stretch">
+      <TextBox Text="{Binding SelectedItem.LogText, FallbackValue=''}" IsReadOnly="True" Classes="mono" Height="180"
+               TextWrapping="NoWrap" AcceptsReturn="True" CaretIndex="{Binding SelectedItem.LogText.Length, FallbackValue=0}" />
+    </Expander>
+  </Grid>
+</UserControl>

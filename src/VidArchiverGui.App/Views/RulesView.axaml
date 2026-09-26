@@ -1,0 +1,115 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:VidArchiverGui.App.ViewModels"
+             xmlns:m="using:VidArchiverGui.Core.Models"
+             xmlns:svc="using:VidArchiverGui.Core.Services"
+             x:Class="VidArchiverGui.App.Views.RulesView"
+             x:DataType="vm:RulesViewModel">
+  <Grid RowDefinitions="*,Auto" ColumnDefinitions="320,*">
+
+    <!-- Rule list -->
+    <DockPanel>
+      <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="4" Margin="0,0,0,6">
+        <Button Classes="small" Content="Add" Command="{Binding AddRuleCommand}" />
+        <Button Classes="small" Content="Duplicate" Command="{Binding DuplicateRuleCommand}" />
+        <Button Classes="small" Content="Delete" Command="{Binding DeleteRuleCommand}" />
+        <Button Classes="small" Content="▲" Command="{Binding MoveUpCommand}" ToolTip.Tip="Move up (checked earlier)" />
+        <Button Classes="small" Content="▼" Command="{Binding MoveDownCommand}" ToolTip.Tip="Move down" />
+      </StackPanel>
+      <TextBlock DockPanel.Dock="Top" Classes="hint" Margin="0,0,0,6"
+                 Text="Rules are checked top to bottom. The first enabled rule that matches decides the folder." />
+      <ListBox ItemsSource="{Binding Rules}" SelectedItem="{Binding SelectedRule}">
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="m:RoutingRule">
+            <Grid ColumnDefinitions="Auto,*">
+              <CheckBox IsChecked="{Binding Enabled}" VerticalAlignment="Center" ToolTip.Tip="Enabled" />
+              <StackPanel Grid.Column="1" Margin="4,0,0,0">
+                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                <TextBlock Text="{Binding Destination}" Classes="hint" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
+              </StackPanel>
+            </Grid>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+    </DockPanel>
+
+    <!-- Rule editor -->
+    <ScrollViewer Grid.Column="1" Margin="16,0,0,0">
+      <Panel>
+        <TextBlock Text="Add a rule or select one on the left." Classes="hint" IsVisible="{Binding !HasSelection}" />
+        <StackPanel Spacing="6" IsVisible="{Binding HasSelection}" Margin="0,0,12,0">
+          <TextBlock Text="Name" />
+          <TextBox Text="{Binding SelectedRule.Name}" />
+
+          <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,10,0,0">
+            <TextBlock Text="Match" VerticalAlignment="Center" />
+            <ComboBox ItemsSource="{x:Static vm:RulesViewModel.MatchModes}" SelectedItem="{Binding SelectedRule.MatchMode}" MinWidth="90" />
+            <TextBlock Text="of these conditions (text comparisons ignore case):" VerticalAlignment="Center" />
+          </StackPanel>
+
+          <ItemsControl ItemsSource="{Binding SelectedRule.Conditions}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="m:RuleCondition">
+                <Grid ColumnDefinitions="140,130,*,Auto" Margin="0,3">
+                  <ComboBox ItemsSource="{x:Static vm:RulesViewModel.Fields}" SelectedItem="{Binding Field}" HorizontalAlignment="Stretch" />
+                  <ComboBox Grid.Column="1" ItemsSource="{x:Static vm:RulesViewModel.Operators}" SelectedItem="{Binding Operator}"
+                            HorizontalAlignment="Stretch" Margin="4,0" />
+                  <TextBox Grid.Column="2" Text="{Binding Value}" PlaceholderText="value" />
+                  <Button Grid.Column="3" Classes="small" Content="✕" Margin="4,0,0,0" VerticalAlignment="Center"
+                          Command="{Binding $parent[ItemsControl].((vm:RulesViewModel)DataContext).RemoveConditionCommand}"
+                          CommandParameter="{Binding}" />
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <Button Classes="small" Content="+ Add condition" Command="{Binding AddConditionCommand}" />
+
+          <TextBlock Text="Save to folder" Margin="0,12,0,0" />
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBox Text="{Binding SelectedRule.Destination}" PlaceholderText="e.g. E:\ARCHIVE\{site}\{channel|channel_id|uploader|uploader_id}" />
+            <Button Grid.Column="1" Content="Browse…" Command="{Binding BrowseDestinationCommand}" Margin="4,0,0,0" />
+          </Grid>
+          <TextBlock Text="{x:Static vm:RulesViewModel.TokenHelp}" Classes="hint" />
+
+          <TextBlock Text="Preset to use when this rule matches" Margin="0,12,0,0" />
+          <ComboBox ItemsSource="{Binding PresetChoices}" SelectedItem="{Binding SelectedPresetChoice}" MinWidth="320">
+            <ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:PresetChoice">
+                <TextBlock Text="{Binding Name}" />
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+
+          <TextBlock Text="Cookies to use when this rule matches" Margin="0,12,0,0" />
+          <ComboBox ItemsSource="{Binding CookieChoices}" SelectedItem="{Binding SelectedCookieChoice}" MinWidth="320">
+            <ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="svc:CookieChoice">
+                <TextBlock Text="{Binding Name}" />
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+          <TextBlock Classes="hint" TextWrapping="Wrap"
+                     Text="Rules are applied after the info lookup, so a video that can't even be looked up without a login needs cookies picked when adding it." />
+        </StackPanel>
+      </Panel>
+    </ScrollViewer>
+
+    <!-- Fallback + tester -->
+    <Border Grid.Row="1" Grid.ColumnSpan="2" Margin="0,12,0,0" Padding="0,10,0,0" BorderThickness="0,1,0,0" BorderBrush="#40808080">
+      <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="Auto,*,Auto,Auto">
+        <TextBlock Text="When no rule matches, save to" VerticalAlignment="Center" Margin="0,0,8,0" />
+        <TextBox Grid.Column="1" Text="{Binding Settings.FallbackDestination}" />
+        <Button Grid.Column="2" Content="Browse…" Command="{Binding BrowseFallbackCommand}" Margin="4,0,0,0" />
+        <Button Grid.Column="3" Content="Save rules" Command="{Binding SaveCommand}" Classes="accent" Margin="12,0,0,0" />
+
+        <TextBlock Grid.Row="1" Text="Test a URL" VerticalAlignment="Center" Margin="0,8,8,0" />
+        <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding TestUrl}" Margin="0,8,0,0"
+                 PlaceholderText="Paste a URL to see which rule and folder it would get" />
+        <Button Grid.Row="1" Grid.Column="2" Content="Test" Command="{Binding TestCommand}" Margin="4,8,0,0" IsEnabled="{Binding !IsTesting}" />
+
+        <SelectableTextBlock Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3" Text="{Binding TestResult}" Margin="0,6,0,0"
+                             FontSize="12" TextWrapping="Wrap" />
+      </Grid>
+    </Border>
+  </Grid>
+</UserControl>
