@@ -109,9 +109,37 @@ public partial class RulesViewModel : ObservableObject
             return;
         }
 
-        var index = Rules.IndexOf(SelectedRule);
+        var deleted = SelectedRule;
+        var index = Rules.IndexOf(deleted);
+        _undoDelete = (deleted, index);
+        UndoText = $"Deleted \"{deleted.Name}\".";
         Rules.RemoveAt(index);
         SelectedRule = Rules.Count == 0 ? null : Rules[Math.Min(index, Rules.Count - 1)];
+    }
+
+    private (RoutingRule Rule, int Index)? _undoDelete;
+
+    /// <summary>Shown with an Undo button after a delete; null when there's nothing to undo.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanUndoDelete))]
+    private string? _undoText;
+
+    public bool CanUndoDelete => UndoText is not null;
+
+    /// <summary>Puts the last deleted rule back at its old position (which matters: the first match wins).</summary>
+    [RelayCommand]
+    private void UndoDelete()
+    {
+        if (_undoDelete is not var (rule, index))
+        {
+            return;
+        }
+
+        Rules.Insert(Math.Min(index, Rules.Count), rule);
+        _undoDelete = null;
+        UndoText = null;
+        SelectedRule = rule;
+        _host.SetStatus($"Restored rule \"{rule.Name}\".");
     }
 
     [RelayCommand]

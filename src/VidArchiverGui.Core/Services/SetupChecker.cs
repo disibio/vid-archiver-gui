@@ -7,6 +7,8 @@ public enum SetupStatus
     Ok,
     Warning,
     Missing,
+    /// <summary>Not known yet: the check is still running (or waiting for something else to finish).</summary>
+    Checking,
 }
 
 public enum SetupFix
@@ -69,67 +71,108 @@ public sealed class SetupChecker(AppSettings settings, ToolManager tools)
     private const string FfmpegWhy = "Merges separate video and audio (e.g. MKV output) and embeds thumbnails, subtitles and metadata.";
     private const string DenoWhy = "yt-dlp uses it to solve some sites' JavaScript challenges: without it formats can be missing and some downloads fail.";
 
-    public async Task<IReadOnlyList<SetupItem>> CheckAsync(CancellationToken ct = default)
+    /// <summary>The checklist's sections in display order, with the row name shown while each is still being checked.</summary>
+    public IReadOnlyList<(string Section, string Name)> Plan()
+    {
+        List<(string, string)> plan = [(DownloaderSection, settings.DefaultEngine.Name), (FfmpegSection, "ffmpeg")];
+        if (settings.DefaultEngine.Flavor == EngineFlavor.YtDlp)
+        {
+            plan.Add((DenoSection, DenoName));
+        }
+
+        plan.Add((DrivesSection, DrivesName));
+        plan.Add((ArchiveSection, "Archive folders"));
+        return plan;
+    }
+
+    public const string DownloaderSection = "downloader", FfmpegSection = "ffmpeg", DenoSection = "deno", DrivesSection = "drives", ArchiveSection = "archive";
+    private const string DenoName = "deno (JavaScript runtime)", DrivesName = "Destination drives";
+
+    /// <summary>
+    /// Runs the checks. <paramref name="activity"/> says what a section is doing right now (e.g. which program it's
+    /// waiting on); <paramref name="done"/> delivers each section's rows as soon as they're known.
+    /// </summary>
+    public async Task<IReadOnlyList<SetupItem>> CheckAsync(
+        Action<string, string>? activity = null, Action<string, IReadOnlyList<SetupItem>>? done = null, CancellationToken ct = default)
     {
         var items = new List<SetupItem>();
+        void Done(string section, params SetupItem[] rows)
+        {
+            items.AddRange(rows);
+            done?.Invoke(section, rows);
+        }
+
         var engine = settings.DefaultEngine;
         var path = ToolManager.LocatePath(engine);
+        var exeName = Path.GetFileName(path ?? engine.ExecutablePath ?? "yt-dlp");
 
         // 1. The downloader itself.
         if (path is null)
         {
-            items.Add(new SetupItem(engine.Name, SetupStatus.Missing,
+            Done(DownloaderSection, new SetupItem(engine.Name, SetupStatus.Missing,
                 engine.IsManaged ? "Not installed yet." : $"Executable not found: {engine.ExecutablePath}. Fix it under Downloaders below.",
                 DownloaderWhy) { Fix = engine.IsManaged ? SetupFix.InstallDownloader : SetupFix.None });
         }
         else
         {
-            items.Add(new SetupItem(engine.Name, SetupStatus.Ok, $"{await tools.GetVersionAsync(path, ct) ?? "installed"}  —  {path}", DownloaderWhy));
+            activity?.Invoke(DownloaderSection, $"Running \"{exeName} --version\"…");
+            var version = await tools.GetVersionAsync(path, ct);
+            Done(DownloaderSection, version is not null
+                ? new SetupItem(engine.Name, SetupStatus.Ok, $"{version}  —  {path}", DownloaderWhy)
+                : new SetupItem(engine.Name, SetupStatus.Warning,
+                    $"Found at {path}, but \"{exeName} --version\" failed or didn't answer within {ToolManager.QueryTimeout.TotalSeconds:0} s.", DownloaderWhy));
         }
 
         // Ask yt-dlp what it can actually see (it's the final word on ffmpeg and the JS runtime).
-        var probe = path is not null && engine.Flavor == EngineFlavor.YtDlp ? await ProbeAsync(tools.Resolve(engine), ct) : null;
+        YtDlpProbe? probe = null;
+        if (path is not null && engine.Flavor == EngineFlavor.YtDlp)
+        {
+            var asking = $"Asking yt-dlp which helper tools it can find (\"{exeName} -v\")…";
+            activity?.Invoke(FfmpegSection, asking);
+            activity?.Invoke(DenoSection, asking);
+            probe = await ProbeAsync(tools.Resolve(engine), ct);
+        }
 
         // 2. ffmpeg.
         var ffmpeg = tools.ResolveFfmpeg();
-        if (probe?.HasFfmpeg ?? ffmpeg is not null)
-        {
-            items.Add(new SetupItem("ffmpeg", SetupStatus.Ok, ffmpeg ?? "found by the downloader", FfmpegWhy));
-        }
-        else
-        {
-            items.Add(FfmpegMissing());
-        }
+        Done(FfmpegSection, probe?.HasFfmpeg ?? ffmpeg is not null
+            ? new SetupItem("ffmpeg", SetupStatus.Ok, ffmpeg ?? "found by the downloader", FfmpegWhy)
+            : FfmpegMissing());
 
         // 3. deno (yt-dlp only; youtube-dl doesn't use one).
         if (engine.Flavor == EngineFlavor.YtDlp)
         {
             var deno = ToolManager.ResolveDeno();
+            var rows = new List<SetupItem>();
             if (probe?.HasJsRuntime ?? deno is not null)
             {
-                items.Add(new SetupItem("deno (JavaScript runtime)", SetupStatus.Ok,
+                rows.Add(new SetupItem(DenoName, SetupStatus.Ok,
                     $"{probe?.JsRuntimes ?? "deno"}  —  {deno ?? "found by the downloader"}", DenoWhy));
             }
             else
             {
-                items.Add(new SetupItem("deno (JavaScript runtime)", SetupStatus.Missing,
+                rows.Add(new SetupItem(DenoName, SetupStatus.Missing,
                     ToolManager.HasOtherJsRuntime ? "Node.js/Bun is installed, but yt-dlp only uses deno by default." : "Not found.",
                     DenoWhy) { Fix = SetupFix.InstallDeno });
             }
 
             if (probe?.HasEjs == false)
             {
-                items.Add(new SetupItem("yt-dlp JavaScript components (yt-dlp-ejs)", SetupStatus.Warning,
+                rows.Add(new SetupItem("yt-dlp JavaScript components (yt-dlp-ejs)", SetupStatus.Warning,
                     "This yt-dlp build doesn't include yt-dlp-ejs. Use an app-installed yt-dlp, or reinstall it with the command shown.",
                     DenoWhy) { Fix = SetupFix.CopyCommand, Command = "pip install -U \"yt-dlp[default]\"" });
             }
+
+            Done(DenoSection, [.. rows]);
         }
 
         // 4. Destination drives (e.g. an external E: drive that isn't plugged in).
-        items.Add(CheckDestinationDrives());
+        activity?.Invoke(DrivesSection, "Looking for the destination drives…");
+        Done(DrivesSection, CheckDestinationDrives());
 
         // 5. Folders for --download-archive files.
-        items.AddRange(CheckArchiveFolders());
+        activity?.Invoke(ArchiveSection, "Looking for the archive folders…");
+        Done(ArchiveSection, [.. CheckArchiveFolders()]);
 
         return items;
     }
@@ -145,7 +188,7 @@ public sealed class SetupChecker(AppSettings settings, ToolManager tools)
         args.AddRange(engine.ExtraArgs);
 
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        timeout.CancelAfter(TimeSpan.FromSeconds(30));
+        timeout.CancelAfter(ToolManager.QueryTimeout);
         try
         {
             // With no URL yt-dlp prints its debug header and then exits with an error; the header is all we need.
@@ -239,8 +282,8 @@ public sealed class SetupChecker(AppSettings settings, ToolManager tools)
         }
 
         return problems.Count == 0
-            ? new SetupItem("Destination drives", SetupStatus.Ok, "All destination drives are available.", why)
-            : new SetupItem("Destination drives", SetupStatus.Warning, string.Join("; ", problems.Distinct()) + ".", why);
+            ? new SetupItem(DrivesName, SetupStatus.Ok, "All destination drives are available.", why)
+            : new SetupItem(DrivesName, SetupStatus.Warning, string.Join("; ", problems.Distinct()) + ".", why);
     }
 
     private IEnumerable<SetupItem> CheckArchiveFolders()

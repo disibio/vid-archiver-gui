@@ -99,6 +99,16 @@ public sealed class SettingsStore(string path)
                 --merge-output-format mkv
                 """,
         };
+        // H.264 + AAC in MP4 plays almost everywhere (QuickTime, iPhone, TVs, editors), unlike MKV; no re-encoding.
+        var compatible = new Preset
+        {
+            Name = "Compatible (MP4)",
+            Arguments = """
+                -f "bv*[vcodec^=avc1]+ba[ext=m4a]/b[ext=mp4]/b"
+                --embed-metadata --embed-chapters --embed-thumbnail
+                --merge-output-format mp4
+                """,
+        };
         var audio = new Preset
         {
             Name = "Audio only (MP3)",
@@ -112,7 +122,7 @@ public sealed class SettingsStore(string path)
 
         return new AppSettings
         {
-            Presets = [archive, best, audio],
+            Presets = [archive, best, compatible, audio],
             DefaultPresetId = archive.Id,
             FallbackDestination = downloads,
             Rules =

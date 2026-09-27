@@ -2,12 +2,29 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="VidArchiverGui.App.App"
              RequestedThemeVariant="Default">
+  <Application.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.ThemeDictionaries>
+        <!-- Dark: a light orange tint for the selected row instead of a solid fill, so its text and the orange
+             "default" badge stay readable. -->
+        <ResourceDictionary x:Key="Dark">
+          <SolidColorBrush x:Key="SystemControlHighlightListAccentLowBrush" Color="#F27818" Opacity="0.22" />
+          <SolidColorBrush x:Key="SystemControlHighlightListAccentMediumBrush" Color="#F27818" Opacity="0.30" />
+          <SolidColorBrush x:Key="SystemControlHighlightListAccentHighBrush" Color="#F27818" Opacity="0.38" />
+          <!-- Expanders (the Log panel, About's notices) default to black, which stands out on the grey window. -->
+          <SolidColorBrush x:Key="ExpanderHeaderBackground" Color="#262626" />
+          <SolidColorBrush x:Key="ExpanderContentBackground" Color="#262626" />
+        </ResourceDictionary>
+      </ResourceDictionary.ThemeDictionaries>
+    </ResourceDictionary>
+  </Application.Resources>
   <Application.Styles>
     <!-- Orange accent to match the app icon, instead of the OS accent colour. -->
     <FluentTheme>
       <FluentTheme.Palettes>
         <ColorPaletteResources x:Key="Light" Accent="#D2640F" />
-        <ColorPaletteResources x:Key="Dark" Accent="#F27818" />
+        <!-- Dark grey instead of pure black, so the list panels don't look like holes cut in the window. -->
+        <ColorPaletteResources x:Key="Dark" Accent="#F27818" RegionColor="#1E1E1E" />
       </FluentTheme.Palettes>
     </FluentTheme>
 
@@ -25,7 +42,20 @@
       <Setter Property="Foreground" Value="#E0524A" />
       <Setter Property="TextWrapping" Value="Wrap" />
     </Style>
-    <Style Selector="Button.small">
+    <!-- An expander docked at the bottom opens upwards (its header moves up), so point its arrow the other way:
+         ⌃ to open, ⌄ to close. -->
+    <Style Selector="Expander.drawer /template/ :is(ToggleButton) /template/ :is(Control)#ExpandCollapseChevronBorder">
+      <Setter Property="RenderTransform" Value="rotate(180deg)" />
+    </Style>
+    <!-- Split buttons are taller with a wide arrow by default; match the small buttons next to them. -->
+    <Style Selector="SplitButton.small">
+      <Style.Resources>
+        <x:Double x:Key="SplitButtonMinHeight">0</x:Double>
+        <x:Double x:Key="SplitButtonSecondaryButtonSize">26</x:Double>
+      </Style.Resources>
+      <Setter Property="MinHeight" Value="0" />
+    </Style>
+    <Style Selector="Button.small, SplitButton.small">
       <Setter Property="Padding" Value="8,3" />
       <Setter Property="FontSize" Value="12" />
     </Style>

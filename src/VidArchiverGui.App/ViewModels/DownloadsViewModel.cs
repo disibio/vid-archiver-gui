@@ -55,6 +55,26 @@ public partial class DownloadsViewModel : ObservableObject
         }
     }
 
+    public bool ShowLog
+    {
+        get => _host.Settings.ShowLog;
+        set
+        {
+            _host.Settings.ShowLog = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public double LogHeight
+    {
+        get => _host.Settings.LogHeight;
+        set
+        {
+            _host.Settings.LogHeight = value;
+            OnPropertyChanged();
+        }
+    }
+
     internal CookieChoice? FindCookieChoice(string? id) =>
         CookieChoices.FirstOrDefault(c => c.Id == (id ?? Cookies.NoneId)) ?? CookieChoices.FirstOrDefault();
 

@@ -13,7 +13,7 @@ public enum AppTheme
 
 public partial class AppSettings : ObservableObject
 {
-    [ObservableProperty] private AppTheme _theme = AppTheme.Light;
+    [ObservableProperty] private AppTheme _theme = AppTheme.System;
 
     public ObservableCollection<Preset> Presets { get; set; } = [];
     public ObservableCollection<RoutingRule> Rules { get; set; } = [];
@@ -52,6 +52,12 @@ public partial class AppSettings : ObservableObject
 
     /// <summary>Cookie choice last picked on the Downloads tab; null = no cookies.</summary>
     [ObservableProperty] private string? _lastCookieId;
+
+    /// <summary>Whether the Downloads tab's log panel is open; open until the user closes it.</summary>
+    [ObservableProperty] private bool _showLog = true;
+
+    /// <summary>Height of the log panel's text, as last dragged by the user.</summary>
+    [ObservableProperty] private double _logHeight = 180;
 
     public Preset? FindPreset(string? id) => id is null ? null : Presets.FirstOrDefault(p => p.Id == id);
 

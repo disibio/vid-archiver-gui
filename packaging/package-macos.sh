@@ -2,10 +2,14 @@
 # Builds "Vid Archiver GUI.app" for macOS (Apple Silicon and Intel) and zips each one.
 #
 # Run this ON A MAC: Apple Silicon refuses to launch unsigned binaries, and the ad-hoc signature below
-# (codesign -s -) can only be applied on macOS. The result is not notarized, so on first launch users
-# right-click the app and choose Open (or allow it under System Settings > Privacy & Security).
+# (codesign -s -) can only be applied on macOS. The result is not notarized, so on first launch users allow it under
+# System Settings > Privacy & Security > Open Anyway (on macOS 14, right-click the app and choose Open).
 #
-# Usage: packaging/package-macos.sh            -> publish/macos/Vid-Archiver-GUI-<version>-osx-{arm64,x64}.zip
+# Usage: packaging/package-macos.sh
+#   -> publish/macos/Vid-Archiver-GUI-<version>-macOS-Apple-Silicon.zip  (osx-arm64)
+#   -> publish/macos/Vid-Archiver-GUI-<version>-macOS-Intel.zip          (osx-x64)
+# The zips are named for what people see under Apple menu > About This Mac ("Chip: Apple M…" or "Processor: Intel…"),
+# not the .NET runtime IDs, so it's obvious which one to download. Upload both to the release.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -15,6 +19,10 @@ rm -rf "$DEST"
 mkdir -p "$DEST"
 
 for RID in osx-arm64 osx-x64; do
+  case "$RID" in
+    osx-arm64) ZIP="Vid-Archiver-GUI-$VERSION-macOS-Apple-Silicon.zip" ;;
+    osx-x64)   ZIP="Vid-Archiver-GUI-$VERSION-macOS-Intel.zip" ;;
+  esac
   BUILD="$DEST/$RID"
   APP="$BUILD/Vid Archiver GUI.app"
   dotnet publish src/VidArchiverGui.App -c Release -r "$RID" --self-contained -o "$BUILD/files"
@@ -46,10 +54,10 @@ EOF
 
   if [[ "$(uname)" == "Darwin" ]]; then
     codesign --force --deep --sign - "$APP"
-    ditto -c -k --keepParent "$APP" "$DEST/Vid-Archiver-GUI-$VERSION-$RID.zip"
+    ditto -c -k --keepParent "$APP" "$DEST/$ZIP"
   else
     echo "warning: not on macOS; the app is unsigned and won't launch on Apple Silicon until signed on a Mac" >&2
-    (cd "$BUILD" && zip -qry "../Vid-Archiver-GUI-$VERSION-$RID.zip" "Vid Archiver GUI.app")
+    (cd "$BUILD" && zip -qry "../$ZIP" "Vid Archiver GUI.app")
   fi
   rm -rf "$BUILD/files"
 done

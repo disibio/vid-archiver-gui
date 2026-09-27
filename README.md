@@ -170,7 +170,8 @@ uses those.
 
 Windows 10 and 11, macOS 14 or newer (Apple Silicon and Intel), and 64-bit Linux (x64 or arm64, glibc). These come
 from what .NET 10 supports. I've tested Linux on Ubuntu 22.04 under WSLg, including setup and a full download.
-I haven't been able to test on a real Mac yet.
+On a Mac I've tested building, packaging and starting it on Apple Silicon with macOS 26 (the Intel build under
+Rosetta).
 
 Settings are stored in:
 
@@ -196,9 +197,11 @@ The packaged builds are self-contained, so people don't need .NET installed.
 | Windows | `run.bat publish` | `publish/win-x64/VidArchiverGui.exe` plus license files |
 | Linux | `packaging/package-linux.sh` (on Linux, or in WSL using the Windows `dotnet.exe`) | `publish/linux/*.tar.gz` for x64 and arm64. Unpack and run `./install.sh` to add a menu entry, or `./install.sh --remove` to uninstall. |
 | Microsoft Store | `powershell -ExecutionPolicy Bypass -File packaging\package-msix.ps1` (needs the Windows SDK; fill in `packaging/msix/store-identity.json` from Partner Center first, and add `-Sign` for a local test install) | `publish/msix/*.msixbundle` for x64 and arm64. Listing text is in `packaging/msix/store-listing.md`. |
-| macOS | `packaging/package-macos.sh`, run on a Mac (Apple Silicon needs the ad-hoc signature it applies) | `publish/macos/*.zip` with `Vid Archiver GUI.app` for arm64 and x64 |
+| macOS | `packaging/package-macos.sh`, run on a Mac (Apple Silicon needs the ad-hoc signature it applies) | `publish/macos/Vid-Archiver-GUI-<version>-macOS-Apple-Silicon.zip` and `…-macOS-Intel.zip`, each with `Vid Archiver GUI.app`. Upload both to the release. |
 
-The macOS app isn't notarized, so the first time you open it, right-click it and choose **Open**.
+The macOS app isn't notarized, so macOS blocks it the first time. On macOS 15 or newer, try to open it once, then go
+to **System Settings > Privacy & Security**, scroll down and click **Open Anyway**. On macOS 14, right-click the app
+and choose **Open** instead.
 
 ### Project layout
 

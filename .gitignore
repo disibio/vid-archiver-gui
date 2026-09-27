@@ -6,3 +6,4 @@ obj/
 publish/
 TestResults/
 __pycache__/
+.DS_Store

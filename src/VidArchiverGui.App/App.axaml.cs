@@ -21,7 +21,25 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            var store = new SettingsStore(AppPaths.SettingsFile);
+            var settingsFile = AppPaths.SettingsFile;
+#if DEBUG
+            // Snapshot runs work on a copy, so they never change the real settings.
+            if (Environment.GetEnvironmentVariable("VIDARCHIVERGUI_SNAPSHOT_DIR") is { Length: > 0 })
+            {
+                var copy = Path.Combine(Path.GetTempPath(), "vidarchivergui-snapshot-settings.json");
+                if (File.Exists(settingsFile))
+                {
+                    File.Copy(settingsFile, copy, overwrite: true);
+                }
+                else
+                {
+                    File.Delete(copy);
+                }
+
+                settingsFile = copy;
+            }
+#endif
+            var store = new SettingsStore(settingsFile);
             var settings = store.Load();
             ApplyTheme(settings.Theme);
             settings.PropertyChanged += (_, e) =>
@@ -72,6 +90,15 @@ public partial class App : Application
     };
 
 #if DEBUG
+    /// <summary>Waits (up to 2 minutes) until first-run setup is done and no checklist row is still checking.</summary>
+    private static async Task WaitForSetupCheckAsync(MainWindowViewModel vm)
+    {
+        for (var i = 0; i < 240 && (vm.Setup.Items.Count == 0 || vm.Setup.Items.Any(r => r.IsChecking) || vm.Tools.IsBusy); i++)
+        {
+            await Task.Delay(500);
+        }
+    }
+
     private static async Task SnapshotTabsAsync(Window window, MainWindowViewModel vm, string dir, IClassicDesktopStyleApplicationLifetime desktop)
     {
         Directory.CreateDirectory(dir);
@@ -86,7 +113,19 @@ public partial class App : Application
             vm.Downloads.UrlInput = urls.Replace(';', '\n');
             vm.Downloads.AddCommand.Execute(null);
         }
+        // Ignore the mouse, so wherever the pointer happens to be doesn't show up as a hover highlight.
+        if (window.Content is Control content)
+        {
+            content.IsHitTestVisible = false;
+        }
+
         await Task.Delay(9000); // let tool detection and metadata lookups finish
+        for (var i = 0; i < 120 && vm.Downloads.Items.Any(x => x.State == DownloadState.Resolving); i++)
+        {
+            await Task.Delay(500);
+        }
+
+        await WaitForSetupCheckAsync(vm);
         if (Environment.GetEnvironmentVariable("VIDARCHIVERGUI_SNAPSHOT_COPY") == "1" && vm.Downloads.Items.FirstOrDefault() is { } first)
         {
             await first.CopyUrlCommand.ExecuteAsync(null);
@@ -95,10 +134,7 @@ public partial class App : Application
         if (Environment.GetEnvironmentVariable("VIDARCHIVERGUI_SNAPSHOT_SETUP") == "1")
         {
             // Fresh-machine run: wait for first-run setup, capture the banner, press "Fix now", capture again.
-            for (var i = 0; i < 240 && (vm.Setup.Items.Count == 0 || vm.Tools.IsBusy); i++)
-            {
-                await Task.Delay(500);
-            }
+            await WaitForSetupCheckAsync(vm);
 
             await SaveTabAsync(window, vm, 0, Path.Combine(dir, "setup-before-downloads.png"));
             await SaveTabAsync(window, vm, 3, Path.Combine(dir, "setup-before-settings.png"));

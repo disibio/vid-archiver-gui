@@ -7,12 +7,18 @@
   <Grid ColumnDefinitions="280,*">
     <DockPanel>
       <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="4" Margin="0,0,0,6">
-        <Button Classes="small" Content="Add" Command="{Binding AddPresetCommand}" />
+        <!-- Add = a blank preset; the arrow offers the built-in presets (filled in by the code-behind). -->
+        <SplitButton x:Name="AddButton" Classes="small" Content="Add" Command="{Binding AddPresetCommand}"
+                     ToolTip.Tip="Add a blank preset, or use the arrow to add one of the built-in presets" />
         <Button Classes="small" Content="Duplicate" Command="{Binding DuplicatePresetCommand}" />
         <Button Classes="small" Content="Delete" Command="{Binding DeletePresetCommand}" />
         <Button Classes="small" Content="Set default" Command="{Binding SetDefaultCommand}" />
       </StackPanel>
       <TextBlock DockPanel.Dock="Top" Text="{Binding DefaultPresetText}" Classes="hint" Margin="0,0,0,6" />
+      <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,6" IsVisible="{Binding CanUndoDelete}">
+        <TextBlock Text="{Binding UndoText}" FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center" />
+        <Button Grid.Column="1" Classes="small" Content="Undo" Command="{Binding UndoDeleteCommand}" Margin="6,0,0,0" />
+      </Grid>
       <ListBox ItemsSource="{Binding Presets}" SelectedItem="{Binding SelectedPreset}">
         <ListBox.ItemTemplate>
           <DataTemplate x:DataType="m:Preset">

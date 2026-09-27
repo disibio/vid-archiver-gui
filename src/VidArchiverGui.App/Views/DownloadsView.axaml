@@ -119,9 +119,22 @@
     </ListBox>
 
     <!-- Log of the selected item -->
-    <Expander Grid.Row="3" Header="Log (selected item)" Margin="0,8,0,0" HorizontalAlignment="Stretch">
-      <TextBox Text="{Binding SelectedItem.LogText, FallbackValue=''}" IsReadOnly="True" Classes="mono" Height="180"
-               TextWrapping="NoWrap" AcceptsReturn="True" CaretIndex="{Binding SelectedItem.LogText.Length, FallbackValue=0}" />
-    </Expander>
+    <DockPanel Grid.Row="3">
+      <!-- Drag to resize the log (only while it's open). -->
+      <Thumb DockPanel.Dock="Top" Height="8" Cursor="SizeNorthSouth" Background="Transparent" IsVisible="{Binding ShowLog}"
+             DragDelta="OnLogResize" ToolTip.Tip="Drag to resize the log">
+        <Thumb.Template>
+          <ControlTemplate>
+            <Border Background="{TemplateBinding Background}">
+              <Border Width="40" Height="3" CornerRadius="2" Background="#60808080" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+          </ControlTemplate>
+        </Thumb.Template>
+      </Thumb>
+      <Expander Classes="drawer" Header="Log (selected item)" IsExpanded="{Binding ShowLog}" Margin="0,8,0,0" HorizontalAlignment="Stretch">
+        <TextBox x:Name="LogBox" Text="{Binding SelectedItem.LogText, FallbackValue=''}" IsReadOnly="True" Classes="mono" Height="{Binding LogHeight}"
+                 TextWrapping="NoWrap" AcceptsReturn="True" CaretIndex="{Binding SelectedItem.LogText.Length, FallbackValue=0}" />
+      </Expander>
+    </DockPanel>
   </Grid>
 </UserControl>

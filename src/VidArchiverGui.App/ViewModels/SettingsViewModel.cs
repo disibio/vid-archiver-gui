@@ -97,7 +97,8 @@ public partial class SettingsViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsIdle))]
     private bool _isBusy;
 
-    [ObservableProperty] private double _busyProgress;
+    /// <summary>What the current install/update is doing, with a Cancel button.</summary>
+    public BusyStatusViewModel Busy { get; } = new();
 
     public bool IsIdle => !IsBusy;
     public bool HasSelection => SelectedEngine is not null;
@@ -112,46 +113,58 @@ public partial class SettingsViewModel : ObservableObject
     /// <summary>First-run install, the daily update check, then the setup checklist.</summary>
     public async Task InitializeAsync()
     {
+        Setup.ShowWaiting(VersionCheckText());
         await RefreshToolsAsync();
 
-        // Prefer our own copy over whatever is on PATH (e.g. an outdated pip install) so it can be kept current.
-        var engine = Settings.DefaultEngine;
-        if (engine.IsManaged && !ToolManager.IsInstalledByApp(engine))
+        // The installs below skip their usual refresh; one runs at the end instead.
+        _initializing = true;
+        try
         {
-            await InstallOrUpdate(engine, auto: false);
+            // Prefer our own copy over whatever is on PATH (e.g. an outdated pip install) so it can be kept current.
+            var engine = Settings.DefaultEngine;
+            if (engine.IsManaged && !ToolManager.IsInstalledByApp(engine))
+            {
+                await InstallOrUpdate(engine, auto: false);
+            }
+            else if (Settings.AutoUpdateYtDlp
+                     && (Settings.LastYtDlpUpdateCheck is null || DateTimeOffset.Now - Settings.LastYtDlpUpdateCheck > TimeSpan.FromHours(24)))
+            {
+                foreach (var e in Settings.Engines.Where(ToolManager.IsInstalledByApp).ToList())
+                {
+                    await InstallOrUpdate(e, auto: true);
+                }
+
+                if (ToolManager.IsDenoInstalledByApp)
+                {
+                    await UpdateDenoIfNewer();
+                }
+
+                Settings.LastYtDlpUpdateCheck = DateTimeOffset.Now;
+                host.Save(quiet: true);
+            }
         }
-        else if (Settings.AutoUpdateYtDlp
-                 && (Settings.LastYtDlpUpdateCheck is null || DateTimeOffset.Now - Settings.LastYtDlpUpdateCheck > TimeSpan.FromHours(24)))
+        finally
         {
-            foreach (var e in Settings.Engines.Where(ToolManager.IsInstalledByApp).ToList())
-            {
-                await InstallOrUpdate(e, auto: true);
-            }
-
-            if (ToolManager.IsDenoInstalledByApp)
-            {
-                await UpdateDenoIfNewer();
-            }
-
-            Settings.LastYtDlpUpdateCheck = DateTimeOffset.Now;
-            host.Save(quiet: true);
+            _initializing = false;
         }
 
-        await Setup.CheckAsync();
+        await RefreshAsync();
     }
+
+    private bool _initializing;
 
     private async Task UpdateDenoIfNewer()
     {
-        await RunBusy("Checking for deno updates", async progress =>
+        await RunBusy("Checking for deno updates", async (progress, ct) =>
         {
-            var current = await host.Tools.GetDenoVersionAsync(ToolManager.ManagedDenoPath);
-            var latest = await host.Tools.GetLatestDenoVersionAsync();
+            var current = await host.Tools.GetDenoVersionAsync(ToolManager.ManagedDenoPath, ct);
+            var latest = await host.Tools.GetLatestDenoVersionAsync(ct);
             if (!ToolManager.IsNewer(latest, current))
             {
                 return $"deno is up to date ({current}).";
             }
 
-            await host.Tools.InstallDenoAsync(progress);
+            await host.Tools.InstallDenoAsync(progress, ct);
             return $"deno updated {current} → {latest}.";
         }, quietOnError: true);
     }
@@ -160,8 +173,21 @@ public partial class SettingsViewModel : ObservableObject
     [RelayCommand]
     private async Task RefreshAsync()
     {
+        Setup.ShowWaiting(VersionCheckText());
         await RefreshToolsAsync();
         await Setup.CheckAsync();
+    }
+
+    /// <summary>What the checklist says while RefreshToolsAsync asks each installed downloader for its version.</summary>
+    private string VersionCheckText()
+    {
+        var installed = Settings.Engines.Where(e => ToolManager.LocatePath(e) is not null).Select(e => e.Name).ToList();
+        return installed switch
+        {
+            [] => "looking for installed downloaders…",
+            [var one] => $"checking which version of {one} is installed…",
+            _ => $"checking which versions of {string.Join(", ", installed[..^1])} and {installed[^1]} are installed…",
+        };
     }
 
     private async Task RefreshToolsAsync()
@@ -194,17 +220,23 @@ public partial class SettingsViewModel : ObservableObject
 
         SelectedEngine = Engines.FirstOrDefault(r => r.Engine.Id == selectedId) ?? Engines.FirstOrDefault(r => r.IsDefault);
 
-        foreach (var row in rows)
+        // All at once: each "--version" can take several seconds (see ToolManager.GetVersionAsync).
+        await Task.WhenAll(rows.Select(async row =>
         {
             var path = ToolManager.LocatePath(row.Engine);
             row.IsAvailable = path is not null;
-            row.Status = path is null
-                ? (row.Engine.IsManaged ? "Not installed" : "Executable not found")
-                : $"{await host.Tools.GetVersionAsync(path) ?? "version unknown"}  —  {path}";
+            if (path is null)
+            {
+                row.Status = row.Engine.IsManaged ? "Not installed" : "Executable not found";
+                return;
+            }
+
+            row.Status = $"Running \"{Path.GetFileName(path)} --version\"…  —  {path}";
+            row.Status = $"{await host.Tools.GetVersionAsync(path) ?? "version unknown (--version failed or didn't answer)"}  —  {path}";
             row.PreviousVersion = ToolManager.CanRollback(row.Engine)
                 ? await host.Tools.GetVersionAsync(ToolManager.PreviousPath(row.Engine)) ?? "previous version"
                 : null;
-        }
+        }));
 
         var ff = host.Tools.ResolveFfmpeg();
         FfmpegStatus = ff is null
@@ -221,7 +253,7 @@ public partial class SettingsViewModel : ObservableObject
         {
             if (ToolManager.LocatePath(engine) is { } exe)
             {
-                await RunBusy($"Running {engine.Name} -U", async _ => await host.Tools.SelfUpdateAsync(exe));
+                await RunBusy($"Running {engine.Name} -U", async (_, ct) => await host.Tools.SelfUpdateAsync(exe, ct));
             }
 
             return;
@@ -229,18 +261,18 @@ public partial class SettingsViewModel : ObservableObject
 
         if (!ToolManager.IsInstalledByApp(engine))
         {
-            await RunBusy($"Installing {engine.Name}", async progress =>
+            await RunBusy($"Installing {engine.Name}", async (progress, ct) =>
             {
-                await host.Tools.InstallAsync(engine, progress);
+                await host.Tools.InstallAsync(engine, progress, ct);
                 return $"{engine.Name} installed to {ToolManager.ManagedPath(engine)}";
             });
             return;
         }
 
-        await RunBusy($"Checking for {engine.Name} updates", async progress =>
+        await RunBusy($"Checking for {engine.Name} updates", async (progress, ct) =>
         {
-            var current = await host.Tools.GetVersionAsync(ToolManager.ManagedPath(engine));
-            var latest = await host.Tools.GetLatestVersionAsync(engine);
+            var current = await host.Tools.GetVersionAsync(ToolManager.ManagedPath(engine), ct);
+            var latest = await host.Tools.GetLatestVersionAsync(engine, ct);
             if (!ToolManager.IsNewer(latest, current))
             {
                 return $"{engine.Name} is up to date ({current}).";
@@ -251,7 +283,7 @@ public partial class SettingsViewModel : ObservableObject
                 return $"{engine.Name} {latest} was rolled back, so it isn't re-installed automatically. Use \"Check for update\" to install it anyway.";
             }
 
-            await host.Tools.InstallAsync(engine, progress);
+            await host.Tools.InstallAsync(engine, progress, ct);
             if (Settings.SkippedVersions.Remove(engine.Id))
             {
                 host.Save(quiet: true);
@@ -269,7 +301,7 @@ public partial class SettingsViewModel : ObservableObject
             return;
         }
 
-        await RunBusy($"Rolling back {engine.Name}", async _ =>
+        await RunBusy($"Rolling back {engine.Name}", async (_, _) =>
         {
             var from = await host.Tools.GetVersionAsync(ToolManager.ManagedPath(engine));
             await host.Tools.RollbackAsync(engine);
@@ -291,9 +323,9 @@ public partial class SettingsViewModel : ObservableObject
             return;
         }
 
-        await RunBusy($"Re-downloading {engine.Name}", async progress =>
+        await RunBusy($"Re-downloading {engine.Name}", async (progress, ct) =>
         {
-            await host.Tools.InstallAsync(engine, progress);
+            await host.Tools.InstallAsync(engine, progress, ct);
             return $"{engine.Name} re-downloaded.";
         });
     }
@@ -460,9 +492,9 @@ public partial class SettingsViewModel : ObservableObject
     [RelayCommand]
     private async Task DownloadFfmpeg()
     {
-        await RunBusy("Downloading ffmpeg (≈100 MB)", async progress =>
+        await RunBusy("Downloading ffmpeg (≈100 MB)", async (progress, ct) =>
         {
-            await host.Tools.DownloadFfmpegAsync(progress);
+            await host.Tools.DownloadFfmpegAsync(progress, ct);
             return "ffmpeg installed to " + AppPaths.BinDir;
         });
     }
@@ -490,7 +522,7 @@ public partial class SettingsViewModel : ObservableObject
     [RelayCommand]
     private void Save() => host.Save();
 
-    private async Task RunBusy(string what, Func<IProgress<double>, Task<string>> action, bool quietOnError = false)
+    private async Task RunBusy(string what, Func<IProgress<TransferProgress>, CancellationToken, Task<string>> action, bool quietOnError = false)
     {
         if (IsBusy)
         {
@@ -498,13 +530,19 @@ public partial class SettingsViewModel : ObservableObject
         }
 
         IsBusy = true;
-        BusyProgress = 0;
-        host.SetStatus(what + "…");
+        // The live text goes to the status bar too, so it's visible from every tab.
+        var ct = Busy.Start(what, host.SetStatus);
+        Setup.ShowWaiting(what);
         try
         {
-            var message = await action(new Progress<double>(p => BusyProgress = p * 100));
+            var message = await action(Busy.Progress, ct);
             ToolOutput = message;
             host.SetStatus(message.Split('\n').Last());
+        }
+        catch (OperationCanceledException) when (Busy.WasCancelled)
+        {
+            ToolOutput = $"{what}: cancelled.";
+            host.SetStatus(ToolOutput);
         }
         catch (Exception e)
         {
@@ -516,8 +554,12 @@ public partial class SettingsViewModel : ObservableObject
         }
         finally
         {
+            Busy.Stop();
             IsBusy = false;
-            await RefreshAsync();
+            if (!_initializing)
+            {
+                await RefreshAsync();
+            }
         }
     }
 }

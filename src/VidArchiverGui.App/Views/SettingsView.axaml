@@ -16,6 +16,21 @@
         <TextBlock Text="Setup check" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
       </DockPanel>
       <TextBlock Classes="hint" Text="What downloads need on this computer. Anything missing can usually be installed with one click." />
+      <!-- Installs, updates and checklist fixes: shown at the top so Cancel is easy to find. -->
+      <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding Setup.Busy.IsActive}">
+        <StackPanel VerticalAlignment="Center" Spacing="2">
+          <TextBlock Text="{Binding Setup.Busy.Text}" FontSize="12" TextWrapping="Wrap" />
+          <ProgressBar Value="{Binding Setup.Busy.Percent}" IsIndeterminate="{Binding Setup.Busy.IsIndeterminate}" />
+        </StackPanel>
+        <Button Grid.Column="1" Content="Cancel" Command="{Binding Setup.Busy.CancelCommand}" VerticalAlignment="Center" Margin="8,0,0,0" />
+      </Grid>
+      <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding Busy.IsActive}">
+        <StackPanel VerticalAlignment="Center" Spacing="2">
+          <TextBlock Text="{Binding Busy.Text}" FontSize="12" TextWrapping="Wrap" />
+          <ProgressBar Value="{Binding Busy.Percent}" IsIndeterminate="{Binding Busy.IsIndeterminate}" />
+        </StackPanel>
+        <Button Grid.Column="1" Content="Cancel" Command="{Binding Busy.CancelCommand}" VerticalAlignment="Center" Margin="8,0,0,0" />
+      </Grid>
       <ItemsControl ItemsSource="{Binding Setup.Items}">
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="vm:SetupItemViewModel">
@@ -25,11 +40,13 @@
                   <TextBlock Text="✔" Foreground="#3FA34D" FontWeight="Bold" IsVisible="{Binding IsOk}" />
                   <TextBlock Text="⚠" Foreground="#D99A00" FontWeight="Bold" IsVisible="{Binding IsWarning}" />
                   <TextBlock Text="✖" Foreground="#E0524A" FontWeight="Bold" IsVisible="{Binding IsMissing}" />
+                  <!-- ◌ rather than an hourglass emoji: DejaVu Sans (stock Linux) has no ⏳ glyph. -->
+                  <TextBlock Text="◌" FontWeight="Bold" Opacity="0.7" IsVisible="{Binding IsChecking}" ToolTip.Tip="Still checking" />
                 </Panel>
                 <StackPanel Grid.Column="1" Spacing="2">
                   <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
                   <SelectableTextBlock Text="{Binding Detail}" TextWrapping="Wrap" FontSize="12" />
-                  <TextBlock Text="{Binding Why}" Classes="hint" IsVisible="{Binding !IsOk}" />
+                  <TextBlock Text="{Binding Why}" Classes="hint" IsVisible="{Binding ShowWhy}" />
                   <SelectableTextBlock Text="{Binding Command}" IsVisible="{Binding HasCommand}" FontSize="12"
                                        FontFamily="Cascadia Mono, Consolas, Menlo, DejaVu Sans Mono, monospace" />
                 </StackPanel>
@@ -41,7 +58,6 @@
           </DataTemplate>
         </ItemsControl.ItemTemplate>
       </ItemsControl>
-      <ProgressBar Value="{Binding Setup.Progress}" IsVisible="{Binding Setup.IsBusy}" />
       <SelectableTextBlock Text="{Binding Setup.Message}" FontSize="12" TextWrapping="Wrap" />
 
       <TextBlock Text="Appearance" Classes="h2" />
@@ -102,7 +118,6 @@
         <Button Grid.Column="4" Content="Add" Command="{Binding AddCustomEngineCommand}" Margin="4,0,0,0" />
       </Grid>
 
-      <ProgressBar Value="{Binding BusyProgress}" IsVisible="{Binding IsBusy}" Margin="0,8,0,0" />
       <SelectableTextBlock Text="{Binding ToolOutput}" FontSize="12" TextWrapping="Wrap" />
 
       <TextBlock Text="Cookies" Classes="h2" />

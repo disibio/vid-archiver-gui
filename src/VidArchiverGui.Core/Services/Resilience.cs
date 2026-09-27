@@ -125,7 +125,8 @@ public static class Resilience
                     if (engine.IsManaged && !ToolManager.IsInstalledByApp(engine) && ToolManager.LocatePath(engine) is null)
                     {
                         status($"Installing {engine.Name} to try it…");
-                        await tools.EnsureInstalledAsync(engine, ct);
+                        await tools.EnsureInstalledAsync(engine, ct,
+                            new Progress<TransferProgress>(p => status($"Installing {engine.Name} to try it: {p}")));
                     }
                     resolved = tools.Resolve(engine);
                 }

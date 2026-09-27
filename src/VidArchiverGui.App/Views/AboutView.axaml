@@ -24,13 +24,6 @@
         <HyperlinkButton Content="Apache License 2.0" NavigateUri="https://www.apache.org/licenses/LICENSE-2.0" />
       </StackPanel>
 
-      <Border BorderBrush="{DynamicResource SystemControlHighlightAccentBrush}" BorderThickness="1" CornerRadius="4" Padding="12,8" Margin="0,10,0,0">
-        <StackPanel Spacing="4">
-          <SelectableTextBlock Text="Written by AI" FontWeight="SemiBold" />
-          <SelectableTextBlock TextWrapping="Wrap" Text="{x:Static vm:AboutViewModel.AiNotice}" />
-        </StackPanel>
-      </Border>
-
       <SelectableTextBlock Text="Inspired by" Classes="h2" />
       <SelectableTextBlock TextWrapping="Wrap"
                  Text="Vid Archiver GUI is inspired by yt-dlg (youtube-dl-gui), the oleksis fork. It is an independent implementation; no code from that project is included." />
@@ -71,6 +64,8 @@
       <Expander Header="Third-party notices (full text)" IsExpanded="{Binding ShowNotices}" HorizontalAlignment="Stretch">
         <TextBox Text="{Binding NoticesText}" IsReadOnly="True" Classes="mono" Height="400" TextWrapping="NoWrap" AcceptsReturn="True" />
       </Expander>
+
+      <SelectableTextBlock Text="{x:Static vm:AboutViewModel.AiNotice}" Classes="hint" FontSize="11" TextWrapping="Wrap" Margin="0,12,0,0" />
     </StackPanel>
   </ScrollViewer>
 </UserControl>

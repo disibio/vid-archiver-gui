@@ -19,8 +19,13 @@
       <Grid ColumnDefinitions="*,Auto">
         <StackPanel VerticalAlignment="Center">
           <TextBlock Text="{Binding Setup.BannerText}" TextWrapping="Wrap" />
-          <TextBlock Text="{Binding Setup.Message}" FontSize="12" Opacity="0.75" IsVisible="{Binding Setup.IsBusy}" />
-          <ProgressBar Value="{Binding Setup.Progress}" IsVisible="{Binding Setup.IsBusy}" Margin="0,4,0,0" MaxWidth="400" HorizontalAlignment="Left" />
+          <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding Setup.Busy.IsActive}" Margin="0,4,0,0" MaxWidth="600" HorizontalAlignment="Left">
+            <StackPanel VerticalAlignment="Center" Spacing="2">
+              <TextBlock Text="{Binding Setup.Busy.Text}" FontSize="12" TextWrapping="Wrap" />
+              <ProgressBar Value="{Binding Setup.Busy.Percent}" IsIndeterminate="{Binding Setup.Busy.IsIndeterminate}" />
+            </StackPanel>
+            <Button Grid.Column="1" Content="Cancel" Command="{Binding Setup.Busy.CancelCommand}" VerticalAlignment="Center" Margin="8,0,0,0" />
+          </Grid>
         </StackPanel>
         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" Margin="12,0,0,0" VerticalAlignment="Center">
           <Button Content="Fix now" Classes="accent" Command="{Binding Setup.FixAllCommand}"
