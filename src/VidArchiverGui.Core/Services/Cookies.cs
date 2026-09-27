@@ -65,7 +65,7 @@ public static class Cookies
                 _ => [],
             };
         }
-        var config = Environment.GetEnvironmentVariable("XDG_CONFIG_HOME") is { Length: > 0 } x ? x : Path.Combine(home, ".config");
+        var config = AppPaths.UserConfigDir;
         return browser switch
         {
             "firefox" => [Path.Combine(home, ".mozilla", "firefox"), Path.Combine(home, "snap", "firefox", "common", ".mozilla", "firefox"),

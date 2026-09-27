@@ -1,0 +1,112 @@
+# Flatpak build of Vid Archiver GUI, as submitted to Flathub.
+#
+# Build and run locally (Linux or WSL, with org.flatpak.Builder installed from Flathub):
+#   flatpak run org.flatpak.Builder --user --install --force-clean build-dir io.github.disibio.vid-archiver-gui.yml
+#   flatpak run io.github.disibio.vid-archiver-gui
+#
+# Flathub builds without network access, so every NuGet package is listed in nuget-sources.json. Regenerate it
+# whenever package references change (see packaging/flatpak/update-nuget-sources.sh).
+id: io.github.disibio.vid-archiver-gui
+runtime: org.freedesktop.Platform
+runtime-version: '26.08'
+sdk: org.freedesktop.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.dotnet10
+command: vidarchivergui
+
+finish-args:
+  - --share=ipc
+  - --share=network
+  # Avalonia draws with X11 (XWayland on Wayland desktops).
+  - --socket=x11
+  - --device=dri
+  # Where downloads usually go, and external drives for archives. Any other folder works when it's picked with a
+  # Browse button (the file chooser portal grants access to it).
+  - --filesystem=xdg-download
+  - --filesystem=xdg-videos
+  - --filesystem=xdg-music
+  - --filesystem=xdg-documents
+  - --filesystem=/media
+  - --filesystem=/run/media
+  - --filesystem=/mnt
+  # Read-only, for yt-dlp's --cookies-from-browser (the Downloads tab's cookie choice).
+  - --filesystem=~/.mozilla/firefox:ro
+  - --filesystem=~/.config/mozilla/firefox:ro
+  - --filesystem=~/snap/firefox/common/.mozilla/firefox:ro
+  - --filesystem=~/.config/google-chrome:ro
+  - --filesystem=~/.config/chromium:ro
+  - --filesystem=~/snap/chromium/common/chromium:ro
+  - --filesystem=~/.config/naver-whale:ro
+  - --filesystem=~/.config/BraveSoftware/Brave-Browser:ro
+  - --filesystem=~/.config/microsoft-edge:ro
+  - --filesystem=~/.config/opera:ro
+  - --filesystem=~/.config/vivaldi:ro
+  # Chromium-based browsers keep their cookie encryption key in the keyring.
+  - --talk-name=org.freedesktop.secrets
+
+build-options:
+  append-path: /usr/lib/sdk/dotnet10/bin
+  append-ld-library-path: /usr/lib/sdk/dotnet10/lib
+  env:
+    DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
+    DOTNET_NOLOGO: 'true'
+  arch:
+    x86_64:
+      env:
+        RUNTIME: linux-x64
+    aarch64:
+      env:
+        RUNTIME: linux-arm64
+
+modules:
+  # yt-dlp uses deno to solve some sites' JavaScript challenges.
+  - name: deno
+    buildsystem: simple
+    build-commands:
+      - install -Dm755 deno /app/bin/deno
+    sources:
+      - type: archive
+        url: https://github.com/denoland/deno/releases/download/v2.9.7/deno-x86_64-unknown-linux-gnu.zip
+        sha256: c6527f24f4b16031d3ae4fa9f658d5f11534c8d84ce7dc8502420280919c3490
+        only-arches: [x86_64]
+      - type: archive
+        url: https://github.com/denoland/deno/releases/download/v2.9.7/deno-aarch64-unknown-linux-gnu.zip
+        sha256: c832298b1ad4422481334855f6003e0f54145762c5a134f20a489511d2f65bbf
+        only-arches: [aarch64]
+
+  # Merges video and audio and embeds thumbnails/metadata. A month-end BtbN build: those are kept for about two years,
+  # the daily ones only for a couple of weeks.
+  - name: ffmpeg
+    buildsystem: simple
+    build-commands:
+      - install -Dm755 bin/ffmpeg bin/ffprobe -t /app/bin
+    sources:
+      - type: archive
+        url: https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-08-31-13-27/ffmpeg-n8.1.2-50-g1a748fe2cd-linux64-gpl-8.1.tar.xz
+        sha256: c733b4b2951e5957e15505f788b2c65a7a41b6da4b289e295852cc38079b4d2b
+        only-arches: [x86_64]
+      - type: archive
+        url: https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-08-31-13-27/ffmpeg-n8.1.2-50-g1a748fe2cd-linuxarm64-gpl-8.1.tar.xz
+        sha256: ae5da4f51b9052390f414005f8ab26c1eed1268f327cce7cb79aa076b29bd66e
+        only-arches: [aarch64]
+
+  - name: vidarchivergui
+    buildsystem: simple
+    build-commands:
+      - dotnet publish src/VidArchiverGui.App -c Release -r $RUNTIME --self-contained --source ./nuget-sources
+        -p:PublishSingleFile=false -o /app/lib/vidarchivergui
+      - mkdir -p /app/bin
+      - ln -s ../lib/vidarchivergui/VidArchiverGui /app/bin/vidarchivergui
+      - install -Dm644 io.github.disibio.vid-archiver-gui.desktop -t /app/share/applications
+      - install -Dm644 io.github.disibio.vid-archiver-gui.metainfo.xml -t /app/share/metainfo
+      - install -Dm644 src/VidArchiverGui.App/Assets/icon.png /app/share/icons/hicolor/512x512/apps/io.github.disibio.vid-archiver-gui.png
+    sources:
+      - type: git
+        url: https://github.com/disibio/vid-archiver-gui.git
+        tag: v1.0.0
+        commit: 01004040c664a522cba176453bd2fd87e8a6d191
+      - nuget-sources.json
+      - type: file
+        path: io.github.disibio.vid-archiver-gui.desktop
+      - type: file
+        path: io.github.disibio.vid-archiver-gui.metainfo.xml

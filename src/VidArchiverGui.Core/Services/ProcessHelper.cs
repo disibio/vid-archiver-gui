@@ -28,6 +28,12 @@ public static class ProcessHelper
         psi.Environment["PYTHONUTF8"] = "1";
         // Child tools (yt-dlp looking for deno/ffmpeg) must search the same places we do.
         psi.Environment["PATH"] = string.Join(Path.PathSeparator, SearchPath());
+        if (AppPaths.IsFlatpak)
+        {
+            // yt-dlp's --cookies-from-browser finds Chrome-family profiles through XDG_CONFIG_HOME, which the sandbox
+            // points at its own folder.
+            psi.Environment["XDG_CONFIG_HOME"] = AppPaths.UserConfigDir;
+        }
         return psi;
     }
 

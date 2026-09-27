@@ -10,6 +10,22 @@ public static class AppPaths
 
     public static bool IsPackaged => PackageFamilyName is not null;
 
+    /// <summary>Running as a Flatpak (e.g. from Flathub).</summary>
+    public static bool IsFlatpak { get; } = Environment.GetEnvironmentVariable("FLATPAK_ID") is { Length: > 0 };
+
+    /// <summary>
+    /// The user's ~/.config (or $XDG_CONFIG_HOME), where Linux browsers keep their profiles. Inside a Flatpak,
+    /// XDG_CONFIG_HOME points at the sandbox's own folder instead, so the real one is used.
+    /// </summary>
+    public static string UserConfigDir
+    {
+        get
+        {
+            var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            return !IsFlatpak && Environment.GetEnvironmentVariable("XDG_CONFIG_HOME") is { Length: > 0 } x ? x : Path.Combine(home, ".config");
+        }
+    }
+
     /// <summary>
     /// Per-user data folder (settings, managed yt-dlp/ffmpeg). If a file named "portable.txt" sits next to the
     /// executable, data is kept beside the executable instead. Store (MSIX) installs use the package's own folder.

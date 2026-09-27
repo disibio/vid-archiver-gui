@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Vid Archiver GUI
+Comment=Download with yt-dlp and file everything into the right folder
+Exec=vidarchivergui
+Icon=io.github.disibio.vid-archiver-gui
+Terminal=false
+Categories=AudioVideo;Video;
+Keywords=yt-dlp;youtube-dl;download;video;archive;
+StartupWMClass=VidArchiverGui

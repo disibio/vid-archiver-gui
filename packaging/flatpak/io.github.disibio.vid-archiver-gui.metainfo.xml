@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.disibio.vid-archiver-gui</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>Apache-2.0</project_license>
+
+  <name>Vid Archiver GUI</name>
+  <summary>Download with yt-dlp and file everything into the right folder</summary>
+  <developer id="io.github.disibio">
+    <name>disibio</name>
+  </developer>
+
+  <description>
+    <p>
+      Vid Archiver GUI is a desktop front end for yt-dlp, the open-source media downloader. Paste links, choose a
+      preset and click Start; there's no command line.
+    </p>
+    <p>
+      Folder rules pick the destination folder from the site, channel, playlist, title or any other field yt-dlp
+      reports, so every download is filed into the right place automatically.
+    </p>
+    <ul>
+      <li>Presets are plain yt-dlp options: paste the command you already use</li>
+      <li>Queue many links and run several downloads at once</li>
+      <li>Automatic retries, and a gentle mode that paces requests for large archive jobs</li>
+      <li>Keeps yt-dlp up to date, with one-click rollback</li>
+      <li>Light and dark themes</li>
+    </ul>
+    <p>
+      On first start the app downloads yt-dlp from its official releases and checks it against the published
+      checksums. Please respect copyright and each site's terms of service.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">io.github.disibio.vid-archiver-gui.desktop</launchable>
+
+  <screenshots>
+    <screenshot type="default">
+      <caption>Downloads, each filed into a folder by a rule</caption>
+      <image>https://raw.githubusercontent.com/disibio/vid-archiver-gui/v1.0.0/docs/screenshots/downloads-light.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Downloads in the dark theme</caption>
+      <image>https://raw.githubusercontent.com/disibio/vid-archiver-gui/v1.0.0/docs/screenshots/downloads.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Folder rules decide where each download goes</caption>
+      <image>https://raw.githubusercontent.com/disibio/vid-archiver-gui/v1.0.0/docs/screenshots/folder-rules.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Presets are plain yt-dlp options</caption>
+      <image>https://raw.githubusercontent.com/disibio/vid-archiver-gui/v1.0.0/docs/screenshots/presets.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Settings and the setup check</caption>
+      <image>https://raw.githubusercontent.com/disibio/vid-archiver-gui/v1.0.0/docs/screenshots/settings.png</image>
+    </screenshot>
+  </screenshots>
+
+  <url type="homepage">https://disibio.github.io/vid-archiver-gui/</url>
+  <url type="bugtracker">https://github.com/disibio/vid-archiver-gui/issues</url>
+  <url type="vcs-browser">https://github.com/disibio/vid-archiver-gui</url>
+
+  <branding>
+    <color type="primary" scheme_preference="light">#f5c9a3</color>
+    <color type="primary" scheme_preference="dark">#7a3a08</color>
+  </branding>
+
+  <content_rating type="oars-1.1" />
+
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+  </supports>
+  <requires>
+    <display_length compare="ge">768</display_length>
+  </requires>
+
+  <releases>
+    <release version="1.0.0" date="2026-09-27">
+      <url type="details">https://github.com/disibio/vid-archiver-gui/releases/tag/v1.0.0</url>
+      <description>
+        <p>First stable release.</p>
+      </description>
+    </release>
+  </releases>
+</component>

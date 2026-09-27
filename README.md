@@ -198,6 +198,7 @@ The packaged builds are self-contained, so people don't need .NET installed.
 | Linux | `packaging/package-linux.sh` (on Linux, or in WSL using the Windows `dotnet.exe`) | `publish/linux/*.tar.gz` for x64 and arm64. Unpack and run `./install.sh` to add a menu entry, or `./install.sh --remove` to uninstall. |
 | Microsoft Store | `powershell -ExecutionPolicy Bypass -File packaging\package-msix.ps1` (needs the Windows SDK; fill in `packaging/msix/store-identity.json` from Partner Center first, and add `-Sign` for a local test install) | `publish/msix/*.msixbundle` for x64 and arm64. Listing text is in `packaging/msix/store-listing.md`. |
 | macOS | `packaging/package-macos.sh`, run on a Mac (Apple Silicon needs the ad-hoc signature it applies) | `publish/macos/Vid-Archiver-GUI-<version>-macOS-Apple-Silicon.zip` and `…-macOS-Intel.zip`, each with `Vid Archiver GUI.app`. Upload both to the release. |
+| Flatpak (Flathub) | `packaging/flatpak/io.github.disibio.vid-archiver-gui.yml`, built with `flatpak run org.flatpak.Builder` (see the comments at the top; run `packaging/flatpak/update-nuget-sources.sh` after changing NuGet packages) | The Flathub package, with ffmpeg and deno bundled |
 
 Releases can also be built by GitHub Actions (`.github/workflows/release.yml`): push a tag such as `v1.0.1` that matches `<Version>` in `Directory.Build.props`, and all of the above except the Store package is built on GitHub's Windows, Linux and Mac machines and attached to a draft release, with `SHA256SUMS.txt`.
 

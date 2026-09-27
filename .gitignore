@@ -7,3 +7,5 @@ publish/
 TestResults/
 __pycache__/
 .DS_Store
+.flatpak-builder/
+build-dir/
