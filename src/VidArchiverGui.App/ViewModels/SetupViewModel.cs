@@ -45,12 +45,17 @@ public partial class SetupItemViewModel(SetupItem item, SetupViewModel owner, st
     public string ActionText => item.Fix switch
     {
         SetupFix.InstallDownloader or SetupFix.InstallDeno or SetupFix.InstallFfmpeg => "Install",
-        SetupFix.CreateFolder => "Create folder",
+        SetupFix.MissingFolder => "Create folder",
         SetupFix.CopyCommand => "Copy command",
         _ => "",
     };
 
     [RelayCommand] private Task Fix() => owner.FixAsync(this);
+
+    /// <summary>A missing folder can also be swapped for one the user picks.</summary>
+    public bool CanChooseFolder => item.Fix == SetupFix.MissingFolder && item.Status != SetupStatus.Ok;
+
+    [RelayCommand] private Task ChooseFolder() => owner.ChooseFolderAsync(this);
 }
 
 /// <summary>The setup checklist: what downloads need on this machine, with one-click fixes where possible.</summary>
@@ -239,7 +244,7 @@ public partial class SetupViewModel(AppHost host) : ObservableObject
         var ct = Busy.Start(item.Item.Fix switch
         {
             SetupFix.InstallFfmpeg => "Installing ffmpeg (≈100 MB download)",
-            SetupFix.CreateFolder => $"Creating {item.Item.Folder}",
+            SetupFix.MissingFolder => $"Creating {item.Item.Folder}",
             _ => $"Installing {item.Name}",
         }, host.SetStatus);
         try
@@ -256,7 +261,7 @@ public partial class SetupViewModel(AppHost host) : ObservableObject
                 case SetupFix.InstallFfmpeg:
                     await host.Tools.DownloadFfmpegAsync(progress, ct);
                     break;
-                case SetupFix.CreateFolder:
+                case SetupFix.MissingFolder:
                     Directory.CreateDirectory(item.Item.Folder!);
                     break;
             }
@@ -282,6 +287,28 @@ public partial class SetupViewModel(AppHost host) : ObservableObject
             Busy.Stop();
             IsBusy = false;
         }
+    }
+
+    /// <summary>Instead of creating a missing archive folder, point the presets that use it at another folder.</summary>
+    public async Task ChooseFolderAsync(SetupItemViewModel item)
+    {
+        if (IsBusy || item.Item.Folder is not { } oldFolder
+            || await host.Dialogs.PickFolderAsync("Choose where to keep the download archive", oldFolder) is not { } newFolder)
+        {
+            return;
+        }
+
+        var changed = SetupChecker.MoveArchiveFolder(host.Settings.Presets, oldFolder, newFolder);
+        if (changed.Count == 0)
+        {
+            Message = $"{item.Name}: couldn't update the preset's --download-archive path. Edit it on the Presets tab.";
+            return;
+        }
+
+        host.Save(quiet: true);
+        Message = $"Archive folder changed to {newFolder} for {string.Join(", ", changed.Select(p => p.Name))}.";
+        host.SetStatus(Message);
+        await CheckAsync();
     }
 
     [RelayCommand] private void DismissBanner() => BannerDismissed = true;

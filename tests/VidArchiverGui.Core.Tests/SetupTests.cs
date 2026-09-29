@@ -56,6 +56,28 @@ public class SetupTests
         Assert.Equal(expected, ArgumentParser.GetOptionValue(ArgumentParser.Split(preset), "--download-archive"));
     }
 
+    [Theory]
+    [InlineData("--download-archive \"C:\\Old Place\\archive.txt\" --mtime", @"D:\New Place", "--download-archive \"D:\\New Place\\archive.txt\" --mtime")]
+    [InlineData("--download-archive C:\\Old\\archive.txt --mtime", @"D:\New Place", "--download-archive \"D:\\New Place\\archive.txt\" --mtime")]
+    [InlineData("--download-archive=C:\\Old\\a.txt", @"D:\New", "--download-archive=D:\\New\\a.txt")]
+    public void Choosing_another_archive_folder_rewrites_the_preset(string arguments, string newFolder, string expected)
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return; // drive-letter paths
+        }
+
+        var preset = new Preset { Arguments = arguments };
+        var other = new Preset { Arguments = "--download-archive \"E:\\Elsewhere\\archive.txt\"" };
+        var oldFolder = SetupChecker.ArchiveFolderOf(preset)!;
+
+        var changed = SetupChecker.MoveArchiveFolder([preset, other], oldFolder, newFolder);
+
+        Assert.Equal([preset], changed);
+        Assert.Equal(expected, preset.Arguments);
+        Assert.Equal("--download-archive \"E:\\Elsewhere\\archive.txt\"", other.Arguments);
+    }
+
     [Fact]
     public void Extra_engine_args_are_passed_before_the_url()
     {

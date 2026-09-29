@@ -50,9 +50,11 @@
                   <SelectableTextBlock Text="{Binding Command}" IsVisible="{Binding HasCommand}" FontSize="12"
                                        FontFamily="Cascadia Mono, Consolas, Menlo, DejaVu Sans Mono, monospace" />
                 </StackPanel>
-                <Button Grid.Column="2" Content="{Binding ActionText}" Command="{Binding FixCommand}" IsVisible="{Binding HasAction}"
-                        VerticalAlignment="Top" Margin="8,0,0,0"
-                        IsEnabled="{Binding $parent[ItemsControl].((vm:SettingsViewModel)DataContext).Setup.IsIdle}" />
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Top" Margin="8,0,0,0"
+                            IsEnabled="{Binding $parent[ItemsControl].((vm:SettingsViewModel)DataContext).Setup.IsIdle}">
+                  <Button Content="{Binding ActionText}" Command="{Binding FixCommand}" IsVisible="{Binding HasAction}" />
+                  <Button Content="Choose folder…" Command="{Binding ChooseFolderCommand}" IsVisible="{Binding CanChooseFolder}" />
+                </StackPanel>
               </Grid>
             </Border>
           </DataTemplate>

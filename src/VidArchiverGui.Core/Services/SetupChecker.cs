@@ -17,7 +17,8 @@ public enum SetupFix
     InstallDownloader,
     InstallDeno,
     InstallFfmpeg,
-    CreateFolder,
+    /// <summary>A folder is missing: create it, or choose another one instead.</summary>
+    MissingFolder,
     CopyCommand,
 }
 
@@ -29,10 +30,11 @@ public sealed record SetupItem(string Name, SetupStatus Status, string Detail, s
     /// <summary>Shell command for <see cref="SetupFix.CopyCommand"/>.</summary>
     public string? Command { get; init; }
 
-    /// <summary>Folder for <see cref="SetupFix.CreateFolder"/>.</summary>
+    /// <summary>Folder for <see cref="SetupFix.MissingFolder"/>.</summary>
     public string? Folder { get; init; }
 
-    public bool CanAutoFix => Fix is SetupFix.InstallDownloader or SetupFix.InstallDeno or SetupFix.InstallFfmpeg or SetupFix.CreateFolder;
+    // A missing folder isn't fixed automatically: the user decides whether to create it or pick another one.
+    public bool CanAutoFix => Fix is SetupFix.InstallDownloader or SetupFix.InstallDeno or SetupFix.InstallFfmpeg;
 }
 
 /// <summary>What yt-dlp itself reports it can use, from the header of <c>yt-dlp -v</c>.</summary>
@@ -293,17 +295,16 @@ public sealed class SetupChecker(AppSettings settings, ToolManager tools)
         var missing = new List<SetupItem>();
         foreach (var preset in settings.Presets)
         {
-            if (ArgumentParser.GetOptionValue(ArgumentParser.Split(preset.Arguments), "--download-archive") is not { Length: > 0 } file)
+            if (ArchiveFolderOf(preset) is not { } folder)
             {
                 continue;
             }
 
             any = true;
-            var folder = Path.GetDirectoryName(Path.GetFullPath(PathTemplate.ExpandHome(file)));
-            if (folder is not null && !Directory.Exists(folder))
+            if (!Directory.Exists(folder))
             {
                 missing.Add(new SetupItem($"Archive folder ({preset.Name})", SetupStatus.Warning, $"{folder} doesn't exist.", why)
-                    { Fix = SetupFix.CreateFolder, Folder = folder });
+                    { Fix = SetupFix.MissingFolder, Folder = folder });
             }
         }
 
@@ -313,5 +314,49 @@ public sealed class SetupChecker(AppSettings settings, ToolManager tools)
         }
 
         return any ? [new SetupItem("Archive folders", SetupStatus.Ok, "Every preset's archive folder exists.", why)] : [];
+    }
+
+    private const string ArchiveOption = "--download-archive";
+
+    /// <summary>The folder a preset's --download-archive file goes in, or null if it doesn't use one.</summary>
+    public static string? ArchiveFolderOf(Preset preset) =>
+        ArgumentParser.GetOptionValue(ArgumentParser.Split(preset.Arguments), ArchiveOption) is { Length: > 0 } file
+            ? Path.GetDirectoryName(Path.GetFullPath(PathTemplate.ExpandHome(file)))
+            : null;
+
+    /// <summary>
+    /// Points every preset whose archive file is in <paramref name="oldFolder"/> at the same file name in
+    /// <paramref name="newFolder"/>. Returns the presets that changed.
+    /// </summary>
+    public static IReadOnlyList<Preset> MoveArchiveFolder(IEnumerable<Preset> presets, string oldFolder, string newFolder)
+    {
+        var changed = new List<Preset>();
+        foreach (var preset in presets)
+        {
+            if (!string.Equals(ArchiveFolderOf(preset), oldFolder, StringComparison.OrdinalIgnoreCase)
+                || ArgumentParser.GetOptionValue(ArgumentParser.Split(preset.Arguments), ArchiveOption) is not { } file)
+            {
+                continue;
+            }
+
+            var text = preset.Arguments;
+            var at = text.IndexOf(file, Math.Max(0, text.LastIndexOf(ArchiveOption, StringComparison.Ordinal)), StringComparison.Ordinal);
+            if (at < 0)
+            {
+                continue;
+            }
+
+            var replacement = Path.Combine(newFolder, Path.GetFileName(file));
+            var quoted = at > 0 && text[at - 1] is '"' or '\'';
+            if (!quoted && replacement.Any(char.IsWhiteSpace))
+            {
+                replacement = $"\"{replacement}\"";
+            }
+
+            preset.Arguments = text[..at] + replacement + text[(at + file.Length)..];
+            changed.Add(preset);
+        }
+
+        return changed;
     }
 }
