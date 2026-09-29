@@ -33,7 +33,9 @@ Grab the latest build from [Releases](https://github.com/disibio/vid-archiver-gu
 - **Windows:** get it from the [Microsoft Store](https://apps.microsoft.com/detail/9NDN8K16996C?mode=direct). It's signed and updates itself. Or download the
   standalone `.exe` in a `.zip` from Releases. That one isn't code-signed, so SmartScreen may complain the first
   time. Click **More info**, then **Run anyway**.
-- **Linux:** `.tar.gz` packages for x64 and arm64. Unpack and run `./install.sh`.
+- **Linux:** an `.AppImage` for x64 and arm64. Make it executable (`chmod +x Vid-Archiver-GUI-*.AppImage`) and run
+  it. If it says FUSE is missing, run it with `--appimage-extract-and-run`. Or use the `.tar.gz`: unpack it and run
+  `./install.sh` to add it to your application menu.
 - **macOS:** build it yourself for now (see [Building](#building)).
 
 The first time you open it, the app offers to install yt-dlp, FFmpeg and deno for you.
@@ -200,7 +202,7 @@ The packaged builds are self-contained, so people don't need .NET installed.
 | Target | Command | Output |
 |---|---|---|
 | Windows | `run.bat publish`, or `powershell -ExecutionPolicy Bypass -File packaging\package-windows.ps1` for the release zip | `publish/win-x64/VidArchiverGui.exe` plus license files; the script makes `publish/windows/Vid-Archiver-GUI-<version>-win-x64.zip` |
-| Linux | `packaging/package-linux.sh` (on Linux, or in WSL using the Windows `dotnet.exe`) | `publish/linux/*.tar.gz` for x64 and arm64. Unpack and run `./install.sh` to add a menu entry, or `./install.sh --remove` to uninstall. |
+| Linux | `packaging/package-linux.sh` (on Linux, or in WSL using the Windows `dotnet.exe`) | `publish/linux/*.AppImage` and `publish/linux/*.tar.gz` for x64 and arm64 (appimagetool is downloaded on first use). Unpack a `.tar.gz` and run `./install.sh` to add a menu entry, or `./install.sh --remove` to uninstall. |
 | Microsoft Store | `powershell -ExecutionPolicy Bypass -File packaging\package-msix.ps1` (needs the Windows SDK; fill in `packaging/msix/store-identity.json` from Partner Center first, and add `-Sign` for a local test install) | `publish/msix/*.msixbundle` for x64 and arm64. Listing text is in `packaging/msix/store-listing.md`. |
 | macOS | `packaging/package-macos.sh`, run on a Mac (Apple Silicon needs the ad-hoc signature it applies) | `publish/macos/Vid-Archiver-GUI-<version>-macOS-Apple-Silicon.zip` and `…-macOS-Intel.zip`, each with `Vid Archiver GUI.app`. Upload both to the release. |
 | Flatpak (Flathub) | `packaging/flatpak/io.github.disibio.vid-archiver-gui.yml`, built with `flatpak run org.flatpak.Builder` (see the comments at the top; run `packaging/flatpak/update-nuget-sources.sh` after changing NuGet packages) | The Flathub package, with ffmpeg and deno bundled |

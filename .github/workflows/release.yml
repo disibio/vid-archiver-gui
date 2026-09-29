@@ -57,7 +57,9 @@ jobs:
       - uses: actions/upload-artifact@v7
         with:
           name: linux
-          path: publish/linux/*.tar.gz
+          path: |
+            publish/linux/*.tar.gz
+            publish/linux/*.AppImage
           if-no-files-found: error
 
   macos:
