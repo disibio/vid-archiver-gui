@@ -37,23 +37,23 @@
   <screenshots>
     <screenshot type="default">
       <caption>Downloads, each filed into a folder by a rule</caption>
-      <image>https://raw.githubusercontent.com/disibio/vid-archiver-gui/v1.0.0/docs/screenshots/downloads-light.png</image>
+      <image>https://raw.githubusercontent.com/disibio/vid-archiver-gui/v1.0.1/docs/screenshots/downloads-light.png</image>
     </screenshot>
     <screenshot>
       <caption>Downloads in the dark theme</caption>
-      <image>https://raw.githubusercontent.com/disibio/vid-archiver-gui/v1.0.0/docs/screenshots/downloads.png</image>
+      <image>https://raw.githubusercontent.com/disibio/vid-archiver-gui/v1.0.1/docs/screenshots/downloads.png</image>
     </screenshot>
     <screenshot>
       <caption>Folder rules decide where each download goes</caption>
-      <image>https://raw.githubusercontent.com/disibio/vid-archiver-gui/v1.0.0/docs/screenshots/folder-rules.png</image>
+      <image>https://raw.githubusercontent.com/disibio/vid-archiver-gui/v1.0.1/docs/screenshots/folder-rules.png</image>
     </screenshot>
     <screenshot>
       <caption>Presets are plain yt-dlp options</caption>
-      <image>https://raw.githubusercontent.com/disibio/vid-archiver-gui/v1.0.0/docs/screenshots/presets.png</image>
+      <image>https://raw.githubusercontent.com/disibio/vid-archiver-gui/v1.0.1/docs/screenshots/presets.png</image>
     </screenshot>
     <screenshot>
       <caption>Settings and the setup check</caption>
-      <image>https://raw.githubusercontent.com/disibio/vid-archiver-gui/v1.0.0/docs/screenshots/settings.png</image>
+      <image>https://raw.githubusercontent.com/disibio/vid-archiver-gui/v1.0.1/docs/screenshots/settings.png</image>
     </screenshot>
   </screenshots>
 
@@ -77,6 +77,12 @@
   </requires>
 
   <releases>
+    <release version="1.0.1" date="2026-09-29">
+      <url type="details">https://github.com/disibio/vid-archiver-gui/releases/tag/v1.0.1</url>
+      <description>
+        <p>When a preset's archive folder is missing, you can now create it or choose another folder. The app still creates its own default folder for you.</p>
+      </description>
+    </release>
     <release version="1.0.0" date="2026-09-27">
       <url type="details">https://github.com/disibio/vid-archiver-gui/releases/tag/v1.0.0</url>
       <description>
