@@ -1,0 +1,45 @@
+# Maintainer: disibio <disibio at protonmail dot com>
+#
+# AUR package: https://aur.archlinux.org/packages/vid-archiver-gui-bin
+# Repackages the release .tar.gz. On a new release: bump pkgver, reset pkgrel=1, update the sha256sums from the
+# release's SHA256SUMS.txt (the .desktop and metainfo sums change only when those files do), then regenerate
+# .SRCINFO with: makepkg --printsrcinfo > .SRCINFO
+pkgname=vid-archiver-gui-bin
+_appid=io.github.disibio.vid-archiver-gui
+pkgver=1.0.1
+pkgrel=1
+pkgdesc='Download with yt-dlp and file everything into the right folder'
+arch=('x86_64' 'aarch64')
+url='https://github.com/disibio/vid-archiver-gui'
+license=('Apache-2.0')
+depends=('fontconfig' 'gcc-libs' 'glibc' 'hicolor-icon-theme' 'icu' 'libice' 'libsm' 'libx11' 'libxcursor'
+         'libxi' 'libxrandr' 'openssl' 'zlib')
+optdepends=('yt-dlp: use the system yt-dlp instead of the one the app downloads'
+            'ffmpeg: merge video and audio, embed thumbnails and metadata'
+            'deno: solve JavaScript challenges on some sites'
+            'libnotify: "downloads finished" notifications')
+provides=('vid-archiver-gui')
+conflicts=('vid-archiver-gui')
+# Stripping breaks the .NET single-file bundle.
+options=('!strip' '!debug')
+source=("$_appid.desktop::https://raw.githubusercontent.com/disibio/vid-archiver-gui/v$pkgver/packaging/flatpak/$_appid.desktop"
+        "$_appid.metainfo.xml::https://raw.githubusercontent.com/disibio/vid-archiver-gui/v$pkgver/packaging/flatpak/$_appid.metainfo.xml")
+source_x86_64=("Vid-Archiver-GUI-$pkgver-linux-x64.tar.gz::https://github.com/disibio/vid-archiver-gui/releases/download/v$pkgver/Vid-Archiver-GUI-$pkgver-linux-x64.tar.gz")
+source_aarch64=("Vid-Archiver-GUI-$pkgver-linux-arm64.tar.gz::https://github.com/disibio/vid-archiver-gui/releases/download/v$pkgver/Vid-Archiver-GUI-$pkgver-linux-arm64.tar.gz")
+sha256sums=('1678456c541cca8f5bf4653b5fead9248ea909d86171dc075223f36b9ca43d89'
+            '698c4b91a1e0a316c439b16a532eb2f47d3c412f10d71bda4295b5a7bc92f516')
+sha256sums_x86_64=('e0533fab1c1f69bc72556d07d1cc3a960502739525852f0c19ca711a0164a919')
+sha256sums_aarch64=('deff85aeb6150466e158d3aaa82f3269e176c190808433e99a3bbbf76f598e77')
+
+package() {
+  cd vid-archiver-gui
+  install -Dm755 VidArchiverGui "$pkgdir/opt/vid-archiver-gui/VidArchiverGui"
+  install -dm755 "$pkgdir/usr/bin"
+  ln -s /opt/vid-archiver-gui/VidArchiverGui "$pkgdir/usr/bin/vid-archiver-gui"
+
+  sed 's/^Exec=.*/Exec=vid-archiver-gui/' "$srcdir/$_appid.desktop" | install -Dm644 /dev/stdin "$pkgdir/usr/share/applications/$_appid.desktop"
+  install -Dm644 "$srcdir/$_appid.metainfo.xml" -t "$pkgdir/usr/share/metainfo"
+  install -Dm644 icon.png "$pkgdir/usr/share/icons/hicolor/512x512/apps/$_appid.png"
+
+  install -Dm644 LICENSE NOTICE THIRD-PARTY-NOTICES.txt -t "$pkgdir/usr/share/licenses/$pkgname"
+}
