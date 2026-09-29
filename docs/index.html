@@ -33,7 +33,8 @@ try { if (localStorage.getItem('theme') === 'dark') document.documentElement.dat
   "image": "https://disibio.github.io/vid-archiver-gui/social-preview.png",
   "applicationCategory": "MultimediaApplication",
   "operatingSystem": "Windows, macOS, Linux",
-  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "installUrl": "https://apps.microsoft.com/detail/9NDN8K16996C?mode=direct"
 }
 </script>
 <style>
@@ -113,6 +114,8 @@ h1 { font-size: clamp(1.9rem, 4vw, 2.5rem); margin: 0; line-height: 1.15; }
 .btn-primary:hover { background: var(--accent-hover); color: var(--on-accent); }
 .btn-plain { border-color: var(--border); color: var(--text); }
 .btn-plain:hover { border-color: var(--muted); color: var(--text); }
+.store-badge { display: inline-flex; align-items: center; line-height: 0; }
+.store-badge img { height: 46px; width: auto; }
 
 .shot { border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow); }
 .intro .shot { margin-top: 36px; }
@@ -149,6 +152,7 @@ td code { word-break: break-all; }
 .platforms { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); margin-bottom: 20px; }
 .platforms div { background: var(--bg-alt); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; }
 .platforms p { margin: 0; color: var(--muted); font-size: 15px; }
+.platforms .store-badge { margin-top: 12px; }
 
 footer { padding: 28px 0 40px; color: var(--muted); font-size: 14px; }
 footer a { color: var(--muted); }
@@ -184,6 +188,8 @@ footer a:hover { color: var(--text); }
   <div class="buttons">
     <a class="btn btn-primary" href="https://github.com/disibio/vid-archiver-gui/releases/latest">Download</a>
     <a class="btn btn-plain" href="https://github.com/disibio/vid-archiver-gui">Source on GitHub</a>
+    <a class="store-badge" href="https://apps.microsoft.com/detail/9NDN8K16996C?mode=direct"><img src="microsoft-store-badge.svg" width="161" height="44"
+       alt="Download from the Microsoft Store"></a>
   </div>
   <img class="shot shot-light" src="screenshots/downloads-light.png" width="1150" height="780"
        alt="Downloads tab: four videos, each filed into a folder by a rule">
@@ -258,8 +264,11 @@ footer a:hover { color: var(--text); }
     <p>Get the latest build from <a href="https://github.com/disibio/vid-archiver-gui/releases/latest">Releases</a>.
       Builds are self-contained, so you don't need .NET installed.</p>
     <div class="platforms">
-      <div><h3>Windows 10/11</h3><p>A standalone <code>.exe</code> in a <code>.zip</code>. It isn't code-signed, so
-        SmartScreen may warn on first launch: choose <strong>More info → Run anyway</strong>.</p></div>
+      <div><h3>Windows 10/11</h3><p>The easiest way is the Microsoft Store: it's signed and updates itself.
+        Or get the standalone <code>.exe</code> in a <code>.zip</code> from Releases. That one isn't code-signed, so
+        SmartScreen may warn on first launch: choose <strong>More info → Run anyway</strong>.</p>
+        <a class="store-badge" href="https://apps.microsoft.com/detail/9NDN8K16996C?mode=direct"><img src="microsoft-store-badge.svg" width="161" height="44"
+           alt="Download from the Microsoft Store"></a></div>
       <div><h3>Linux x64/arm64</h3><p>A <code>.tar.gz</code>. Unpack it and run <code>./install.sh</code>
         (<code>--remove</code> uninstalls).</p></div>
       <div><h3>macOS 14+</h3><p>Not notarized, so macOS blocks it the first time: open it once, then choose

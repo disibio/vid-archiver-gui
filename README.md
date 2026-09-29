@@ -8,6 +8,10 @@
   <a href="#building">Build from source</a>
 </p>
 
+<p align="center">
+  <a href="https://apps.microsoft.com/detail/9NDN8K16996C?mode=direct"><img src="docs/microsoft-store-badge.svg" width="161" height="44" alt="Download from the Microsoft Store"></a>
+</p>
+
 A desktop front end for [yt-dlp](https://github.com/yt-dlp/yt-dlp) for Windows, macOS and Linux. I built it because I
 liked [yt-dlg (the oleksis fork)](https://github.com/oleksis/youtube-dl-gui) but kept running into small things that
 annoyed me. The goal is to be dead simple to use.
@@ -26,8 +30,9 @@ Most of the code was written with AI (Claude Opus 5.5), and I've tested it a lot
 
 Grab the latest build from [Releases](https://github.com/disibio/vid-archiver-gui/releases).
 
-- **Windows:** a standalone `.exe` in a `.zip`. It isn't code-signed yet, so SmartScreen may complain the first time.
-  Click **More info**, then **Run anyway**.
+- **Windows:** get it from the [Microsoft Store](https://apps.microsoft.com/detail/9NDN8K16996C?mode=direct). It's signed and updates itself. Or download the
+  standalone `.exe` in a `.zip` from Releases. That one isn't code-signed, so SmartScreen may complain the first
+  time. Click **More info**, then **Run anyway**.
 - **Linux:** `.tar.gz` packages for x64 and arm64. Unpack and run `./install.sh`.
 - **macOS:** build it yourself for now (see [Building](#building)).
 
