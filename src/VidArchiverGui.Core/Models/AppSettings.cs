@@ -33,6 +33,9 @@ public partial class AppSettings : ObservableObject
     [ObservableProperty] private int _maxConcurrentDownloads = 2;
     [ObservableProperty] private bool _autoStartDownloads;
 
+    /// <summary>Show a system notification when the queue finishes while the window isn't in front.</summary>
+    [ObservableProperty] private bool _notifyWhenDone = true;
+
     /// <summary>Pause between requests and videos and back off longer on errors (see <see cref="Services.DownloadRunner.GentleArgs"/>).</summary>
     [ObservableProperty] private bool _gentleDownloads;
 
@@ -52,6 +55,9 @@ public partial class AppSettings : ObservableObject
 
     /// <summary>Cookie choice last picked on the Downloads tab; null = no cookies.</summary>
     [ObservableProperty] private string? _lastCookieId;
+
+    /// <summary>Downloads that were still in the list when the app closed; restored on the next start.</summary>
+    public List<SavedDownload> UnfinishedDownloads { get; set; } = [];
 
     /// <summary>Whether the Downloads tab's log panel is open; open until the user closes it.</summary>
     [ObservableProperty] private bool _showLog = true;

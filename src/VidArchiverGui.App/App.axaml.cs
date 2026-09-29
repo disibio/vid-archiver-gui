@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Input;
 using Avalonia.Media.Imaging;
 using Avalonia.Styling;
 using Avalonia.Threading;
@@ -51,7 +52,8 @@ public partial class App : Application
             };
 
             var window = new MainWindow();
-            var host = new AppHost(settings, store, new WindowDialogs(window));
+            var dialogs = new WindowDialogs(window);
+            var host = new AppHost(settings, store, dialogs);
 
             // Last line of defence: log unexpected UI-thread errors and keep running instead of closing the app.
             Dispatcher.UIThread.UnhandledException += (_, e) =>
@@ -68,7 +70,43 @@ public partial class App : Application
 
             window.DataContext = vm;
             window.Opened += async (_, _) => await vm.InitializeAsync();
-            window.Closing += (_, _) => vm.Shutdown();
+            var quitConfirmed = false;
+            window.Closing += async (_, e) =>
+            {
+                // Ask before cancelling running downloads, unless Windows is shutting down (no one to answer).
+                var active = vm.Downloads.ActiveCount;
+                if (!quitConfirmed && active > 0 && e.CloseReason is not (WindowCloseReason.OSShutdown or WindowCloseReason.ApplicationShutdown))
+                {
+                    e.Cancel = true;
+                    var what = active == 1 ? "1 download is" : $"{active} downloads are";
+                    if (await dialogs.ConfirmAsync("Quit Vid Archiver GUI?",
+                            $"{what} still running or waiting. If you quit, they'll be back in the list next time you open the app, " +
+                            "and partly downloaded files carry on where they stopped.",
+                            "Quit", "Keep downloading"))
+                    {
+                        quitConfirmed = true;
+                        window.Close();
+                    }
+
+                    return;
+                }
+
+                vm.Shutdown();
+                dialogs.CleanUp();
+            };
+            // Links dragged from a browser (or anywhere) onto the window are added like pasted ones.
+            DragDrop.SetAllowDrop(window, true);
+            window.AddHandler(DragDrop.DragOverEvent, (_, e) =>
+                e.DragEffects = e.DataTransfer.Contains(DataFormat.Text) ? DragDropEffects.Copy : DragDropEffects.None);
+            window.AddHandler(DragDrop.DropEvent, (_, e) =>
+            {
+                if (e.DataTransfer.TryGetText() is { Length: > 0 } text)
+                {
+                    vm.SelectedTab = 0;
+                    vm.Downloads.AddUrls(text);
+                    e.Handled = true;
+                }
+            });
             desktop.MainWindow = window;
 #if DEBUG
             // Development aid: VIDARCHIVERGUI_SNAPSHOT_DIR=<dir> renders each tab to a PNG offscreen and exits.

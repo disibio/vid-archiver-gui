@@ -1,5 +1,8 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input.Platform;
+using Avalonia.Layout;
+using Avalonia.Media;
 using Avalonia.Platform.Storage;
 
 namespace VidArchiverGui.App.Services;
@@ -10,10 +13,64 @@ public interface IDialogs
     Task<string?> PickFileAsync(string title);
     Task OpenFolderAsync(string path);
     Task CopyTextAsync(string text);
+
+    /// <summary>Asks a yes/no question; true if the user picked <paramref name="yes"/>.</summary>
+    Task<bool> ConfirmAsync(string title, string message, string yes, string no);
+
+    /// <summary>Whether the app's window is the one in front.</summary>
+    bool IsWindowActive { get; }
+
+    /// <summary>A desktop notification (best effort).</summary>
+    void Notify(string title, string message);
 }
 
 public sealed class WindowDialogs(Window window) : IDialogs
 {
+    private readonly SystemNotifier _notifier = new(window);
+
+    public bool IsWindowActive => window.IsActive;
+
+    public void Notify(string title, string message) => _notifier.Show(title, message);
+
+    /// <summary>Removes anything the notifier left behind (the Windows tray icon).</summary>
+    public void CleanUp() => _notifier.RemoveWindowsIcon();
+
+    public async Task<bool> ConfirmAsync(string title, string message, string yes, string no)
+    {
+        var yesButton = new Button { Content = yes };
+        var noButton = new Button { Content = no, IsDefault = true, IsCancel = true };
+        noButton.Classes.Add("accent");
+        var dialog = new Window
+        {
+            Title = title,
+            Icon = window.Icon,
+            SizeToContent = SizeToContent.WidthAndHeight,
+            CanResize = false,
+            ShowInTaskbar = false,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            Content = new StackPanel
+            {
+                Margin = new Thickness(20),
+                Spacing = 16,
+                MaxWidth = 460,
+                Children =
+                {
+                    new TextBlock { Text = message, TextWrapping = TextWrapping.Wrap },
+                    new StackPanel
+                    {
+                        Orientation = Orientation.Horizontal,
+                        Spacing = 8,
+                        HorizontalAlignment = HorizontalAlignment.Right,
+                        Children = { yesButton, noButton },
+                    },
+                },
+            },
+        };
+        yesButton.Click += (_, _) => dialog.Close(true);
+        noButton.Click += (_, _) => dialog.Close(false);
+        return await dialog.ShowDialog<bool>(window);
+    }
+
     public async Task<string?> PickFolderAsync(string title, string? startPath = null)
     {
         var options = new FolderPickerOpenOptions { Title = title, AllowMultiple = false };

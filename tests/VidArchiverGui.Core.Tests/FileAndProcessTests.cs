@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using VidArchiverGui.Core.Models;
 using VidArchiverGui.Core.Services;
 
 namespace VidArchiverGui.Core.Tests;
@@ -72,5 +73,23 @@ public sealed class FileAndProcessTests : IDisposable
 
         Assert.Equal(4, store.Load().MaxConcurrentDownloads);
         Assert.Empty(Directory.GetFiles(_dir, "*.corrupt-*"));
+    }
+
+    [Fact]
+    public void Unfinished_downloads_survive_a_restart()
+    {
+        var store = new SettingsStore(Path.Combine(_dir, "settings.json"));
+        var saved = SettingsStore.CreateDefaults();
+        saved.NotifyWhenDone = false;
+        saved.UnfinishedDownloads =
+        [
+            new SavedDownload { Url = "https://example.com/a", PresetId = saved.Presets[0].Id, Destination = @"D:\Picked" },
+            new SavedDownload { Url = "https://example.com/b" },
+        ];
+        store.Save(saved);
+
+        var loaded = store.Load();
+        Assert.False(loaded.NotifyWhenDone);
+        Assert.Equal(saved.UnfinishedDownloads, loaded.UnfinishedDownloads);
     }
 }

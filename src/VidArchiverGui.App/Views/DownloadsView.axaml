@@ -14,7 +14,7 @@
     <!-- URL input -->
     <Grid ColumnDefinitions="*,Auto">
       <TextBox Text="{Binding UrlInput}" AcceptsReturn="True" TextWrapping="NoWrap" MinHeight="76"
-               PlaceholderText="Paste one or more URLs (one per line), then click Add or press Ctrl+Enter" />
+               PlaceholderText="Paste one or more URLs (one per line), then click Add or press Ctrl+Enter. You can also drag links onto the window." />
       <StackPanel Grid.Column="1" Margin="10,0,0,0" Spacing="6" Width="250">
         <ComboBox ItemsSource="{Binding Presets}" SelectedItem="{Binding SelectedPreset}" HorizontalAlignment="Stretch">
           <ComboBox.ItemTemplate>

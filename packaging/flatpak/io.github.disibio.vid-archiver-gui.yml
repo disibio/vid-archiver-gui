@@ -20,6 +20,8 @@ finish-args:
   # Avalonia draws with X11 (XWayland on Wayland desktops).
   - --socket=x11
   - --device=dri
+  # "Downloads finished" notifications.
+  - --talk-name=org.freedesktop.Notifications
   # Where downloads usually go, and external drives for archives. Any other folder works when it's picked with a
   # Browse button (the file chooser portal grants access to it).
   - --filesystem=xdg-download

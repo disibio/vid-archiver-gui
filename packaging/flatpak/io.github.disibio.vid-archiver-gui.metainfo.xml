@@ -80,7 +80,12 @@
     <release version="1.0.1" date="2026-09-29">
       <url type="details">https://github.com/disibio/vid-archiver-gui/releases/tag/v1.0.1</url>
       <description>
-        <p>When a preset's archive folder is missing, you can now create it or choose another folder. The app still creates its own default folder for you.</p>
+        <ul>
+          <li>Closing the app while downloads are running now asks first. Unfinished downloads are back in the list next time.</li>
+          <li>Drag links onto the window to add them.</li>
+          <li>An optional notification when all downloads have finished.</li>
+          <li>When a preset's archive folder is missing, you can create it or choose another folder. The app still creates its own default folder for you.</li>
+        </ul>
       </description>
     </release>
     <release version="1.0.0" date="2026-09-27">

@@ -110,9 +110,16 @@ public partial class DownloadsViewModel : ObservableObject
     [RelayCommand]
     private void Add()
     {
+        AddUrls(UrlInput);
+        UrlInput = "";
+    }
+
+    /// <summary>Adds every link in <paramref name="text"/> (typed, pasted or dropped). Returns how many were new.</summary>
+    public int AddUrls(string text)
+    {
         var preset = SelectedPreset ?? _host.Settings.DefaultPreset;
         var added = 0;
-        foreach (var url in ExtractUrls(UrlInput))
+        foreach (var url in ExtractUrls(text))
         {
             if (Items.Any(i => i.Url == url && !i.IsFinished && i.State != DownloadState.Cancelled))
             {
@@ -124,11 +131,12 @@ public partial class DownloadsViewModel : ObservableObject
             _ = ResolveAsync(item);
             added++;
         }
-        UrlInput = "";
         if (added == 0)
         {
             _host.SetStatus("No new URLs to add.");
         }
+
+        return added;
     }
 
     private static IEnumerable<string> ExtractUrls(string text) =>
@@ -215,8 +223,18 @@ public partial class DownloadsViewModel : ObservableObject
         }
 
         var route = RoutingEngine.Resolve(item.Info, _host.Settings.Rules, _host.Settings.FallbackDestination);
-        item.SetRoutedDestination(route.Destination);
-        item.RouteDescription = route.Describe();
+        if (!item.DestinationEdited)
+        {
+            item.SetRoutedDestination(route.Destination);
+            item.RouteDescription = route.Describe();
+        }
+
+        if (item.Restored)
+        {
+            item.Restored = false; // keep last session's preset and cookies; "Re-apply rules" still applies them in full
+            return;
+        }
+
         if (_host.Settings.FindPreset(route.PresetId) is { } preset)
         {
             item.Preset = preset;
@@ -287,8 +305,67 @@ public partial class DownloadsViewModel : ObservableObject
             _host.SetStatus($"Finished: {item.Title}");
         }
 
+        if (item.State is DownloadState.Completed or DownloadState.Skipped or DownloadState.Failed)
+        {
+            _batch.Add(item);
+        }
+
         Pump();
+        NotifyIfQueueDone();
     }
+
+    // Downloads that ended since the queue was last empty, for the "all done" notification.
+    private readonly List<DownloadItemViewModel> _batch = [];
+
+    private void NotifyIfQueueDone()
+    {
+        if (Items.Any(i => i.State is DownloadState.Queued or DownloadState.Downloading or DownloadState.Resolving))
+        {
+            return;
+        }
+
+        var batch = _batch.ToList();
+        _batch.Clear();
+        if (batch.Count == 0 || !_host.Settings.NotifyWhenDone || _host.Dialogs.IsWindowActive)
+        {
+            return;
+        }
+
+        var done = batch.Count(i => i.State == DownloadState.Completed);
+        var skipped = batch.Count(i => i.State == DownloadState.Skipped);
+        var failed = batch.Count(i => i.State == DownloadState.Failed);
+        _host.Dialogs.Notify(failed > 0 ? "Downloads finished, with errors" : "Downloads finished",
+            BatchSummary(batch[0].Title, done, skipped, failed));
+    }
+
+    internal static string BatchSummary(string firstTitle, int done, int skipped, int failed)
+    {
+        if (done + skipped + failed == 1)
+        {
+            return (done == 1 ? "Finished: " : skipped == 1 ? "Already in the archive: " : "Failed: ") + firstTitle;
+        }
+
+        var parts = new List<string>();
+        if (done > 0)
+        {
+            parts.Add($"{done} finished");
+        }
+
+        if (skipped > 0)
+        {
+            parts.Add($"{skipped} already in the archive");
+        }
+
+        if (failed > 0)
+        {
+            parts.Add($"{failed} failed");
+        }
+
+        return string.Join(", ", parts) + ".";
+    }
+
+    /// <summary>Downloads that are running or waiting for a free slot.</summary>
+    public int ActiveCount => Items.Count(i => i.State is DownloadState.Queued or DownloadState.Downloading);
 
     [RelayCommand]
     private void StartAll()
@@ -321,6 +398,68 @@ public partial class DownloadsViewModel : ObservableObject
     {
         item.CancelInternal();
         Items.Remove(item);
+    }
+
+    // ---------- keeping unfinished downloads between sessions ----------
+
+    /// <summary>Remembers what's still in the list and not done (cancelled items were the user's choice, so they go).</summary>
+    public void SaveUnfinished()
+    {
+        _host.Settings.UnfinishedDownloads = Items
+            .Where(i => i.State is not (DownloadState.Completed or DownloadState.Skipped or DownloadState.Cancelled))
+            .Select(i => new SavedDownload
+            {
+                Url = i.Url,
+                PresetId = i.Preset.Id,
+                CookieId = i.CookieId,
+                EngineId = i.EngineOverride?.Id,
+                Destination = i.DestinationEdited && !string.IsNullOrWhiteSpace(i.Destination) ? i.Destination : null,
+            })
+            .ToList();
+    }
+
+    private readonly List<DownloadItemViewModel> _restored = [];
+
+    /// <summary>
+    /// Puts last session's unfinished downloads back in the list. Their info is read by <see cref="ResumeRestored"/>,
+    /// once startup has installed or updated the downloader.
+    /// </summary>
+    public void RestoreUnfinished()
+    {
+        foreach (var saved in _host.Settings.UnfinishedDownloads)
+        {
+            var item = new DownloadItemViewModel(this, saved.Url, _host.Settings.FindPreset(saved.PresetId) ?? _host.Settings.DefaultPreset)
+            {
+                CookieId = saved.CookieId,
+                EngineOverride = _host.Settings.FindEngine(saved.EngineId),
+                Restored = true,
+                ProgressText = "Waiting for the startup checks…",
+                IsIndeterminate = true,
+            };
+            if (saved.Destination is { } folder)
+            {
+                item.Destination = folder; // marks it as picked by hand
+            }
+
+            Items.Add(item);
+            _restored.Add(item);
+        }
+
+        // The saved list stays until the next close replaces it, so a crash in between doesn't lose it.
+        if (_restored.Count > 0)
+        {
+            _host.SetStatus($"Put back {_restored.Count} unfinished download(s) from last time.");
+        }
+    }
+
+    public void ResumeRestored()
+    {
+        foreach (var item in _restored.Where(Items.Contains))
+        {
+            _ = ResolveAsync(item);
+        }
+
+        _restored.Clear();
     }
 
     public void CancelEverything()

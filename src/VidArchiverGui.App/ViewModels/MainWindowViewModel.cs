@@ -18,6 +18,7 @@ public partial class MainWindowViewModel : ObservableObject
         Setup.DetailsRequested += () => SelectedTab = SettingsTabIndex;
         Tools = new SettingsViewModel(host, Setup);
         host.StatusChanged += message => Dispatcher.UIThread.Post(() => Status = message);
+        Downloads.RestoreUnfinished();
     }
 
     public DownloadsViewModel Downloads { get; }
@@ -49,10 +50,21 @@ public partial class MainWindowViewModel : ObservableObject
         }
     }
 
-    public Task InitializeAsync() => Tools.InitializeAsync();
+    public async Task InitializeAsync()
+    {
+        try
+        {
+            await Tools.InitializeAsync();
+        }
+        finally
+        {
+            Downloads.ResumeRestored();
+        }
+    }
 
     public void Shutdown()
     {
+        Downloads.SaveUnfinished();
         Downloads.CancelEverything();
         _host.Save(quiet: true);
     }
