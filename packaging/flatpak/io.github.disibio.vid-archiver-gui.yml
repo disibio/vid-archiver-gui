@@ -106,7 +106,7 @@ modules:
       - type: git
         url: https://github.com/disibio/vid-archiver-gui.git
         tag: v1.0.1
-        commit: 6bab8fff7bd9bd9fbf5d4a292a987c6ffd31a379
+        commit: 84339c140b44e9e7c4b055ea4fd024edf3ac6956
       - nuget-sources.json
       - type: file
         path: io.github.disibio.vid-archiver-gui.desktop
