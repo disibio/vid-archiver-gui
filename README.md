@@ -161,7 +161,7 @@ goes into its own data folder and is checked against the publisher's SHA-256 che
 | yt-dlp | Does the downloading | Automatic | Automatic | Automatic |
 | deno | Some sites need it to get past JavaScript checks (only yt-dlp uses it by default) | One click | One click | One click |
 | FFmpeg | Merging video and audio, and embedding things into files | One click | `brew install ffmpeg` (with a Copy button) | One click (needs `tar`), or the apt/dnf/pacman/zypper command |
-| Archive folder | `--download-archive` needs the folder to exist | Create it, or choose another folder | Create it, or choose another folder | Create it, or choose another folder |
+| Archive folder | `--download-archive` needs the folder to exist. The app creates its own default folder; for a folder you chose, you pick **Create folder** or **Choose folder…** | One click | One click | One click |
 
 If you've already installed any of these yourself (on your PATH, through Homebrew, or in `~/.local/bin`), the app
 uses those.

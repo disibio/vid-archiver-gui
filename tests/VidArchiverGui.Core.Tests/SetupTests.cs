@@ -79,6 +79,21 @@ public class SetupTests
     }
 
     [Fact]
+    public void Only_the_apps_own_archive_folder_is_created_automatically()
+    {
+        var app = SettingsStore.AppVideosFolder;
+        Assert.True(SetupChecker.IsUnder(app, app));
+        Assert.True(SetupChecker.IsUnder(Path.Combine(app, "sub"), app + Path.DirectorySeparatorChar));
+        Assert.False(SetupChecker.IsUnder(app + " (old)", app));
+        Assert.False(SetupChecker.IsUnder(Path.GetTempPath(), app));
+
+        var item = new SetupItem("Archive folder", SetupStatus.Warning, "", "") { Fix = SetupFix.MissingFolder, CanCreateFolder = true };
+        Assert.False(item.CanAutoFix);
+        Assert.True((item with { IsAppFolder = true }).CanAutoFix);
+        Assert.False((item with { IsAppFolder = true, CanCreateFolder = false }).CanAutoFix);
+    }
+
+    [Fact]
     public void Extra_engine_args_are_passed_before_the_url()
     {
         var args = DownloadRunner.BuildArguments(new DownloadRequest("https://x", ["-f", "b"], "/d"), null, ["--js-runtimes", "deno:/app/deno"]);

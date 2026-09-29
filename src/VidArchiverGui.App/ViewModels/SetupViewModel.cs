@@ -40,7 +40,8 @@ public partial class SetupItemViewModel(SetupItem item, SetupViewModel owner, st
         var seconds = (int)(DateTime.UtcNow - _activitySince).TotalSeconds;
         Detail = seconds < 2 ? Activity : $"{Activity} {seconds} s";
     }
-    public bool HasAction => item.Fix != SetupFix.None && item.Status != SetupStatus.Ok;
+    public bool HasAction => item.Fix != SetupFix.None && item.Status != SetupStatus.Ok
+        && (item.Fix != SetupFix.MissingFolder || item.CanCreateFolder);
 
     public string ActionText => item.Fix switch
     {

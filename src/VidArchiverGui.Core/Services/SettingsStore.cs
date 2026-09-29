@@ -65,17 +65,29 @@ public sealed class SettingsStore(string path)
         File.Move(tmp, Path, overwrite: true);
     }
 
+    /// <summary>
+    /// The app's own folder under the user's Videos (Movies on macOS), where the default presets and rules save.
+    /// </summary>
+    public static string AppVideosFolder
+    {
+        get
+        {
+            var videos = Environment.GetFolderPath(Environment.SpecialFolder.MyVideos);
+            if (string.IsNullOrEmpty(videos))
+            {
+                videos = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Videos");
+            }
+
+            return System.IO.Path.Combine(videos, "Vid Archiver GUI");
+        }
+    }
+
     public static AppSettings CreateDefaults()
     {
         // Per-user, per-OS locations: Videos on Windows/Linux, Movies on macOS.
         var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        var videos = Environment.GetFolderPath(Environment.SpecialFolder.MyVideos);
-        if (string.IsNullOrEmpty(videos))
-        {
-            videos = System.IO.Path.Combine(home, "Videos");
-        }
-
-        var archiveFile = System.IO.Path.Combine(videos, "Vid Archiver GUI", "archive.txt");
+        var appVideos = AppVideosFolder;
+        var archiveFile = System.IO.Path.Combine(appVideos, "archive.txt");
 
         var archive = new Preset
         {
@@ -118,7 +130,7 @@ public sealed class SettingsStore(string path)
                 """,
         };
 
-        var downloads = System.IO.Path.Combine(videos, "Vid Archiver GUI", "{site}", "{channel|uploader|\"Unknown\"}");
+        var downloads = System.IO.Path.Combine(appVideos, "{site}", "{channel|uploader|\"Unknown\"}");
 
         return new AppSettings
         {

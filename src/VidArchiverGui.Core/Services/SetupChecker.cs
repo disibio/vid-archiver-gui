@@ -33,8 +33,15 @@ public sealed record SetupItem(string Name, SetupStatus Status, string Detail, s
     /// <summary>Folder for <see cref="SetupFix.MissingFolder"/>.</summary>
     public string? Folder { get; init; }
 
-    // A missing folder isn't fixed automatically: the user decides whether to create it or pick another one.
-    public bool CanAutoFix => Fix is SetupFix.InstallDownloader or SetupFix.InstallDeno or SetupFix.InstallFfmpeg;
+    /// <summary>The missing folder's drive is there, so the folder can be created (not so for an unplugged disk).</summary>
+    public bool CanCreateFolder { get; init; }
+
+    /// <summary>The missing folder is one the app chose itself (under its own Videos folder), not the user.</summary>
+    public bool IsAppFolder { get; init; }
+
+    // Missing folders the user chose are left to them (create it, or pick another); only the app's own is created automatically.
+    public bool CanAutoFix => Fix is SetupFix.InstallDownloader or SetupFix.InstallDeno or SetupFix.InstallFfmpeg
+        || Fix == SetupFix.MissingFolder && IsAppFolder && CanCreateFolder;
 }
 
 /// <summary>What yt-dlp itself reports it can use, from the header of <c>yt-dlp -v</c>.</summary>
@@ -303,8 +310,12 @@ public sealed class SetupChecker(AppSettings settings, ToolManager tools)
             any = true;
             if (!Directory.Exists(folder))
             {
-                missing.Add(new SetupItem($"Archive folder ({preset.Name})", SetupStatus.Warning, $"{folder} doesn't exist.", why)
-                    { Fix = SetupFix.MissingFolder, Folder = folder });
+                var root = Path.GetPathRoot(folder);
+                var canCreate = root is { Length: > 0 } && Directory.Exists(root);
+                missing.Add(new SetupItem($"Archive folder ({preset.Name})", SetupStatus.Warning,
+                    canCreate ? $"{folder} doesn't exist." : $"{folder} is on {root}, which isn't available. Plug the drive in, or choose another folder.",
+                    why)
+                    { Fix = SetupFix.MissingFolder, Folder = folder, CanCreateFolder = canCreate, IsAppFolder = IsUnder(folder, SettingsStore.AppVideosFolder) });
             }
         }
 
@@ -317,6 +328,14 @@ public sealed class SetupChecker(AppSettings settings, ToolManager tools)
     }
 
     private const string ArchiveOption = "--download-archive";
+
+    public static bool IsUnder(string path, string folder)
+    {
+        path = Path.TrimEndingDirectorySeparator(Path.GetFullPath(path));
+        folder = Path.TrimEndingDirectorySeparator(Path.GetFullPath(folder));
+        return path.Equals(folder, StringComparison.OrdinalIgnoreCase)
+            || path.StartsWith(folder + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
+    }
 
     /// <summary>The folder a preset's --download-archive file goes in, or null if it doesn't use one.</summary>
     public static string? ArchiveFolderOf(Preset preset) =>
