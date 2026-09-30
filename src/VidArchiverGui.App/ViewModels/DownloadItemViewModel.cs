@@ -7,18 +7,6 @@ using VidArchiverGui.Core.Services;
 
 namespace VidArchiverGui.App.ViewModels;
 
-public enum DownloadState
-{
-    Resolving,
-    Ready,
-    Queued,
-    Downloading,
-    Completed,
-    Skipped,
-    Failed,
-    Cancelled,
-}
-
 public partial class DownloadItemViewModel : ObservableObject
 {
     private const int MaxLogLines = 500;

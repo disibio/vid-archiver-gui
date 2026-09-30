@@ -248,15 +248,8 @@ public partial class DownloadsViewModel : ObservableObject
 
     private void Pump()
     {
-        var running = Items.Count(i => i.State == DownloadState.Downloading);
-        foreach (var next in Items.Where(i => i.State == DownloadState.Queued).ToList())
+        foreach (var next in DownloadQueue.ToStart(Items, i => i.State, _host.Settings.MaxConcurrentDownloads))
         {
-            if (running >= _host.Settings.MaxConcurrentDownloads)
-            {
-                break;
-            }
-
-            running++;
             _ = DownloadAsync(next);
         }
         UpdateSummary();
@@ -297,33 +290,7 @@ public partial class DownloadsViewModel : ObservableObject
         var skipped = batch.Count(i => i.State == DownloadState.Skipped);
         var failed = batch.Count(i => i.State == DownloadState.Failed);
         _host.Dialogs.Notify(failed > 0 ? "Downloads finished, with errors" : "Downloads finished",
-            BatchSummary(batch[0].Title, done, skipped, failed));
-    }
-
-    internal static string BatchSummary(string firstTitle, int done, int skipped, int failed)
-    {
-        if (done + skipped + failed == 1)
-        {
-            return (done == 1 ? "Finished: " : skipped == 1 ? "Already in the archive: " : "Failed: ") + firstTitle;
-        }
-
-        var parts = new List<string>();
-        if (done > 0)
-        {
-            parts.Add($"{done} finished");
-        }
-
-        if (skipped > 0)
-        {
-            parts.Add($"{skipped} already in the archive");
-        }
-
-        if (failed > 0)
-        {
-            parts.Add($"{failed} failed");
-        }
-
-        return string.Join(", ", parts) + ".";
+            DownloadQueue.BatchSummary(batch[0].Title, done, skipped, failed));
     }
 
     /// <summary>Downloads that are running or waiting for a free slot.</summary>
@@ -364,11 +331,11 @@ public partial class DownloadsViewModel : ObservableObject
 
     // ---------- keeping unfinished downloads between sessions ----------
 
-    /// <summary>Remembers what's still in the list and not done (cancelled items were the user's choice, so they go).</summary>
+    /// <summary>Remembers what's still in the list and not done.</summary>
     public void SaveUnfinished()
     {
         _host.Settings.UnfinishedDownloads = Items
-            .Where(i => i.State is not (DownloadState.Completed or DownloadState.Skipped or DownloadState.Cancelled))
+            .Where(i => DownloadQueue.KeepForNextSession(i.State))
             .Select(i => new SavedDownload
             {
                 Url = i.Url,
