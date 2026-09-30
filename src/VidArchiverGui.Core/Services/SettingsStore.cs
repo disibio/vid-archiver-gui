@@ -169,11 +169,11 @@ public sealed class SettingsStore(string path)
         s.MaxConcurrentDownloads = Math.Clamp(s.MaxConcurrentDownloads, 1, 10);
 
         // Built-ins always come first and their definitions come from code (so fixes to repos/names apply).
-        var custom = s.Engines.Where(e => e.GitHubRepo is null && !string.IsNullOrWhiteSpace(e.ExecutablePath)).ToList();
-        s.Engines.Clear();
-        foreach (var e in Engine.CreateBuiltIns().Concat(custom))
+        var custom = s.Downloaders.Where(e => e.GitHubRepo is null && !string.IsNullOrWhiteSpace(e.ExecutablePath)).ToList();
+        s.Downloaders.Clear();
+        foreach (var e in Downloader.CreateBuiltIns().Concat(custom))
         {
-            s.Engines.Add(e);
+            s.Downloaders.Add(e);
         }
 
         s.RemoveDanglingReferences();

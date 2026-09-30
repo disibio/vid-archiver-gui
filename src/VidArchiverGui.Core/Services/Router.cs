@@ -8,7 +8,7 @@ public sealed record RouteResult(RoutingRule? Rule, string Destination, string? 
     public string Describe() => Rule is null ? "No rule matched (fallback folder)" : $"Rule: {Rule.Name}";
 }
 
-public static class RoutingEngine
+public static class Router
 {
     /// <summary>Returns the first enabled rule (top to bottom) whose conditions match, or the fallback.</summary>
     public static RouteResult Resolve(MediaInfo info, IEnumerable<RoutingRule> rules, string fallbackDestination)

@@ -23,8 +23,8 @@ public partial class PresetsViewModel : ObservableObject
     [ObservableProperty] private Preset? _selectedPreset;
     [ObservableProperty] private string _parsedPreview = "";
     [ObservableProperty] private string _warning = "";
-    [ObservableProperty] private ObservableCollection<Choice> _engineChoices = [];
-    [ObservableProperty] private Choice? _selectedEngineChoice;
+    [ObservableProperty] private ObservableCollection<Choice> _downloaderChoices = [];
+    [ObservableProperty] private Choice? _selectedDownloaderChoice;
 
     public string DefaultPresetText => "Default preset: " + _host.Settings.DefaultPreset.Name;
 
@@ -39,28 +39,28 @@ public partial class PresetsViewModel : ObservableObject
             newValue.PropertyChanged += OnPresetPropertyChanged;
         }
         UpdatePreview();
-        RefreshEngineChoices();
+        RefreshDownloaderChoices();
     }
 
-    partial void OnSelectedEngineChoiceChanged(Choice? value)
+    partial void OnSelectedDownloaderChoiceChanged(Choice? value)
     {
         if (SelectedPreset is not null && value is not null)
         {
-            SelectedPreset.EngineId = value.Id;
+            SelectedPreset.DownloaderId = value.Id;
         }
     }
 
     /// <summary>Called when the tab is shown, since downloaders may have been added or the default changed.</summary>
-    public void RefreshEngineChoices()
+    public void RefreshDownloaderChoices()
     {
-        var choices = new ObservableCollection<Choice> { new(null, $"Default downloader ({_host.Settings.DefaultEngine.Name})") };
-        foreach (var e in _host.Settings.Engines)
+        var choices = new ObservableCollection<Choice> { new(null, $"Default downloader ({_host.Settings.DefaultDownloader.Name})") };
+        foreach (var e in _host.Settings.Downloaders)
         {
             choices.Add(new Choice(e.Id, e.Name));
         }
 
-        EngineChoices = choices;
-        SelectedEngineChoice = choices.FirstOrDefault(c => c.Id == SelectedPreset?.EngineId) ?? choices[0];
+        DownloaderChoices = choices;
+        SelectedDownloaderChoice = choices.FirstOrDefault(c => c.Id == SelectedPreset?.DownloaderId) ?? choices[0];
     }
 
     private void OnPresetPropertyChanged(object? sender, PropertyChangedEventArgs e)

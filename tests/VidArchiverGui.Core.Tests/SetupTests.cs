@@ -94,7 +94,7 @@ public class SetupTests
     }
 
     [Fact]
-    public void Extra_engine_args_are_passed_before_the_url()
+    public void Extra_downloader_args_are_passed_before_the_url()
     {
         var args = DownloadRunner.BuildArguments(new DownloadRequest("https://x", ["-f", "b"], "/d"), null, ["--js-runtimes", "deno:/app/deno"]);
         Assert.True(args.IndexOf("--js-runtimes") < args.IndexOf("--"));

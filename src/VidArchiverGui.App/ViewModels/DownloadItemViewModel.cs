@@ -67,21 +67,21 @@ public partial class DownloadItemViewModel : ObservableObject
     internal void OnCookieChoicesChanged() => OnPropertyChanged(nameof(SelectedCookie));
 
     /// <summary>A fallback downloader that worked for this URL when the preset's own one didn't; used for the download too.</summary>
-    public Engine? EngineOverride
+    public Downloader? DownloaderOverride
     {
-        get => _engineOverride;
+        get => _downloaderOverride;
         set
         {
-            if (SetProperty(ref _engineOverride, value))
+            if (SetProperty(ref _downloaderOverride, value))
             {
                 UpdateDetails();
             }
         }
     }
-    private Engine? _engineOverride;
+    private Downloader? _downloaderOverride;
 
-    /// <summary>The downloader this item uses: <see cref="EngineOverride"/>, else the preset's.</summary>
-    internal Engine Engine => EngineOverride ?? _owner.Settings.EngineFor(Preset);
+    /// <summary>The downloader this item uses: <see cref="DownloaderOverride"/>, else the preset's.</summary>
+    internal Downloader Downloader => DownloaderOverride ?? _owner.Settings.DownloaderFor(Preset);
 
     private string AdviceFor(FailureKind kind) =>
         Resilience.Advice(kind, !Cookies.IsNone(CookieId)) is { } advice ? Environment.NewLine + advice : "";
@@ -187,9 +187,9 @@ public partial class DownloadItemViewModel : ObservableObject
             parts.Add(RouteDescription);
         }
 
-        if (Engine != _owner.Settings.DefaultEngine)
+        if (Downloader != _owner.Settings.DefaultDownloader)
         {
-            parts.Add("via " + Engine.Name);
+            parts.Add("via " + Downloader.Name);
         }
 
         if (!Cookies.IsNone(CookieId))
@@ -202,7 +202,7 @@ public partial class DownloadItemViewModel : ObservableObject
 
     partial void OnPresetChanged(Preset value)
     {
-        EngineOverride = null; // the new preset may use another downloader
+        DownloaderOverride = null; // the new preset may use another downloader
         UpdateDetails();
     }
 
@@ -254,16 +254,16 @@ public partial class DownloadItemViewModel : ObservableObject
     internal async Task<bool> ReadInfoAsync(AppSettings settings, CancellationToken ct)
     {
         var presetArgs = ArgumentParser.Split(Preset.Arguments);
-        var result = await Resilience.RunAsync(settings, Engine,
-            async (engine, attemptCt) =>
+        var result = await Resilience.RunAsync(settings, Downloader,
+            async (downloader, attemptCt) =>
             {
                 try
                 {
-                    var cookieArgs = Cookies.Args(settings, CookieId, engine.Flavor);
-                    Info = await MetadataService.FetchAsync(Url, presetArgs, engine, cookieArgs, attemptCt);
+                    var cookieArgs = Cookies.Args(settings, CookieId, downloader.Flavor);
+                    Info = await MetadataService.FetchAsync(Url, presetArgs, downloader, cookieArgs, attemptCt);
                     return null;
                 }
-                catch (YtDlpException e)
+                catch (DownloaderException e)
                 {
                     AppendLog("ERROR: " + e.Message);
                     return e.Message;
@@ -279,7 +279,7 @@ public partial class DownloadItemViewModel : ObservableObject
             return false;
         }
 
-        EngineOverride = result.Engine == settings.EngineFor(Preset) ? null : result.Engine;
+        DownloaderOverride = result.Downloader == settings.DownloaderFor(Preset) ? null : result.Downloader;
         return true;
     }
 
@@ -300,22 +300,22 @@ public partial class DownloadItemViewModel : ObservableObject
 
         try
         {
-            var primary = Engine;
+            var primary = Downloader;
             var presetArgs = ArgumentParser.Split(Preset.Arguments);
             var ffmpeg = ToolManager.ResolveFfmpeg(settings.FfmpegPath);
             var result = await Resilience.RunAsync(settings, primary,
-                async (engine, ct) =>
+                async (downloader, ct) =>
                 {
                     var request = new DownloadRequest(Url, presetArgs, Destination)
                     {
-                        CookieArgs = Cookies.Args(settings, CookieId, engine.Flavor),
+                        CookieArgs = Cookies.Args(settings, CookieId, downloader.Flavor),
                         Gentle = settings.GentleDownloads,
                     };
                     _lastError = null;
-                    var exitCode = await DownloadRunner.RunAsync(request, engine, ffmpeg, OnOutput, ct);
+                    var exitCode = await DownloadRunner.RunAsync(request, downloader, ffmpeg, OnOutput, ct);
                     // Let any output events still queued on the UI thread land first.
                     await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
-                    return exitCode == 0 ? null : _lastError ?? $"{engine.Engine.Name} exited with code {exitCode}";
+                    return exitCode == 0 ? null : _lastError ?? $"{downloader.Downloader.Name} exited with code {exitCode}";
                 },
                 message => Dispatcher.UIThread.Post(() =>
                 {
@@ -328,9 +328,9 @@ public partial class DownloadItemViewModel : ObservableObject
 
             if (result.Succeeded)
             {
-                if (result.Engine != primary)
+                if (result.Downloader != primary)
                 {
-                    EngineOverride = result.Engine;
+                    DownloaderOverride = result.Downloader;
                 }
 
                 var skipped = _alreadyDoneCount > 0 && _destinationCount == 0;

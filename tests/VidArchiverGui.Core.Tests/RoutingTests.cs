@@ -46,7 +46,7 @@ public class RoutingTests
             Rule("/a", MatchField.Channel, MatchOperator.Equals, "veritasium"),
             Rule("/b", MatchField.Domain, MatchOperator.Equals, "youtube.com"),
         };
-        var r = RoutingEngine.Resolve(Video, rules, "/fallback");
+        var r = Router.Resolve(Video, rules, "/fallback");
         Assert.Same(rules[0], r.Rule);
         Assert.Equal("/a", r.Destination);
     }
@@ -59,7 +59,7 @@ public class RoutingTests
             Rule("/a", MatchField.Channel, MatchOperator.Equals, "Veritasium", enabled: false),
             Rule("/b", MatchField.Channel, MatchOperator.Equals, "   "),
         };
-        var r = RoutingEngine.Resolve(Video, rules, "/fallback/{site}");
+        var r = Router.Resolve(Video, rules, "/fallback/{site}");
         Assert.Null(r.Rule);
         Assert.Equal("/fallback/Youtube", r.Destination);
     }
@@ -71,9 +71,9 @@ public class RoutingTests
         rule.Conditions.Add(new RuleCondition { Field = MatchField.Channel, Operator = MatchOperator.Equals, Value = "Nope" });
 
         rule.MatchMode = MatchMode.All;
-        Assert.False(RoutingEngine.Matches(rule, Video));
+        Assert.False(Router.Matches(rule, Video));
         rule.MatchMode = MatchMode.Any;
-        Assert.True(RoutingEngine.Matches(rule, Video));
+        Assert.True(Router.Matches(rule, Video));
     }
 
     [Theory]
@@ -85,14 +85,14 @@ public class RoutingTests
     public void Operators(MatchOperator op, string value, bool expected)
     {
         var cond = new RuleCondition { Field = MatchField.Channel, Operator = op, Value = value };
-        Assert.Equal(expected, RoutingEngine.Matches(cond, Video));
+        Assert.Equal(expected, Router.Matches(cond, Video));
     }
 
     [Fact]
     public void Missing_field_never_matches()
     {
         var cond = new RuleCondition { Field = MatchField.Playlist, Operator = MatchOperator.Regex, Value = ".*" };
-        Assert.False(RoutingEngine.Matches(cond, Video));
+        Assert.False(Router.Matches(cond, Video));
     }
 
     [Fact]

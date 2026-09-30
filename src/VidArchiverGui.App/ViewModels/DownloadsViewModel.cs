@@ -187,7 +187,7 @@ public partial class DownloadsViewModel : ObservableObject
             return;
         }
 
-        var route = RoutingEngine.Resolve(item.Info, _host.Settings.Rules, _host.Settings.FallbackDestination);
+        var route = Router.Resolve(item.Info, _host.Settings.Rules, _host.Settings.FallbackDestination);
         if (!item.DestinationEdited)
         {
             item.SetRoutedDestination(route.Destination);
@@ -341,7 +341,7 @@ public partial class DownloadsViewModel : ObservableObject
                 Url = i.Url,
                 PresetId = i.Preset.Id,
                 CookieId = i.CookieId,
-                EngineId = i.EngineOverride?.Id,
+                DownloaderId = i.DownloaderOverride?.Id,
                 Destination = i.DestinationEdited && !string.IsNullOrWhiteSpace(i.Destination) ? i.Destination : null,
             })
             .ToList();
@@ -358,7 +358,7 @@ public partial class DownloadsViewModel : ObservableObject
             var item = new DownloadItemViewModel(this, saved.Url, _host.Settings.FindPreset(saved.PresetId) ?? _host.Settings.DefaultPreset)
             {
                 CookieId = saved.CookieId,
-                EngineOverride = _host.Settings.FindEngine(saved.EngineId),
+                DownloaderOverride = _host.Settings.FindDownloader(saved.DownloaderId),
                 Restored = true,
                 ProgressText = "Waiting for the startup checks…",
                 IsIndeterminate = true,
@@ -423,7 +423,7 @@ public partial class DownloadsViewModel : ObservableObject
     /// <summary>Adds the same URL as a fresh item (e.g. to download it again with another preset or folder).</summary>
     internal void AddAgain(DownloadItemViewModel item)
     {
-        var copy = new DownloadItemViewModel(this, item.Url, item.Preset) { CookieId = item.CookieId, EngineOverride = item.EngineOverride };
+        var copy = new DownloadItemViewModel(this, item.Url, item.Preset) { CookieId = item.CookieId, DownloaderOverride = item.DownloaderOverride };
         Items.Insert(Items.IndexOf(item) + 1, copy);
         _ = ResolveAsync(copy);
     }

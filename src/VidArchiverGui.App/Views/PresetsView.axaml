@@ -39,7 +39,7 @@
       <TextBlock Text="Name" />
       <TextBlock Grid.Column="1" Text="Downloader" Margin="10,0,0,0" />
       <TextBox Grid.Row="1" Text="{Binding SelectedPreset.Name}" Margin="0,4,0,10" />
-      <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding EngineChoices}" SelectedItem="{Binding SelectedEngineChoice}"
+      <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding DownloaderChoices}" SelectedItem="{Binding SelectedDownloaderChoice}"
                 HorizontalAlignment="Stretch" Margin="10,4,0,10"
                 ToolTip.Tip="Options differ between downloaders (e.g. youtube-dl has no --embed-chapters), so a preset is usually written for one of them.">
         <ComboBox.ItemTemplate>

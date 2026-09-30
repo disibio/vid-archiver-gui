@@ -93,8 +93,8 @@ public sealed class SetupChecker(AppSettings settings)
     /// <summary>The checklist's sections in display order, with the row name shown while each is still being checked.</summary>
     public IReadOnlyList<(SetupSection Section, string Name)> Plan()
     {
-        List<(SetupSection, string)> plan = [(SetupSection.Downloader, settings.DefaultEngine.Name), (SetupSection.Ffmpeg, "ffmpeg")];
-        if (settings.DefaultEngine.Flavor == EngineFlavor.YtDlp)
+        List<(SetupSection, string)> plan = [(SetupSection.Downloader, settings.DefaultDownloader.Name), (SetupSection.Ffmpeg, "ffmpeg")];
+        if (settings.DefaultDownloader.Flavor == DownloaderFlavor.YtDlp)
         {
             plan.Add((SetupSection.Deno, DenoName));
         }
@@ -120,35 +120,35 @@ public sealed class SetupChecker(AppSettings settings)
             done?.Invoke(section, rows);
         }
 
-        var engine = settings.DefaultEngine;
-        var path = ToolManager.LocatePath(engine);
-        var exeName = Path.GetFileName(path ?? engine.ExecutablePath ?? "yt-dlp");
+        var downloader = settings.DefaultDownloader;
+        var path = ToolManager.LocatePath(downloader);
+        var exeName = Path.GetFileName(path ?? downloader.ExecutablePath ?? "yt-dlp");
 
         // 1. The downloader itself.
         if (path is null)
         {
-            Done(SetupSection.Downloader, new SetupItem(engine.Name, SetupStatus.Missing,
-                engine.IsManaged ? "Not installed yet." : $"Executable not found: {engine.ExecutablePath}. Fix it under Downloaders below.",
-                DownloaderWhy) { Fix = engine.IsManaged ? SetupFix.InstallDownloader : SetupFix.None });
+            Done(SetupSection.Downloader, new SetupItem(downloader.Name, SetupStatus.Missing,
+                downloader.IsManaged ? "Not installed yet." : $"Executable not found: {downloader.ExecutablePath}. Fix it under Downloaders below.",
+                DownloaderWhy) { Fix = downloader.IsManaged ? SetupFix.InstallDownloader : SetupFix.None });
         }
         else
         {
             activity?.Invoke(SetupSection.Downloader, $"Running \"{exeName} --version\"…");
             var version = await ToolManager.GetVersionAsync(path, ct);
             Done(SetupSection.Downloader, version is not null
-                ? new SetupItem(engine.Name, SetupStatus.Ok, $"{version}  —  {path}", DownloaderWhy)
-                : new SetupItem(engine.Name, SetupStatus.Warning,
+                ? new SetupItem(downloader.Name, SetupStatus.Ok, $"{version}  —  {path}", DownloaderWhy)
+                : new SetupItem(downloader.Name, SetupStatus.Warning,
                     $"Found at {path}, but \"{exeName} --version\" failed or didn't answer within {ToolManager.QueryTimeout.TotalSeconds:0} s.", DownloaderWhy));
         }
 
         // Ask yt-dlp what it can actually see (it's the final word on ffmpeg and the JS runtime).
         YtDlpProbe? probe = null;
-        if (path is not null && engine.Flavor == EngineFlavor.YtDlp)
+        if (path is not null && downloader.Flavor == DownloaderFlavor.YtDlp)
         {
             var asking = $"Asking yt-dlp which helper tools it can find (\"{exeName} -v\")…";
             activity?.Invoke(SetupSection.Ffmpeg, asking);
             activity?.Invoke(SetupSection.Deno, asking);
-            probe = await ProbeAsync(ToolManager.Resolve(engine), ct);
+            probe = await ProbeAsync(ToolManager.Resolve(downloader), ct);
         }
 
         // 2. ffmpeg.
@@ -158,7 +158,7 @@ public sealed class SetupChecker(AppSettings settings)
             : FfmpegMissing());
 
         // 3. deno (yt-dlp only; youtube-dl doesn't use one).
-        if (engine.Flavor == EngineFlavor.YtDlp)
+        if (downloader.Flavor == DownloaderFlavor.YtDlp)
         {
             var deno = ToolManager.ResolveDeno();
             var rows = new List<SetupItem>();
@@ -195,7 +195,7 @@ public sealed class SetupChecker(AppSettings settings)
         return items;
     }
 
-    public async Task<YtDlpProbe?> ProbeAsync(ResolvedEngine engine, CancellationToken ct = default)
+    public async Task<YtDlpProbe?> ProbeAsync(ResolvedDownloader downloader, CancellationToken ct = default)
     {
         List<string> args = ["-v"];
         if (ToolManager.ResolveFfmpeg(settings.FfmpegPath) is { } ffmpeg)
@@ -203,10 +203,10 @@ public sealed class SetupChecker(AppSettings settings)
             args.AddRange(["--ffmpeg-location", ffmpeg]);
         }
 
-        args.AddRange(engine.ExtraArgs);
+        args.AddRange(downloader.ExtraArgs);
 
         // With no URL yt-dlp prints its debug header and then exits with an error; the header is all we need.
-        if (await ToolManager.TryRunAsync(engine.Path, args, ct) is not { } r)
+        if (await ToolManager.TryRunAsync(downloader.Path, args, ct) is not { } r)
         {
             return null;
         }

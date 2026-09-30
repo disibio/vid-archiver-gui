@@ -11,14 +11,14 @@ public class AccessTests
     public void No_cookies_adds_nothing()
     {
         var s = new AppSettings();
-        Assert.Empty(Cookies.Args(s, null, EngineFlavor.YtDlp));
-        Assert.Empty(Cookies.Args(s, Cookies.NoneId, EngineFlavor.YtDlp));
+        Assert.Empty(Cookies.Args(s, null, DownloaderFlavor.YtDlp));
+        Assert.Empty(Cookies.Args(s, Cookies.NoneId, DownloaderFlavor.YtDlp));
     }
 
     [Fact]
     public void Browser_choice_becomes_cookies_from_browser()
     {
-        Assert.Equal(["--cookies-from-browser", "firefox"], Cookies.Args(new AppSettings(), Cookies.BrowserId("firefox"), EngineFlavor.YtDlp));
+        Assert.Equal(["--cookies-from-browser", "firefox"], Cookies.Args(new AppSettings(), Cookies.BrowserId("firefox"), DownloaderFlavor.YtDlp));
     }
 
     [Fact]
@@ -33,9 +33,9 @@ public class AccessTests
             s.CookieSources.Add(txt);
             s.CookieSources.Add(profile);
 
-            Assert.Equal(["--cookies", file], Cookies.Args(s, txt.Id, EngineFlavor.YtDlp));
-            Assert.Equal(["--cookies", file], Cookies.Args(s, txt.Id, EngineFlavor.YoutubeDl)); // youtube-dl can use files
-            Assert.Equal(["--cookies-from-browser", "firefox:work"], Cookies.Args(s, profile.Id, EngineFlavor.YtDlp));
+            Assert.Equal(["--cookies", file], Cookies.Args(s, txt.Id, DownloaderFlavor.YtDlp));
+            Assert.Equal(["--cookies", file], Cookies.Args(s, txt.Id, DownloaderFlavor.YoutubeDl)); // youtube-dl can use files
+            Assert.Equal(["--cookies-from-browser", "firefox:work"], Cookies.Args(s, profile.Id, DownloaderFlavor.YtDlp));
             Assert.Equal("work", Cookies.DisplayName(s, profile.Id));
         }
         finally
@@ -50,9 +50,9 @@ public class AccessTests
         var s = new AppSettings();
         s.CookieSources.Add(new CookieSource { Id = "gone-file", Kind = CookieSourceKind.File, Value = Path.Combine(Dest, "nope.txt") });
 
-        Assert.Contains("not found", Assert.Throws<YtDlpException>(() => Cookies.Args(s, "gone-file", EngineFlavor.YtDlp)).Message);
-        Assert.Contains("removed", Assert.Throws<YtDlpException>(() => Cookies.Args(s, "never-existed", EngineFlavor.YtDlp)).Message);
-        Assert.Contains("youtube-dl", Assert.Throws<YtDlpException>(() => Cookies.Args(s, Cookies.BrowserId("chrome"), EngineFlavor.YoutubeDl)).Message);
+        Assert.Contains("not found", Assert.Throws<DownloaderException>(() => Cookies.Args(s, "gone-file", DownloaderFlavor.YtDlp)).Message);
+        Assert.Contains("removed", Assert.Throws<DownloaderException>(() => Cookies.Args(s, "never-existed", DownloaderFlavor.YtDlp)).Message);
+        Assert.Contains("youtube-dl", Assert.Throws<DownloaderException>(() => Cookies.Args(s, Cookies.BrowserId("chrome"), DownloaderFlavor.YoutubeDl)).Message);
     }
 
     [Fact]
@@ -109,7 +109,7 @@ public class AccessTests
         Assert.True(args.LastIndexOf("--sleep-interval") > args.IndexOf("--max-sleep-interval"));
         Assert.Equal("30", args[args.LastIndexOf("--sleep-interval") + 1]);
 
-        var ytdl = DownloadRunner.BuildArguments(new DownloadRequest("u", [], Dest, EngineFlavor.YoutubeDl) { Gentle = true }, null);
+        var ytdl = DownloadRunner.BuildArguments(new DownloadRequest("u", [], Dest, DownloaderFlavor.YoutubeDl) { Gentle = true }, null);
         Assert.DoesNotContain("--sleep-requests", ytdl);
         Assert.Contains("--sleep-interval", ytdl);
     }

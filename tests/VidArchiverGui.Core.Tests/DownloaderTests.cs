@@ -3,12 +3,12 @@ using VidArchiverGui.Core.Services;
 
 namespace VidArchiverGui.Core.Tests;
 
-public class EngineTests
+public class DownloaderTests
 {
     private static readonly string Dest = Path.Combine(Path.GetTempPath(), "dest");
 
     private static List<string> YoutubeDlArgs(params string[] preset) =>
-        DownloadRunner.BuildArguments(new DownloadRequest("https://x", preset, Dest, EngineFlavor.YoutubeDl), null);
+        DownloadRunner.BuildArguments(new DownloadRequest("https://x", preset, Dest, DownloaderFlavor.YoutubeDl), null);
 
     [Fact]
     public void YoutubeDl_gets_output_template_instead_of_P()
@@ -39,7 +39,7 @@ public class EngineTests
     [Fact]
     public void YoutubeDl_escapes_percent_in_destination()
     {
-        var args = DownloadRunner.BuildArguments(new DownloadRequest("u", [], Path.Combine(Dest, "100% legit"), EngineFlavor.YoutubeDl), null);
+        var args = DownloadRunner.BuildArguments(new DownloadRequest("u", [], Path.Combine(Dest, "100% legit"), DownloaderFlavor.YoutubeDl), null);
         Assert.StartsWith(Path.Combine(Dest, "100%% legit"), args[args.IndexOf("-o") + 1]);
     }
 
@@ -90,12 +90,12 @@ public class EngineTests
                 """);
             var s = new SettingsStore(file).Load();
 
-            Assert.Equal(["yt-dlp", "yt-dlp-nightly", "yt-dlp-master", "youtube-dl"], s.Engines.Take(4).Select(e => e.Id));
-            Assert.Equal("yt-dlp/yt-dlp", s.FindEngine("yt-dlp")!.GitHubRepo); // built-in definitions come from code
-            var custom = Assert.Single(s.Engines, e => !e.IsManaged);
+            Assert.Equal(["yt-dlp", "yt-dlp-nightly", "yt-dlp-master", "youtube-dl"], s.Downloaders.Take(4).Select(e => e.Id));
+            Assert.Equal("yt-dlp/yt-dlp", s.FindDownloader("yt-dlp")!.GitHubRepo); // built-in definitions come from code
+            var custom = Assert.Single(s.Downloaders, e => !e.IsManaged);
             Assert.Equal(@"C:\tools\yt-dlp-fork.exe", custom.ExecutablePath);
             Assert.Equal("fork", custom.Id);
-            Assert.Null(s.Presets[0].EngineId); // pointed at a downloader that no longer exists
+            Assert.Null(s.Presets[0].DownloaderId); // pointed at a downloader that no longer exists
         }
         finally
         {
@@ -104,43 +104,43 @@ public class EngineTests
     }
 
     [Fact]
-    public void Preset_engine_falls_back_to_default()
+    public void Preset_downloader_falls_back_to_default()
     {
-        var s = SettingsStore.CreateDefaults(); // engines are only filled in by Load(), so add them here
-        foreach (var e in Engine.CreateBuiltIns())
+        var s = SettingsStore.CreateDefaults(); // downloaders are only filled in by Load(), so add them here
+        foreach (var e in Downloader.CreateBuiltIns())
         {
-            s.Engines.Add(e);
+            s.Downloaders.Add(e);
         }
 
         var preset = s.Presets[0];
-        Assert.Equal(Engine.StableId, s.EngineFor(preset).Id);
-        preset.EngineId = "youtube-dl";
-        Assert.Equal(EngineFlavor.YoutubeDl, s.EngineFor(preset).Flavor);
+        Assert.Equal(Downloader.StableId, s.DownloaderFor(preset).Id);
+        preset.DownloaderId = "youtube-dl";
+        Assert.Equal(DownloaderFlavor.YoutubeDl, s.DownloaderFor(preset).Flavor);
     }
 
     [Fact]
     public void Removing_things_drops_the_choices_that_pointed_at_them()
     {
         var s = SettingsStore.CreateDefaults();
-        var custom = new Engine { Name = "Fork", ExecutablePath = "fork" };
+        var custom = new Downloader { Name = "Fork", ExecutablePath = "fork" };
         var cookies = new CookieSource { Name = "Work" };
-        s.Engines = [.. Engine.CreateBuiltIns(), custom];
+        s.Downloaders = [.. Downloader.CreateBuiltIns(), custom];
         s.CookieSources.Add(cookies);
-        s.DefaultEngineId = custom.Id;
-        s.Presets[1].EngineId = custom.Id;
+        s.DefaultDownloaderId = custom.Id;
+        s.Presets[1].DownloaderId = custom.Id;
         s.LastCookieId = cookies.Id;
         var deletedPreset = s.Presets[0]; // the default
         var rule = new RoutingRule { PresetId = deletedPreset.Id, CookieId = cookies.Id };
         var browserRule = new RoutingRule { PresetId = s.Presets[1].Id, CookieId = Cookies.BrowserId("firefox") };
         s.Rules = [rule, browserRule];
 
-        s.Engines.Remove(custom);
+        s.Downloaders.Remove(custom);
         s.CookieSources.Remove(cookies);
         s.Presets.Remove(deletedPreset);
         s.RemoveDanglingReferences();
 
-        Assert.Equal(Engine.StableId, s.DefaultEngineId);
-        Assert.Null(s.Presets[0].EngineId);
+        Assert.Equal(Downloader.StableId, s.DefaultDownloaderId);
+        Assert.Null(s.Presets[0].DownloaderId);
         Assert.Equal(s.Presets[0].Id, s.DefaultPresetId);
         Assert.Null(s.LastCookieId);
         Assert.Equal((null, null), (rule.PresetId, rule.CookieId));

@@ -111,8 +111,8 @@ public static class Cookies
     public static bool Exists(AppSettings settings, string? id) =>
         IsNone(id) || IsBrowser(id) || settings.CookieSources.Any(c => c.Id == id);
 
-    /// <summary>Downloader arguments for a cookie choice. Throws <see cref="YtDlpException"/> with a readable reason if it can't be used.</summary>
-    public static IReadOnlyList<string> Args(AppSettings settings, string? id, EngineFlavor flavor)
+    /// <summary>Downloader arguments for a cookie choice. Throws <see cref="DownloaderException"/> with a readable reason if it can't be used.</summary>
+    public static IReadOnlyList<string> Args(AppSettings settings, string? id, DownloaderFlavor flavor)
     {
         if (IsNone(id))
         {
@@ -127,18 +127,18 @@ public static class Cookies
         else
         {
             var source = settings.CookieSources.FirstOrDefault(c => c.Id == id)
-                ?? throw new YtDlpException("The selected cookie source was removed. Pick another one in the Cookies list.");
+                ?? throw new DownloaderException("The selected cookie source was removed. Pick another one in the Cookies list.");
             var value = source.Value.Trim().Trim('"');
             if (value.Length == 0)
             {
-                throw new YtDlpException($"Cookie source \"{source.Name}\" is empty. Set it up on the Settings tab.");
+                throw new DownloaderException($"Cookie source \"{source.Name}\" is empty. Set it up on the Settings tab.");
             }
 
             if (source.Kind == CookieSourceKind.File)
             {
                 if (!File.Exists(value))
                 {
-                    throw new YtDlpException($"Cookie file for \"{source.Name}\" not found: {value}");
+                    throw new DownloaderException($"Cookie file for \"{source.Name}\" not found: {value}");
                 }
 
                 return ["--cookies", value];
@@ -146,9 +146,9 @@ public static class Cookies
             spec = value;
         }
 
-        if (flavor == EngineFlavor.YoutubeDl)
+        if (flavor == DownloaderFlavor.YoutubeDl)
         {
-            throw new YtDlpException("youtube-dl can't read cookies from a browser. Use a cookies.txt file instead (Settings → Cookies).");
+            throw new DownloaderException("youtube-dl can't read cookies from a browser. Use a cookies.txt file instead (Settings → Cookies).");
         }
 
         return ["--cookies-from-browser", spec];

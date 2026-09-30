@@ -246,7 +246,7 @@ public partial class SetupViewModel(AppHost host, Func<Task> refresh) : Observab
             switch (item.Item.Fix)
             {
                 case SetupFix.InstallDownloader:
-                    await ToolManager.InstallAsync(host.Settings.DefaultEngine, progress, ct);
+                    await ToolManager.InstallAsync(host.Settings.DefaultDownloader, progress, ct);
                     break;
                 case SetupFix.InstallDeno:
                     await ToolManager.InstallDenoAsync(progress, ct);

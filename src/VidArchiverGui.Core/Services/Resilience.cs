@@ -20,7 +20,7 @@ public enum FailureKind
 }
 
 /// <summary>The outcome of <see cref="Resilience.RunAsync"/>. <see cref="Error"/> is null on success.</summary>
-public sealed record FallbackResult(Engine Engine, string? Error, FailureKind Kind)
+public sealed record FallbackResult(Downloader Downloader, string? Error, FailureKind Kind)
 {
     public bool Succeeded => Error is null;
 }
@@ -94,64 +94,64 @@ public static class Resilience
     /// written for one flavor), in the Settings list order, so stable → nightly → master → custom forks.
     /// App-managed ones are included even if not installed yet; <see cref="RunAsync"/> installs them on demand.
     /// </summary>
-    public static IReadOnlyList<Engine> FallbackEngines(AppSettings settings, Engine primary) =>
-        settings.Engines
+    public static IReadOnlyList<Downloader> FallbackDownloaders(AppSettings settings, Downloader primary) =>
+        settings.Downloaders
             .Where(e => e.Id != primary.Id && e.Flavor == primary.Flavor && (e.IsManaged || ToolManager.LocatePath(e) is not null))
             .ToList();
 
     /// <summary>
     /// Runs <paramref name="attempt"/> (which returns null on success, otherwise the error message) with
     /// <paramref name="primary"/>, retrying network errors after a pause and, when <see cref="AppSettings.AutoFallback"/>
-    /// is on, moving to the next of the <see cref="FallbackEngines"/> when extraction is broken.
+    /// is on, moving to the next of the <see cref="FallbackDownloaders"/> when extraction is broken.
     /// </summary>
     public static async Task<FallbackResult> RunAsync(
-        AppSettings settings, Engine primary,
-        Func<ResolvedEngine, CancellationToken, Task<string?>> attempt, Action<string> status, CancellationToken ct,
+        AppSettings settings, Downloader primary,
+        Func<ResolvedDownloader, CancellationToken, Task<string?>> attempt, Action<string> status, CancellationToken ct,
         IReadOnlyList<TimeSpan>? networkRetryDelays = null)
     {
         networkRetryDelays ??= NetworkRetryDelays;
-        List<Engine> engines = settings.AutoFallback ? [primary, .. FallbackEngines(settings, primary)] : [primary];
+        List<Downloader> downloaders = settings.AutoFallback ? [primary, .. FallbackDownloaders(settings, primary)] : [primary];
         FallbackResult? last = null;
         var tried = new List<string>();
 
-        foreach (var engine in engines)
+        foreach (var downloader in downloaders)
         {
-            ResolvedEngine resolved;
-            if (engine == primary)
+            ResolvedDownloader resolved;
+            if (downloader == primary)
             {
-                resolved = ToolManager.Resolve(engine); // a missing primary is reported as-is
+                resolved = ToolManager.Resolve(downloader); // a missing primary is reported as-is
             }
             else
             {
                 try
                 {
-                    if (engine.IsManaged && !ToolManager.IsInstalledByApp(engine) && ToolManager.LocatePath(engine) is null)
+                    if (downloader.IsManaged && !ToolManager.IsInstalledByApp(downloader) && ToolManager.LocatePath(downloader) is null)
                     {
-                        status($"Installing {engine.Name} to try it…");
-                        await ToolManager.EnsureInstalledAsync(engine,
-                            new Progress<TransferProgress>(p => status($"Installing {engine.Name} to try it: {p}")), ct);
+                        status($"Installing {downloader.Name} to try it…");
+                        await ToolManager.EnsureInstalledAsync(downloader,
+                            new Progress<TransferProgress>(p => status($"Installing {downloader.Name} to try it: {p}")), ct);
                     }
-                    resolved = ToolManager.Resolve(engine);
+                    resolved = ToolManager.Resolve(downloader);
                 }
                 catch (Exception e) when (e is not OperationCanceledException)
                 {
-                    status($"Skipping {engine.Name}: {e.Message}");
+                    status($"Skipping {downloader.Name}: {e.Message}");
                     continue;
                 }
-                status($"{string.Join(", ", tried)} couldn't handle this; trying {engine.Name}…");
+                status($"{string.Join(", ", tried)} couldn't handle this; trying {downloader.Name}…");
             }
-            tried.Add(engine.Name);
+            tried.Add(downloader.Name);
 
             for (var retry = 0; ; retry++)
             {
                 var error = await attempt(resolved, ct);
                 if (error is null)
                 {
-                    return new FallbackResult(engine, null, FailureKind.Unknown);
+                    return new FallbackResult(downloader, null, FailureKind.Unknown);
                 }
 
                 var kind = Classify(error);
-                last = new FallbackResult(engine, error, kind);
+                last = new FallbackResult(downloader, error, kind);
                 if (kind != FailureKind.Network || retry >= networkRetryDelays.Count)
                 {
                     break;

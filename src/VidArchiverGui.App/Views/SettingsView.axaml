@@ -77,12 +77,12 @@
       <TextBlock Text="Downloaders" Classes="h2" />
       <TextBlock Classes="hint"
                  Text="yt-dlp and its release channels, youtube-dl, or any fork you add as a custom executable. The default is used unless a preset picks another one." />
-      <ListBox ItemsSource="{Binding Engines}" SelectedItem="{Binding SelectedEngine}" MaxHeight="260">
+      <ListBox ItemsSource="{Binding Downloaders}" SelectedItem="{Binding SelectedDownloader}" MaxHeight="260">
         <ListBox.ItemTemplate>
-          <DataTemplate x:DataType="vm:EngineRowViewModel">
+          <DataTemplate x:DataType="vm:DownloaderRowViewModel">
             <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
               <StackPanel Orientation="Horizontal" Spacing="8">
-                <TextBlock Text="{Binding Engine.Name}" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding Downloader.Name}" FontWeight="SemiBold" />
                 <Border Background="{DynamicResource SystemControlHighlightAccentBrush}" CornerRadius="3" Padding="6,0" IsVisible="{Binding IsDefault}">
                   <TextBlock Text="default" FontSize="11" Foreground="White" VerticalAlignment="Center" />
                 </Border>
@@ -96,14 +96,14 @@
       <StackPanel Orientation="Horizontal" Spacing="6" IsEnabled="{Binding Busy.IsIdle}">
         <Button Content="{Binding InstallButtonText}" Command="{Binding InstallSelectedCommand}" IsEnabled="{Binding HasSelection}" />
         <Button Content="Re-download" Command="{Binding ReinstallSelectedCommand}" IsEnabled="{Binding HasSelection}" />
-        <Button Content="{Binding SelectedEngine.RollbackText, FallbackValue=''}" Command="{Binding RollbackSelectedCommand}"
-                IsVisible="{Binding SelectedEngine.CanRollback, FallbackValue=False}"
+        <Button Content="{Binding SelectedDownloader.RollbackText, FallbackValue=''}" Command="{Binding RollbackSelectedCommand}"
+                IsVisible="{Binding SelectedDownloader.CanRollback, FallbackValue=False}"
                 ToolTip.Tip="Go back to the version that was installed before the last update, e.g. when a new release broke something." />
         <Button Content="Set as default" Command="{Binding SetDefaultCommand}" IsEnabled="{Binding HasSelection}" />
         <Button Content="Remove" Command="{Binding RemoveSelectedCommand}" IsVisible="{Binding CanRemoveSelected}" />
         <Button Content="Refresh" Command="{Binding RefreshCommand}" />
       </StackPanel>
-      <TextBlock Text="{Binding SelectedEngine.Source, FallbackValue=''}" Classes="hint" />
+      <TextBlock Text="{Binding SelectedDownloader.Source, FallbackValue=''}" Classes="hint" />
       <CheckBox Content="Check app-installed downloaders for updates once a day" IsChecked="{Binding Settings.AutoUpdateYtDlp}" />
       <CheckBox IsChecked="{Binding Settings.AutoFallback}">
         <TextBlock TextWrapping="Wrap"
@@ -112,12 +112,12 @@
 
       <TextBlock Text="Add a custom downloader (fork)" Margin="0,10,0,0" FontWeight="SemiBold" />
       <Grid ColumnDefinitions="200,*,Auto,190,Auto" IsEnabled="{Binding Busy.IsIdle}">
-        <TextBox Text="{Binding NewEngineName}" PlaceholderText="Name" />
-        <TextBox Grid.Column="1" Text="{Binding NewEnginePath}" PlaceholderText="Path to executable" Margin="4,0,0,0" />
-        <Button Grid.Column="2" Content="Browse…" Command="{Binding BrowseNewEngineCommand}" Margin="4,0,0,0" />
-        <ComboBox Grid.Column="3" ItemsSource="{x:Static vm:SettingsViewModel.Flavors}" SelectedItem="{Binding NewEngineFlavor}"
+        <TextBox Text="{Binding NewDownloaderName}" PlaceholderText="Name" />
+        <TextBox Grid.Column="1" Text="{Binding NewDownloaderPath}" PlaceholderText="Path to executable" Margin="4,0,0,0" />
+        <Button Grid.Column="2" Content="Browse…" Command="{Binding BrowseNewDownloaderCommand}" Margin="4,0,0,0" />
+        <ComboBox Grid.Column="3" ItemsSource="{x:Static vm:SettingsViewModel.Flavors}" SelectedItem="{Binding NewDownloaderFlavor}"
                   HorizontalAlignment="Stretch" Margin="4,0,0,0" ToolTip.Tip="YtDlp: supports -P and --progress-template. YoutubeDl: the older youtube-dl options." />
-        <Button Grid.Column="4" Content="Add" Command="{Binding AddCustomEngineCommand}" Margin="4,0,0,0" />
+        <Button Grid.Column="4" Content="Add" Command="{Binding AddCustomDownloaderCommand}" Margin="4,0,0,0" />
       </Grid>
 
       <SelectableTextBlock Text="{Binding ToolOutput}" FontSize="12" TextWrapping="Wrap" />

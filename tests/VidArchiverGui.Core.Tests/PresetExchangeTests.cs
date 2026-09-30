@@ -5,10 +5,10 @@ namespace VidArchiverGui.Core.Tests;
 
 public class PresetExchangeTests
 {
-    private static AppSettings Settings(params Engine[] custom)
+    private static AppSettings Settings(params Downloader[] custom)
     {
-        var settings = new AppSettings { Engines = [.. Engine.CreateBuiltIns(), .. custom] };
-        var audio = new Preset { Name = "Audio", Arguments = "-x --audio-format mp3", EngineId = "yt-dlp-nightly" };
+        var settings = new AppSettings { Downloaders = [.. Downloader.CreateBuiltIns(), .. custom] };
+        var audio = new Preset { Name = "Audio", Arguments = "-x --audio-format mp3", DownloaderId = "yt-dlp-nightly" };
         var video = new Preset { Name = "Video", Arguments = "-f \"bv+ba\"\n# comment" };
         settings.Presets = [audio, video];
         settings.DefaultPresetId = video.Id;
@@ -24,23 +24,23 @@ public class PresetExchangeTests
         Assert.Equal("Video", imported.DefaultPresetName);
         Assert.Equal(["Audio", "Video"], imported.Presets.Select(p => p.Name));
         Assert.Equal("-x --audio-format mp3", imported.Presets[0].Arguments);
-        Assert.Equal("yt-dlp-nightly", imported.Presets[0].EngineId);
+        Assert.Equal("yt-dlp-nightly", imported.Presets[0].DownloaderId);
         Assert.Equal("-f \"bv+ba\"\n# comment", imported.Presets[1].Arguments);
-        Assert.Null(imported.Presets[1].EngineId);
+        Assert.Null(imported.Presets[1].DownloaderId);
     }
 
     [Fact]
     public void Custom_downloader_is_matched_by_name_or_dropped_with_a_warning()
     {
-        var source = Settings(new Engine { Name = "My fork", ExecutablePath = "a" });
-        source.Presets[1].EngineId = source.Engines[^1].Id;
+        var source = Settings(new Downloader { Name = "My fork", ExecutablePath = "a" });
+        source.Presets[1].DownloaderId = source.Downloaders[^1].Id;
         var json = PresetExchange.Export(source);
 
-        var sameName = Settings(new Engine { Name = "my fork", ExecutablePath = "b" });
-        Assert.Equal(sameName.Engines[^1].Id, PresetExchange.Import(json, sameName).Presets[1].EngineId);
+        var sameName = Settings(new Downloader { Name = "my fork", ExecutablePath = "b" });
+        Assert.Equal(sameName.Downloaders[^1].Id, PresetExchange.Import(json, sameName).Presets[1].DownloaderId);
 
         var missing = PresetExchange.Import(json, Settings());
-        Assert.Null(missing.Presets[1].EngineId);
+        Assert.Null(missing.Presets[1].DownloaderId);
         Assert.Single(missing.Warnings);
     }
 
@@ -65,7 +65,7 @@ public class PresetExchangeTests
         var result = PresetExchange.Replace(settings, imported);
 
         Assert.Same(audio, result[0]); // rules and downloads using it keep pointing at it
-        Assert.Equal(("AUDIO", "-x", (string?)null), (audio.Name, audio.Arguments, audio.EngineId));
+        Assert.Equal(("AUDIO", "-x", (string?)null), (audio.Name, audio.Arguments, audio.DownloaderId));
         Assert.Equal(result, settings.Presets);
         Assert.Equal(result[1].Id, settings.DefaultPresetId);
         Assert.Null(rule.PresetId); // "Video" is gone
@@ -96,7 +96,7 @@ public class PresetExchangeTests
         snapshot.Restore();
 
         Assert.Equal(presets, settings.Presets);
-        Assert.Equal(("Audio", "-x --audio-format mp3", "yt-dlp-nightly"), (presets[0].Name, presets[0].Arguments, presets[0].EngineId));
+        Assert.Equal(("Audio", "-x --audio-format mp3", "yt-dlp-nightly"), (presets[0].Name, presets[0].Arguments, presets[0].DownloaderId));
         Assert.Equal(defaultId, settings.DefaultPresetId);
         Assert.Equal(presets[1].Id, rule.PresetId);
     }

@@ -26,7 +26,7 @@ public class ResilienceTests
     public void Classifies_real_error_messages(string message, FailureKind expected) =>
         Assert.Equal(expected, Resilience.Classify(message));
 
-    private static Engine Custom(string name, string exe, EngineFlavor flavor = EngineFlavor.YtDlp) =>
+    private static Downloader Custom(string name, string exe, DownloaderFlavor flavor = DownloaderFlavor.YtDlp) =>
         new() { Id = name, Name = name, ExecutablePath = exe, Flavor = flavor };
 
     private sealed class Fixture : IDisposable
@@ -36,14 +36,14 @@ public class ResilienceTests
         public readonly List<string> Calls = [];
         public readonly List<string> Status = [];
 
-        public Task<FallbackResult> Run(Engine primary, bool fallback, params string?[] results)
+        public Task<FallbackResult> Run(Downloader primary, bool fallback, params string?[] results)
         {
             var queue = new Queue<string?>(results);
             Settings.AutoFallback = fallback;
             return Resilience.RunAsync(Settings, primary,
-                (engine, _) =>
+                (downloader, _) =>
                 {
-                    Calls.Add(engine.Engine.Name);
+                    Calls.Add(downloader.Downloader.Name);
                     return Task.FromResult(queue.Dequeue());
                 },
                 Status.Add, CancellationToken.None, [TimeSpan.Zero, TimeSpan.Zero]);
@@ -56,29 +56,29 @@ public class ResilienceTests
     public void Fallbacks_are_other_usable_downloaders_of_the_same_flavor()
     {
         using var f = new Fixture();
-        Engine a = Custom("a", f.Exe), b = Custom("b", f.Exe), ytdl = Custom("ytdl", f.Exe, EngineFlavor.YoutubeDl),
+        Downloader a = Custom("a", f.Exe), b = Custom("b", f.Exe), ytdl = Custom("ytdl", f.Exe, DownloaderFlavor.YoutubeDl),
             missing = Custom("missing", Path.Combine(Path.GetTempPath(), "does-not-exist.exe"));
         foreach (var e in new[] { a, ytdl, missing, b })
         {
-            f.Settings.Engines.Add(e);
+            f.Settings.Downloaders.Add(e);
         }
 
-        Assert.Equal([b], Resilience.FallbackEngines(f.Settings, a));
-        Assert.Empty(Resilience.FallbackEngines(f.Settings, ytdl));
+        Assert.Equal([b], Resilience.FallbackDownloaders(f.Settings, a));
+        Assert.Empty(Resilience.FallbackDownloaders(f.Settings, ytdl));
     }
 
     [Fact]
     public async Task Site_changes_move_on_to_the_next_downloader()
     {
         using var f = new Fixture();
-        Engine a = Custom("a", f.Exe), b = Custom("b", f.Exe);
-        f.Settings.Engines.Add(a);
-        f.Settings.Engines.Add(b);
+        Downloader a = Custom("a", f.Exe), b = Custom("b", f.Exe);
+        f.Settings.Downloaders.Add(a);
+        f.Settings.Downloaders.Add(b);
 
         var result = await f.Run(a, fallback: true, "[youtube] x: Unable to extract nsig function code", null);
 
         Assert.True(result.Succeeded);
-        Assert.Same(b, result.Engine);
+        Assert.Same(b, result.Downloader);
         Assert.Equal(["a", "b"], f.Calls);
     }
 
@@ -86,9 +86,9 @@ public class ResilienceTests
     public async Task Fallback_can_be_turned_off_and_reports_every_downloader_tried()
     {
         using var f = new Fixture();
-        Engine a = Custom("a", f.Exe), b = Custom("b", f.Exe);
-        f.Settings.Engines.Add(a);
-        f.Settings.Engines.Add(b);
+        Downloader a = Custom("a", f.Exe), b = Custom("b", f.Exe);
+        f.Settings.Downloaders.Add(a);
+        f.Settings.Downloaders.Add(b);
         const string broken = "[youtube] x: Unable to extract nsig function code";
 
         var off = await f.Run(a, fallback: false, broken);
@@ -105,9 +105,9 @@ public class ResilienceTests
     public async Task Network_errors_retry_the_same_downloader_then_give_up()
     {
         using var f = new Fixture();
-        Engine a = Custom("a", f.Exe), b = Custom("b", f.Exe);
-        f.Settings.Engines.Add(a);
-        f.Settings.Engines.Add(b);
+        Downloader a = Custom("a", f.Exe), b = Custom("b", f.Exe);
+        f.Settings.Downloaders.Add(a);
+        f.Settings.Downloaders.Add(b);
         const string net = "Unable to download webpage: The read operation timed out";
 
         var recovered = await f.Run(a, fallback: true, net, null);
@@ -127,9 +127,9 @@ public class ResilienceTests
     public async Task Errors_another_downloader_cant_fix_stop_right_away(string error, FailureKind kind)
     {
         using var f = new Fixture();
-        Engine a = Custom("a", f.Exe), b = Custom("b", f.Exe);
-        f.Settings.Engines.Add(a);
-        f.Settings.Engines.Add(b);
+        Downloader a = Custom("a", f.Exe), b = Custom("b", f.Exe);
+        f.Settings.Downloaders.Add(a);
+        f.Settings.Downloaders.Add(b);
 
         var result = await f.Run(a, fallback: true, error);
         Assert.Equal(kind, result.Kind);

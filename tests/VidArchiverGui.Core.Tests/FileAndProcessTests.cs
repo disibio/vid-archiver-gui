@@ -88,6 +88,32 @@ public sealed class FileAndProcessTests : IDisposable
     }
 
     [Fact]
+    public void Settings_keep_the_downloader_names_from_before_the_rename()
+    {
+        var path = Path.Combine(_dir, "settings.json");
+        File.WriteAllText(path, """
+            {
+              "Presets": [ { "Id": "p1", "Name": "Audio", "EngineId": "yt-dlp-nightly" } ],
+              "Engines": [ { "Name": "My fork", "ExecutablePath": "my-fork", "Id": "fork" } ],
+              "DefaultEngineId": "fork",
+              "UnfinishedDownloads": [ { "Url": "https://example.com/a", "EngineId": "yt-dlp-master" } ]
+            }
+            """);
+        var store = new SettingsStore(path);
+
+        var loaded = store.Load();
+        Assert.Equal("yt-dlp-nightly", loaded.Presets[0].DownloaderId);
+        Assert.Equal("yt-dlp-master", loaded.UnfinishedDownloads[0].DownloaderId);
+        Assert.Equal("fork", loaded.DefaultDownloaderId);
+
+        store.SaveIfChanged(loaded);
+        var json = File.ReadAllText(path);
+        Assert.Contains("\"Engines\"", json);
+        Assert.Contains("\"DefaultEngineId\"", json);
+        Assert.Contains("\"EngineId\"", json);
+    }
+
+    [Fact]
     public void Unfinished_downloads_survive_a_restart()
     {
         var store = new SettingsStore(Path.Combine(_dir, "settings.json"));

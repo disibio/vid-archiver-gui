@@ -3,7 +3,7 @@ using VidArchiverGui.Core.Models;
 
 namespace VidArchiverGui.Core.Services;
 
-public sealed record DownloadRequest(string Url, IReadOnlyList<string> PresetArgs, string Destination, EngineFlavor Flavor = EngineFlavor.YtDlp)
+public sealed record DownloadRequest(string Url, IReadOnlyList<string> PresetArgs, string Destination, DownloaderFlavor Flavor = DownloaderFlavor.YtDlp)
 {
     /// <summary>Cookie options chosen in the app; when present they replace any cookie options in the preset.</summary>
     public IReadOnlyList<string> CookieArgs { get; init; } = [];
@@ -20,7 +20,7 @@ public static class DownloadRunner
     /// Slower but far less likely to be throttled or hit "confirm you're not a bot": a pause before each request and
     /// between videos, and exponential back-off on retries. They go before the preset, so a preset's own values win.
     /// </summary>
-    public static IReadOnlyList<string> GentleArgs(EngineFlavor flavor) => flavor == EngineFlavor.YtDlp
+    public static IReadOnlyList<string> GentleArgs(DownloaderFlavor flavor) => flavor == DownloaderFlavor.YtDlp
         ?
         [
             "--sleep-requests", "1", "--sleep-interval", "5", "--max-sleep-interval", "15",
@@ -33,7 +33,7 @@ public static class DownloadRunner
     {
         List<string> args = request.Gentle ? [.. GentleArgs(request.Flavor)] : [];
         args.AddRange(ArgumentParser.WithCookies(request.PresetArgs, request.CookieArgs));
-        if (request.Flavor == EngineFlavor.YtDlp)
+        if (request.Flavor == DownloaderFlavor.YtDlp)
         {
             // Our destination goes after the preset so it wins over any -P in the preset.
             args.AddRange(["-P", request.Destination]);
@@ -68,7 +68,7 @@ public static class DownloadRunner
         }
 
         args.AddRange(["--newline", "--encoding", "utf-8"]);
-        if (request.Flavor == EngineFlavor.YtDlp)
+        if (request.Flavor == DownloaderFlavor.YtDlp)
         {
             args.AddRange(["--progress-template", YtDlpOutputParser.ProgressTemplate]);
         }
@@ -94,15 +94,15 @@ public static class DownloadRunner
 
     /// <summary>Runs one download. Events are raised on a background thread. Returns the downloader's exit code.</summary>
     /// <param name="ffmpegLocation">See <see cref="ToolManager.ResolveFfmpeg"/>.</param>
-    public static async Task<int> RunAsync(DownloadRequest request, ResolvedEngine engine, string? ffmpegLocation,
+    public static async Task<int> RunAsync(DownloadRequest request, ResolvedDownloader downloader, string? ffmpegLocation,
         Action<OutputEvent> onEvent, CancellationToken ct)
     {
         Directory.CreateDirectory(request.Destination);
 
-        var args = BuildArguments(request with { Flavor = engine.Flavor }, ffmpegLocation, engine.ExtraArgs);
-        onEvent(new OutputEvent.Text($"> {Path.GetFileName(engine.Path)} " + string.Join(' ', args.Select(Quote))));
+        var args = BuildArguments(request with { Flavor = downloader.Flavor }, ffmpegLocation, downloader.ExtraArgs);
+        onEvent(new OutputEvent.Text($"> {Path.GetFileName(downloader.Path)} " + string.Join(' ', args.Select(Quote))));
 
-        using var process = new Process { StartInfo = ProcessHelper.CreateStartInfo(engine.Path, args) };
+        using var process = new Process { StartInfo = ProcessHelper.CreateStartInfo(downloader.Path, args) };
         process.OutputDataReceived += (_, e) => { if (e.Data is { Length: > 0 } l) { onEvent(YtDlpOutputParser.Parse(l)); } };
         process.ErrorDataReceived += (_, e) => { if (e.Data is { Length: > 0 } l) { onEvent(YtDlpOutputParser.Parse(l)); } };
 

@@ -23,9 +23,13 @@ public partial class AppSettings : ObservableObject
     /// <summary>Used when no rule matches. Supports the same tokens as rule destinations.</summary>
     [ObservableProperty] private string _fallbackDestination = "";
 
-    public ObservableCollection<Engine> Engines { get; set; } = [];
+    // Downloaders were called engines in the code once; settings.json keeps those names.
+    [JsonPropertyName("Engines")]
+    public ObservableCollection<Downloader> Downloaders { get; set; } = [];
 
-    [ObservableProperty] private string _defaultEngineId = Engine.StableId;
+    [ObservableProperty]
+    [property: JsonPropertyName("DefaultEngineId")]
+    private string _defaultDownloaderId = Downloader.StableId;
 
     /// <summary>Custom ffmpeg executable or folder. Empty = app-managed copy, then PATH.</summary>
     [ObservableProperty] private string? _ffmpegPath;
@@ -45,7 +49,7 @@ public partial class AppSettings : ObservableObject
     [ObservableProperty] private DateTimeOffset? _lastYtDlpUpdateCheck;
 
     /// <summary>
-    /// Engine id → release the user rolled back from. The daily update check skips that release, so a bad version
+    /// Downloader id → release the user rolled back from. The daily update check skips that release, so a bad version
     /// isn't re-installed the next day; the next release (or a manual update) installs normally.
     /// </summary>
     public Dictionary<string, string> SkippedVersions { get; set; } = [];
@@ -70,12 +74,12 @@ public partial class AppSettings : ObservableObject
     [JsonIgnore]
     public Preset DefaultPreset => FindPreset(DefaultPresetId) ?? Presets.First();
 
-    public Engine? FindEngine(string? id) => id is null ? null : Engines.FirstOrDefault(e => e.Id == id);
+    public Downloader? FindDownloader(string? id) => id is null ? null : Downloaders.FirstOrDefault(e => e.Id == id);
 
     [JsonIgnore]
-    public Engine DefaultEngine => FindEngine(DefaultEngineId) ?? Engines.First();
+    public Downloader DefaultDownloader => FindDownloader(DefaultDownloaderId) ?? Downloaders.First();
 
-    public Engine EngineFor(Preset preset) => FindEngine(preset.EngineId) ?? DefaultEngine;
+    public Downloader DownloaderFor(Preset preset) => FindDownloader(preset.DownloaderId) ?? DefaultDownloader;
 
     /// <summary>
     /// After a preset, downloader or cookie source is removed: choices that pointed at it fall back to the default
@@ -88,14 +92,14 @@ public partial class AppSettings : ObservableObject
             DefaultPresetId = Presets[0].Id;
         }
 
-        if (FindEngine(DefaultEngineId) is null)
+        if (FindDownloader(DefaultDownloaderId) is null)
         {
-            DefaultEngineId = Engine.StableId;
+            DefaultDownloaderId = Downloader.StableId;
         }
 
-        foreach (var preset in Presets.Where(p => p.EngineId is not null && FindEngine(p.EngineId) is null))
+        foreach (var preset in Presets.Where(p => p.DownloaderId is not null && FindDownloader(p.DownloaderId) is null))
         {
-            preset.EngineId = null;
+            preset.DownloaderId = null;
         }
 
         if (!Services.Cookies.Exists(this, LastCookieId))

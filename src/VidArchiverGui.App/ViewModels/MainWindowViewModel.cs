@@ -67,7 +67,7 @@ public partial class MainWindowViewModel : ObservableObject
                 Rules.RefreshChoices();
                 break;
             case MainTab.Presets:
-                Presets.RefreshEngineChoices();
+                Presets.RefreshDownloaderChoices();
                 break;
         }
     }

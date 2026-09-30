@@ -5,9 +5,9 @@ using VidArchiverGui.Core.Models;
 namespace VidArchiverGui.Core.Services;
 
 /// <summary>A downloader that has been located on disk, plus any arguments it needs to find the app's helper tools.</summary>
-public sealed record ResolvedEngine(Engine Engine, string Path)
+public sealed record ResolvedDownloader(Downloader Downloader, string Path)
 {
-    public EngineFlavor Flavor => Engine.Flavor;
+    public DownloaderFlavor Flavor => Downloader.Flavor;
 
     /// <summary>Extra arguments for every invocation (e.g. pointing yt-dlp at the app-installed deno).</summary>
     public IReadOnlyList<string> ExtraArgs { get; init; } = [];
@@ -32,70 +32,70 @@ public static partial class ToolManager
     // ---------- downloaders ----------
 
     /// <summary>Where the app keeps its own copy of a managed downloader.</summary>
-    public static string ManagedPath(Engine engine) =>
-        Path.Combine(AppPaths.BinDir, engine.Id, AppPaths.ExeName(engine.Flavor == EngineFlavor.YoutubeDl ? "youtube-dl" : "yt-dlp"));
+    public static string ManagedPath(Downloader downloader) =>
+        Path.Combine(AppPaths.BinDir, downloader.Id, AppPaths.ExeName(downloader.Flavor == DownloaderFlavor.YoutubeDl ? "youtube-dl" : "yt-dlp"));
 
-    public static string? LocatePath(Engine engine)
+    public static string? LocatePath(Downloader downloader)
     {
-        if (!engine.IsManaged)
+        if (!downloader.IsManaged)
         {
-            return File.Exists(engine.ExecutablePath) ? engine.ExecutablePath : null;
+            return File.Exists(downloader.ExecutablePath) ? downloader.ExecutablePath : null;
         }
 
-        var managed = ManagedPath(engine);
+        var managed = ManagedPath(downloader);
         if (File.Exists(managed))
         {
             return managed;
         }
         // Only stable yt-dlp falls back to a copy on PATH.
-        return engine.Id == Engine.StableId ? ProcessHelper.FindOnPath("yt-dlp") : null;
+        return downloader.Id == Downloader.StableId ? ProcessHelper.FindOnPath("yt-dlp") : null;
     }
 
-    public static bool IsInstalledByApp(Engine engine) => engine.IsManaged && File.Exists(ManagedPath(engine));
+    public static bool IsInstalledByApp(Downloader downloader) => downloader.IsManaged && File.Exists(ManagedPath(downloader));
 
     /// <summary>The version that was installed before the last update, kept so a bad release can be rolled back.</summary>
-    public static string PreviousPath(Engine engine) =>
-        Path.Combine(AppPaths.BinDir, "previous", engine.Id, Path.GetFileName(ManagedPath(engine)));
+    public static string PreviousPath(Downloader downloader) =>
+        Path.Combine(AppPaths.BinDir, "previous", downloader.Id, Path.GetFileName(ManagedPath(downloader)));
 
-    public static bool CanRollback(Engine engine) => engine.IsManaged && File.Exists(PreviousPath(engine)) && File.Exists(ManagedPath(engine));
+    public static bool CanRollback(Downloader downloader) => downloader.IsManaged && File.Exists(PreviousPath(downloader)) && File.Exists(ManagedPath(downloader));
 
-    public static ResolvedEngine Resolve(Engine engine) =>
-        LocatePath(engine) is { } path
-            ? new ResolvedEngine(engine, path) { ExtraArgs = JsRuntimeArgs(engine.Flavor) }
-            : throw new YtDlpException(engine.IsManaged
-                ? $"{engine.Name} is not installed. Install it on the Settings tab."
-                : $"{engine.Name}: executable not found at {engine.ExecutablePath}");
+    public static ResolvedDownloader Resolve(Downloader downloader) =>
+        LocatePath(downloader) is { } path
+            ? new ResolvedDownloader(downloader, path) { ExtraArgs = JsRuntimeArgs(downloader.Flavor) }
+            : throw new DownloaderException(downloader.IsManaged
+                ? $"{downloader.Name} is not installed. Install it on the Settings tab."
+                : $"{downloader.Name}: executable not found at {downloader.ExecutablePath}");
 
-    public static async Task InstallAsync(Engine engine, IProgress<TransferProgress>? progress = null, CancellationToken ct = default)
+    public static async Task InstallAsync(Downloader downloader, IProgress<TransferProgress>? progress = null, CancellationToken ct = default)
     {
-        if (!engine.IsManaged)
+        if (!downloader.IsManaged)
         {
-            throw new InvalidOperationException($"{engine.Name} is a custom executable and can't be installed by the app.");
+            throw new InvalidOperationException($"{downloader.Name} is a custom executable and can't be installed by the app.");
         }
 
-        await WithGate(InstallGate, () => InstallCoreAsync(engine, progress, ct), ct);
+        await WithGate(InstallGate, () => InstallCoreAsync(downloader, progress, ct), ct);
     }
 
-    /// <summary>Installs <paramref name="engine"/> unless it's already there (e.g. installed meanwhile by another download).</summary>
-    public static Task EnsureInstalledAsync(Engine engine, IProgress<TransferProgress>? progress = null, CancellationToken ct = default) =>
-        WithGate(InstallGate, () => IsInstalledByApp(engine) ? Task.CompletedTask : InstallCoreAsync(engine, progress, ct), ct);
+    /// <summary>Installs <paramref name="downloader"/> unless it's already there (e.g. installed meanwhile by another download).</summary>
+    public static Task EnsureInstalledAsync(Downloader downloader, IProgress<TransferProgress>? progress = null, CancellationToken ct = default) =>
+        WithGate(InstallGate, () => IsInstalledByApp(downloader) ? Task.CompletedTask : InstallCoreAsync(downloader, progress, ct), ct);
 
-    private static async Task InstallCoreAsync(Engine engine, IProgress<TransferProgress>? progress, CancellationToken ct)
+    private static async Task InstallCoreAsync(Downloader downloader, IProgress<TransferProgress>? progress, CancellationToken ct)
     {
-        var path = ManagedPath(engine);
+        var path = ManagedPath(downloader);
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
 
         // Pin to one release tag so the checksum list and the binary are guaranteed to match.
-        var tag = await GetLatestVersionAsync(engine, ct) ?? throw new InvalidDataException($"No release found for {engine.GitHubRepo}");
-        var releaseBase = $"https://github.com/{engine.GitHubRepo}/releases/download/{tag}/";
-        var asset = AssetName(engine.Flavor);
+        var tag = await GetLatestVersionAsync(downloader, ct) ?? throw new InvalidDataException($"No release found for {downloader.GitHubRepo}");
+        var releaseBase = $"https://github.com/{downloader.GitHubRepo}/releases/download/{tag}/";
+        var asset = AssetName(downloader.Flavor);
         var expected = ReleaseDownloader.FindChecksum(await ReleaseDownloader.GetTextAsync(releaseBase + "SHA2-256SUMS", ct), asset)
             ?? throw new InvalidDataException($"{asset} is not listed in the release checksums; refusing to install it.");
 
         // Keep the version being replaced (unless it's the same release, e.g. a re-download) so it can be rolled back to.
         if (File.Exists(path) && await GetVersionAsync(path, ct) != tag)
         {
-            var previous = PreviousPath(engine);
+            var previous = PreviousPath(downloader);
             Directory.CreateDirectory(Path.GetDirectoryName(previous)!);
             File.Copy(path, previous + ".download", overwrite: true);
             ReleaseDownloader.ReplaceFile(previous + ".download", previous);
@@ -106,15 +106,15 @@ public static partial class ToolManager
     }
 
     /// <summary>Swaps the current and previous versions, so rolling back can itself be undone.</summary>
-    public static Task RollbackAsync(Engine engine, CancellationToken ct = default) => WithGate(InstallGate, () =>
+    public static Task RollbackAsync(Downloader downloader, CancellationToken ct = default) => WithGate(InstallGate, () =>
     {
-        if (!CanRollback(engine))
+        if (!CanRollback(downloader))
         {
-            throw new InvalidOperationException($"No previous version of {engine.Name} is kept.");
+            throw new InvalidOperationException($"No previous version of {downloader.Name} is kept.");
         }
 
-        var current = ManagedPath(engine);
-        var previous = PreviousPath(engine);
+        var current = ManagedPath(downloader);
+        var previous = PreviousPath(downloader);
         File.Copy(current, previous + ".swap", overwrite: true);
         File.Copy(previous, current + ".download", overwrite: true);
         ReleaseDownloader.ReplaceFile(current + ".download", current);
@@ -123,8 +123,8 @@ public static partial class ToolManager
         return Task.CompletedTask;
     }, ct);
 
-    public static Task<string?> GetLatestVersionAsync(Engine engine, CancellationToken ct = default) =>
-        engine.IsManaged ? ReleaseDownloader.GetLatestTagAsync(engine.GitHubRepo!, ct) : Task.FromResult<string?>(null);
+    public static Task<string?> GetLatestVersionAsync(Downloader downloader, CancellationToken ct = default) =>
+        downloader.IsManaged ? ReleaseDownloader.GetLatestTagAsync(downloader.GitHubRepo!, ct) : Task.FromResult<string?>(null);
 
     /// <summary>Runs "-U" for a downloader the app doesn't manage (works for official yt-dlp/youtube-dl binaries).</summary>
     public static async Task<string> SelfUpdateAsync(string exe, CancellationToken ct = default)
@@ -162,9 +162,9 @@ public static partial class ToolManager
     public static bool IsNewer(string? latest, string? current) =>
         Version.TryParse(latest, out var l) && (!Version.TryParse(current, out var c) || l > c);
 
-    private static string AssetName(EngineFlavor flavor)
+    private static string AssetName(DownloaderFlavor flavor)
     {
-        if (flavor == EngineFlavor.YoutubeDl)
+        if (flavor == DownloaderFlavor.YoutubeDl)
         {
             return OperatingSystem.IsWindows() ? "youtube-dl.exe" : "youtube-dl"; // non-Windows build is a Python zipapp
         }

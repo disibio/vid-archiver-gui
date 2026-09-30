@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace VidArchiverGui.Core.Models;
@@ -12,9 +13,11 @@ public partial class Preset : ObservableObject
     [ObservableProperty] private string _arguments = "";
 
     /// <summary>Downloader to use for this preset; null = the default downloader.</summary>
-    [ObservableProperty] private string? _engineId;
+    [ObservableProperty]
+    [property: JsonPropertyName("EngineId")] // its name in settings.json from before downloaders were renamed
+    private string? _downloaderId;
 
-    public Preset Clone() => new() { Name = Name + " (copy)", Arguments = Arguments, EngineId = EngineId };
+    public Preset Clone() => new() { Name = Name + " (copy)", Arguments = Arguments, DownloaderId = DownloaderId };
 
     public override string ToString() => Name;
 }

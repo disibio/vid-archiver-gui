@@ -41,7 +41,7 @@ public static class PresetExchange
             {
                 Name = p.Name,
                 Arguments = p.Arguments,
-                Downloader = settings.FindEngine(p.EngineId)?.Name,
+                Downloader = settings.FindDownloader(p.DownloaderId)?.Name,
             }).ToList(),
         };
         return JsonSerializer.Serialize(file, SettingsStore.Options);
@@ -63,8 +63,8 @@ public static class PresetExchange
             var preset = new Preset { Name = p.Name, Arguments = p.Arguments };
             if (p.Downloader is not null)
             {
-                preset.EngineId = settings.Engines.FirstOrDefault(e => string.Equals(e.Name, p.Downloader, StringComparison.OrdinalIgnoreCase))?.Id;
-                if (preset.EngineId is null)
+                preset.DownloaderId = settings.Downloaders.FirstOrDefault(e => string.Equals(e.Name, p.Downloader, StringComparison.OrdinalIgnoreCase))?.Id;
+                if (preset.DownloaderId is null)
                 {
                     warnings.Add($"\"{p.Name}\": no downloader named \"{p.Downloader}\", so it uses the default downloader.");
                 }
@@ -92,7 +92,7 @@ public static class PresetExchange
             {
                 existing.Name = p.Name;
                 existing.Arguments = p.Arguments;
-                existing.EngineId = p.EngineId;
+                existing.DownloaderId = p.DownloaderId;
             }
 
             result.Add(existing ?? p);
@@ -140,8 +140,8 @@ public static class PresetExchange
 /// <summary>Everything a preset import can change (the presets and their values, the default, rules' presets), so it can be undone.</summary>
 public sealed class PresetsSnapshot(AppSettings settings)
 {
-    private readonly List<(Preset Preset, string Name, string Arguments, string? EngineId)> _presets =
-        settings.Presets.Select(p => (p, p.Name, p.Arguments, p.EngineId)).ToList();
+    private readonly List<(Preset Preset, string Name, string Arguments, string? DownloaderId)> _presets =
+        settings.Presets.Select(p => (p, p.Name, p.Arguments, p.DownloaderId)).ToList();
 
     private readonly string? _defaultPresetId = settings.DefaultPresetId;
     private readonly List<(RoutingRule Rule, string? PresetId)> _rulePresets = settings.Rules.Select(r => (r, r.PresetId)).ToList();
@@ -149,11 +149,11 @@ public sealed class PresetsSnapshot(AppSettings settings)
     public void Restore()
     {
         settings.Presets.Clear();
-        foreach (var (preset, name, arguments, engineId) in _presets)
+        foreach (var (preset, name, arguments, downloaderId) in _presets)
         {
             preset.Name = name;
             preset.Arguments = arguments;
-            preset.EngineId = engineId;
+            preset.DownloaderId = downloaderId;
             settings.Presets.Add(preset);
         }
 

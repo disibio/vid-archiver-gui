@@ -26,8 +26,8 @@ public static partial class ToolManager
     /// yt-dlp finds deno on PATH by itself. Only the app-installed copy (used when deno isn't on PATH) needs pointing
     /// out; doing it only then keeps older forks without --js-runtimes working.
     /// </summary>
-    private static IReadOnlyList<string> JsRuntimeArgs(EngineFlavor flavor) =>
-        flavor == EngineFlavor.YtDlp && ProcessHelper.FindOnPath("deno") is null && IsDenoInstalledByApp
+    private static IReadOnlyList<string> JsRuntimeArgs(DownloaderFlavor flavor) =>
+        flavor == DownloaderFlavor.YtDlp && ProcessHelper.FindOnPath("deno") is null && IsDenoInstalledByApp
             ? ["--js-runtimes", "deno:" + ManagedDenoPath]
             : [];
 
