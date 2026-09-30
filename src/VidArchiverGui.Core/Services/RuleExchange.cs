@@ -16,10 +16,8 @@ public static class RuleExchange
     private const string Format = "vid-archiver-gui/folder-rules";
     private const int Version = 1;
 
-    private sealed class RuleFile
+    private sealed class RuleFile : ExchangeFile
     {
-        public string Format { get; set; } = "";
-        public int Version { get; set; }
         public string? FallbackDestination { get; set; }
         public List<ExportedRule> Rules { get; set; } = [];
     }
@@ -64,26 +62,7 @@ public static class RuleExchange
     /// <summary>Reads an exported file. Throws <see cref="FormatException"/> with a readable reason if it isn't one.</summary>
     public static ImportedRules Import(string json, AppSettings settings)
     {
-        RuleFile? file;
-        try
-        {
-            file = JsonSerializer.Deserialize<RuleFile>(json, SettingsStore.Options);
-        }
-        catch (JsonException e)
-        {
-            throw new FormatException("This file isn't valid JSON: " + e.Message, e);
-        }
-
-        if (file is null || file.Format != Format)
-        {
-            throw new FormatException("This file isn't a folder rules export from Vid Archiver GUI.");
-        }
-
-        if (file.Version > Version)
-        {
-            throw new FormatException("These rules were exported by a newer version of the app. Update it to import them.");
-        }
-
+        var file = ExchangeFile.Read<RuleFile>(json, Format, Version, "a folder rules export");
         var warnings = new List<string>();
         var rules = new List<RoutingRule>();
         foreach (var r in file.Rules)

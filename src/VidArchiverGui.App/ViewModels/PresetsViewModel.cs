@@ -135,8 +135,24 @@ public partial class PresetsViewModel : ObservableObject
         var index = Presets.IndexOf(deleted);
         var wasDefault = _host.Settings.DefaultPresetId == deleted.Id;
         var rules = _host.Settings.Rules.Where(r => r.PresetId == deleted.Id).ToList();
-        _undoDelete = new DeletedPreset(deleted, index, wasDefault, rules);
-        UndoText = $"Deleted \"{deleted.Name}\"" + (rules.Count > 0 ? $" (used by {rules.Count} folder rule{(rules.Count == 1 ? "" : "s")})." : ".");
+        // Put it back where it was, as the default and on its rules if it was before.
+        OfferUndo($"Deleted \"{deleted.Name}\"" + (rules.Count > 0 ? $" (used by {rules.Count} folder rule{(rules.Count == 1 ? "" : "s")})." : "."), () =>
+        {
+            Presets.Insert(Math.Min(index, Presets.Count), deleted);
+            if (wasDefault)
+            {
+                _host.Settings.DefaultPresetId = deleted.Id;
+            }
+
+            foreach (var rule in rules.Where(r => r.PresetId is null && _host.Settings.Rules.Contains(r)))
+            {
+                rule.PresetId = deleted.Id;
+            }
+
+            SelectedPreset = deleted;
+            OnPropertyChanged(nameof(DefaultPresetText));
+            _host.SetStatus($"Restored preset \"{deleted.Name}\".");
+        });
 
         Presets.Remove(deleted);
         if (wasDefault)
@@ -153,41 +169,152 @@ public partial class PresetsViewModel : ObservableObject
         OnPropertyChanged(nameof(DefaultPresetText));
     }
 
-    private sealed record DeletedPreset(Preset Preset, int Index, bool WasDefault, List<RoutingRule> Rules);
-    private DeletedPreset? _undoDelete;
+    private Action? _undo;
 
-    /// <summary>Shown with an Undo button after a delete; null when there's nothing to undo.</summary>
+    /// <summary>Shown with an Undo button after a delete or import; null when there's nothing to undo.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(CanUndoDelete))]
+    [NotifyPropertyChangedFor(nameof(CanUndo))]
     private string? _undoText;
 
-    public bool CanUndoDelete => UndoText is not null;
+    public bool CanUndo => UndoText is not null;
 
-    /// <summary>Puts the last deleted preset back where it was, as the default and on its rules if it was before.</summary>
-    [RelayCommand]
-    private void UndoDelete()
+    private void OfferUndo(string text, Action undo)
     {
-        if (_undoDelete is not { } d)
+        _undo = undo;
+        UndoText = text;
+    }
+
+    [RelayCommand]
+    private void Undo()
+    {
+        var undo = _undo;
+        _undo = null;
+        UndoText = null;
+        undo?.Invoke();
+    }
+
+    [RelayCommand]
+    private async Task Export()
+    {
+        if (await _host.Dialogs.SaveJsonFileAsync("Export presets", $"presets-{DateTime.Now:yyyy-MM-dd}.json") is not { } path)
         {
             return;
         }
 
-        Presets.Insert(Math.Min(d.Index, Presets.Count), d.Preset);
-        if (d.WasDefault)
+        try
         {
-            _host.Settings.DefaultPresetId = d.Preset.Id;
+            await File.WriteAllTextAsync(path, PresetExchange.Export(_host.Settings));
+            _host.SetStatus($"Exported {Presets.Count} preset(s) to {path}");
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            _host.SetStatus("Could not export presets: " + e.Message);
+        }
+    }
+
+    [RelayCommand]
+    private async Task Import()
+    {
+        if (await _host.Dialogs.PickJsonFileAsync("Import presets") is not { } path)
+        {
+            return;
         }
 
-        foreach (var rule in d.Rules.Where(r => r.PresetId is null && _host.Settings.Rules.Contains(r)))
+        ImportedPresets imported;
+        try
         {
-            rule.PresetId = d.Preset.Id;
+            imported = PresetExchange.Import(await File.ReadAllTextAsync(path), _host.Settings);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or FormatException)
+        {
+            _host.SetStatus("Could not import presets: " + e.Message);
+            return;
         }
 
-        _undoDelete = null;
-        UndoText = null;
-        SelectedPreset = d.Preset;
+        var settings = _host.Settings;
+        var count = imported.Presets.Count;
+        var replace = await _host.Dialogs.ConfirmAsync("Import presets",
+            $"The file has {count} preset(s). Replace your {Presets.Count} current preset(s) and the default, or add the new presets below yours?",
+            "Replace", "Add below mine");
+
+        // Everything an import can change, so Undo can put it all back.
+        var before = Presets.ToList();
+        var valuesBefore = before.Select(p => (p, p.Name, p.Arguments, p.EngineId)).ToList();
+        var defaultBefore = settings.DefaultPresetId;
+        var rulePresetsBefore = settings.Rules.Select(r => (r, r.PresetId)).ToList();
+
+        List<Preset> added;
+        if (replace)
+        {
+            // A preset with the same name as one of yours updates yours in place, so folder rules and
+            // waiting downloads that use it keep pointing at it.
+            added = [];
+            foreach (var p in imported.Presets)
+            {
+                var existing = before.FirstOrDefault(e => !added.Contains(e) && string.Equals(e.Name, p.Name, StringComparison.OrdinalIgnoreCase));
+                if (existing is not null)
+                {
+                    existing.Name = p.Name;
+                    existing.Arguments = p.Arguments;
+                    existing.EngineId = p.EngineId;
+                }
+
+                added.Add(existing ?? p);
+            }
+
+            Presets.Clear();
+            foreach (var p in added)
+            {
+                Presets.Add(p);
+            }
+
+            settings.DefaultPresetId = (added.FirstOrDefault(p => string.Equals(p.Name, imported.DefaultPresetName, StringComparison.OrdinalIgnoreCase)) ?? added[0]).Id;
+            foreach (var rule in settings.Rules.Where(r => r.PresetId is not null && settings.FindPreset(r.PresetId) is null))
+            {
+                rule.PresetId = null;
+            }
+        }
+        else
+        {
+            added = imported.Presets;
+            foreach (var p in added)
+            {
+                p.Name = PresetExchange.UniqueName(p.Name, Presets);
+                Presets.Add(p);
+            }
+        }
+
+        SelectedPreset = added[0];
         OnPropertyChanged(nameof(DefaultPresetText));
-        _host.SetStatus($"Restored preset \"{d.Preset.Name}\".");
+        OfferUndo((replace ? $"Replaced your presets with {count} imported preset(s)." : $"Added {count} imported preset(s).") +
+            " Click Save presets to keep them.", () =>
+        {
+            foreach (var (p, name, arguments, engineId) in valuesBefore)
+            {
+                p.Name = name;
+                p.Arguments = arguments;
+                p.EngineId = engineId;
+            }
+
+            Presets.Clear();
+            foreach (var p in before)
+            {
+                Presets.Add(p);
+            }
+
+            settings.DefaultPresetId = defaultBefore;
+            foreach (var (rule, presetId) in rulePresetsBefore)
+            {
+                rule.PresetId = presetId;
+            }
+
+            SelectedPreset = settings.DefaultPreset;
+            OnPropertyChanged(nameof(DefaultPresetText));
+            _host.SetStatus("Undid the import.");
+        });
+        _host.SetStatus(imported.Warnings.Count == 0
+            ? $"Imported {count} preset(s) from {path}"
+            : $"Imported {count} preset(s). " + string.Join(" ", imported.Warnings));
     }
 
     [RelayCommand]

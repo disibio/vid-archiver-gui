@@ -14,10 +14,16 @@
         <Button Classes="small" Content="Delete" Command="{Binding DeletePresetCommand}" />
         <Button Classes="small" Content="Set default" Command="{Binding SetDefaultCommand}" />
       </StackPanel>
+      <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="4" Margin="0,0,0,6">
+        <Button Classes="small" Content="Import…" Command="{Binding ImportCommand}"
+                ToolTip.Tip="Load presets from a file exported by this app, replacing yours or adding to them." />
+        <Button Classes="small" Content="Export…" Command="{Binding ExportCommand}"
+                ToolTip.Tip="Save all presets to a file, to back them up or use on another computer." />
+      </StackPanel>
       <TextBlock DockPanel.Dock="Top" Text="{Binding DefaultPresetText}" Classes="hint" Margin="0,0,0,6" />
-      <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,6" IsVisible="{Binding CanUndoDelete}">
+      <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,6" IsVisible="{Binding CanUndo}">
         <TextBlock Text="{Binding UndoText}" FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center" />
-        <Button Grid.Column="1" Classes="small" Content="Undo" Command="{Binding UndoDeleteCommand}" Margin="6,0,0,0" />
+        <Button Grid.Column="1" Classes="small" Content="Undo" Command="{Binding UndoCommand}" Margin="6,0,0,0" />
       </Grid>
       <ListBox ItemsSource="{Binding Presets}" SelectedItem="{Binding SelectedPreset}">
         <ListBox.ItemTemplate>

@@ -101,6 +101,12 @@ you can split options over several lines, and lines starting with `#` are commen
 The app adds `-P`, `--ffmpeg-location`, `--newline` and a progress template itself. Everything else is up to you.
 Login options like `--cookies-from-browser`, `--cookies` and `--proxy` are also used when looking up a link.
 
+Presets can be exported and imported with **Export…** and **Import…** on the Presets tab, the same way as folder
+rules. If you're moving to another computer, import your presets before your rules, since rules find their preset by
+name. When you replace your presets, an imported preset with the same name as one of yours takes its place, so rules
+using it keep working. Paths inside a preset's options (such as `--download-archive`) are copied as they are, so check
+them on the new computer.
+
 ## When a download fails
 
 The app looks at the error and handles it depending on what went wrong. This applies both when looking up a link
