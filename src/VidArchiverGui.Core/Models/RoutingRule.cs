@@ -5,9 +5,9 @@ namespace VidArchiverGui.Core.Models;
 
 public enum MatchField
 {
-    /// <summary>yt-dlp site name without sub-extractor, e.g. "Youtube" (also for channels/playlists), "Twitch", "Soundcloud".</summary>
+    /// <summary>yt-dlp site name without sub-extractor, e.g. "Wikimedia" or "ArchiveOrg" (also for their channels/playlists).</summary>
     Site,
-    /// <summary>Host of the URL without "www."/"m.", e.g. "youtube.com".</summary>
+    /// <summary>Host of the URL without "www."/"m.", e.g. "archive.org".</summary>
     Domain,
     Channel,
     ChannelId,

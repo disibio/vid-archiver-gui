@@ -67,7 +67,7 @@ public static class Resilience
                 return kind;
             }
         }
-        // Anything else raised by an extractor ("[youtube] abc: ...") is most likely the site having changed.
+        // Anything else raised by an extractor ("[archive.org] abc: ...") is most likely the site having changed.
         return m.TrimStart().StartsWith('[') && !m.Contains("postprocess", StringComparison.OrdinalIgnoreCase)
             ? FailureKind.SiteChanged
             : FailureKind.Unknown;

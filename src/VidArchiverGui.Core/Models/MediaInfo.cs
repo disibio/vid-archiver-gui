@@ -94,8 +94,8 @@ public sealed record MediaInfo
     }
 
     /// <summary>
-    /// The site without the sub-extractor, so videos ("Youtube"), channels/playlists ("YoutubeTab", extractor
-    /// "youtube:tab") and e.g. "TwitchVod" ("twitch:vod") all route and file under one name.
+    /// The site without the sub-extractor, so a site's videos ("Example") and its channels or playlists ("ExampleTab",
+    /// extractor "example:tab") all route and file under one name.
     /// </summary>
     internal static string? SiteName(string? extractorKey, string? extractor)
     {

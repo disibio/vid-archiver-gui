@@ -6,19 +6,19 @@ namespace VidArchiverGui.Core.Tests;
 public class ResilienceTests
 {
     [Theory]
-    [InlineData("[youtube] jNQXAC9IVRw: Sign in to confirm you’re not a bot. Use --cookies-from-browser or --cookies for the authentication.", FailureKind.NeedsLogin)]
-    [InlineData("[youtube] abc: Sign in to confirm your age. This video may be inappropriate for some users.", FailureKind.NeedsLogin)]
-    [InlineData("[youtube] abc: Join this channel to get access to members-only content like this video", FailureKind.NeedsLogin)]
-    [InlineData("[youtube] abc: Private video. Sign in if you've been granted access to this video", FailureKind.Unavailable)]
-    [InlineData("[youtube] abc: Video unavailable. This video has been removed by the uploader", FailureKind.Unavailable)]
+    [InlineData("[archive.org] apollo-11: Sign in to confirm you’re not a bot. Use --cookies-from-browser or --cookies for the authentication.", FailureKind.NeedsLogin)]
+    [InlineData("[archive.org] abc: Sign in to confirm your age. This video may be inappropriate for some users.", FailureKind.NeedsLogin)]
+    [InlineData("[archive.org] abc: Join this channel to get access to members-only content like this video", FailureKind.NeedsLogin)]
+    [InlineData("[archive.org] abc: Private video. Sign in if you've been granted access to this video", FailureKind.Unavailable)]
+    [InlineData("[archive.org] abc: Video unavailable. This video has been removed by the uploader", FailureKind.Unavailable)]
     [InlineData("Unsupported URL: https://example.com/", FailureKind.Unavailable)]
-    [InlineData("[youtube] abc: Video unavailable. This content isn't available, try again later.", FailureKind.RateLimited)]
-    [InlineData("[youtube] abc: Unable to download API page: HTTP Error 429: Too Many Requests", FailureKind.RateLimited)]
-    [InlineData("[youtube] abc: Unable to download webpage: <urlopen error [Errno 11001] getaddrinfo failed>", FailureKind.Network)]
+    [InlineData("[archive.org] abc: Video unavailable. This content isn't available, try again later.", FailureKind.RateLimited)]
+    [InlineData("[archive.org] abc: Unable to download API page: HTTP Error 429: Too Many Requests", FailureKind.RateLimited)]
+    [InlineData("[archive.org] abc: Unable to download webpage: <urlopen error [Errno 11001] getaddrinfo failed>", FailureKind.Network)]
     [InlineData("unable to download video data: HTTP Error 503: Service Unavailable", FailureKind.Network)]
-    [InlineData("[youtube] abc: Unable to extract initial player response; please report this issue on https://github.com/yt-dlp/yt-dlp/issues", FailureKind.SiteChanged)]
-    [InlineData("[youtube] abc: Requested format is not available. Use --list-formats for a list of available formats", FailureKind.SiteChanged)]
-    [InlineData("[vimeo] 123: something new and unexpected", FailureKind.SiteChanged)]
+    [InlineData("[archive.org] abc: Unable to extract initial player response; please report this issue on https://github.com/yt-dlp/yt-dlp/issues", FailureKind.SiteChanged)]
+    [InlineData("[archive.org] abc: Requested format is not available. Use --list-formats for a list of available formats", FailureKind.SiteChanged)]
+    [InlineData("[wikimedia.org] 123: something new and unexpected", FailureKind.SiteChanged)]
     [InlineData("Could not copy Chrome cookie database. See  https://github.com/yt-dlp/yt-dlp/issues/7271  for more info", FailureKind.CookiesUnreadable)]
     [InlineData("Failed to decrypt with DPAPI. See  https://github.com/yt-dlp/yt-dlp/issues/10927  for more info", FailureKind.CookiesUnreadable)]
     [InlineData("Postprocessing: Conversion failed!", FailureKind.Unknown)]
@@ -75,7 +75,7 @@ public class ResilienceTests
         f.Settings.Downloaders.Add(a);
         f.Settings.Downloaders.Add(b);
 
-        var result = await f.Run(a, fallback: true, "[youtube] x: Unable to extract nsig function code", null);
+        var result = await f.Run(a, fallback: true, "[archive.org] x: Unable to extract nsig function code", null);
 
         Assert.True(result.Succeeded);
         Assert.Same(b, result.Downloader);
@@ -89,7 +89,7 @@ public class ResilienceTests
         Downloader a = Custom("a", f.Exe), b = Custom("b", f.Exe);
         f.Settings.Downloaders.Add(a);
         f.Settings.Downloaders.Add(b);
-        const string broken = "[youtube] x: Unable to extract nsig function code";
+        const string broken = "[archive.org] x: Unable to extract nsig function code";
 
         var off = await f.Run(a, fallback: false, broken);
         Assert.Equal(broken, off.Error);
@@ -121,8 +121,8 @@ public class ResilienceTests
     }
 
     [Theory]
-    [InlineData("[youtube] x: Sign in to confirm you're not a bot", FailureKind.NeedsLogin)]
-    [InlineData("[youtube] x: Private video", FailureKind.Unavailable)]
+    [InlineData("[archive.org] x: Sign in to confirm you're not a bot", FailureKind.NeedsLogin)]
+    [InlineData("[archive.org] x: Private video", FailureKind.Unavailable)]
     [InlineData("HTTP Error 429: Too Many Requests", FailureKind.RateLimited)]
     public async Task Errors_another_downloader_cant_fix_stop_right_away(string error, FailureKind kind)
     {

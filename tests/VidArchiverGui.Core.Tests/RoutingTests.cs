@@ -7,27 +7,27 @@ public class RoutingTests
 {
     private static readonly MediaInfo Video = new()
     {
-        Url = "https://www.youtube.com/watch?v=abc",
+        Url = "https://archive.org/details/how-things-work",
         Title = "How: things/work?",
-        Site = "Youtube",
-        Domain = "youtube.com",
-        Channel = "Veritasium",
-        ChannelId = "UCHnyfMqiRRG1u-2MsSQLbXA",
+        Site = "ArchiveOrg",
+        Domain = "archive.org",
+        Channel = "NASA Archive",
+        ChannelId = "nasa-archive",
         Fields = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             ["id"] = "abc",
             ["title"] = "How: things/work?",
-            ["channel"] = "Veritasium",
-            ["channel_id"] = "UCHnyfMqiRRG1u-2MsSQLbXA",
-            ["uploader_id"] = "@veritasium",
+            ["channel"] = "NASA Archive",
+            ["channel_id"] = "nasa-archive",
+            ["uploader_id"] = "nasa_uploads",
             ["upload_date"] = "20240102",
         },
     };
 
-    // Like SoundCloud: no channel fields, only an uploader.
+    // Some sites have no channel fields, only an uploader.
     private static readonly MediaInfo UploaderOnly = Video with
     {
-        Fields = new Dictionary<string, string> { ["uploader"] = "Forss", ["uploader_id"] = "forss" },
+        Fields = new Dictionary<string, string> { ["uploader"] = "Space Sounds", ["uploader_id"] = "spacesounds" },
     };
 
     private static RoutingRule Rule(string dest, MatchField field, MatchOperator op, string value, bool enabled = true) => new()
@@ -43,8 +43,8 @@ public class RoutingTests
     {
         var rules = new[]
         {
-            Rule("/a", MatchField.Channel, MatchOperator.Equals, "veritasium"),
-            Rule("/b", MatchField.Domain, MatchOperator.Equals, "youtube.com"),
+            Rule("/a", MatchField.Channel, MatchOperator.Equals, "nasa archive"),
+            Rule("/b", MatchField.Domain, MatchOperator.Equals, "archive.org"),
         };
         var r = Router.Resolve(Video, rules, "/fallback");
         Assert.Same(rules[0], r.Rule);
@@ -56,18 +56,18 @@ public class RoutingTests
     {
         var rules = new[]
         {
-            Rule("/a", MatchField.Channel, MatchOperator.Equals, "Veritasium", enabled: false),
+            Rule("/a", MatchField.Channel, MatchOperator.Equals, "NASA Archive", enabled: false),
             Rule("/b", MatchField.Channel, MatchOperator.Equals, "   "),
         };
         var r = Router.Resolve(Video, rules, "/fallback/{site}");
         Assert.Null(r.Rule);
-        Assert.Equal("/fallback/Youtube", r.Destination);
+        Assert.Equal("/fallback/ArchiveOrg", r.Destination);
     }
 
     [Fact]
     public void All_vs_any_match_modes()
     {
-        var rule = Rule("/x", MatchField.Site, MatchOperator.Equals, "Youtube");
+        var rule = Rule("/x", MatchField.Site, MatchOperator.Equals, "ArchiveOrg");
         rule.Conditions.Add(new RuleCondition { Field = MatchField.Channel, Operator = MatchOperator.Equals, Value = "Nope" });
 
         rule.MatchMode = MatchMode.All;
@@ -77,10 +77,10 @@ public class RoutingTests
     }
 
     [Theory]
-    [InlineData(MatchOperator.Contains, "VERITAS", true)]
-    [InlineData(MatchOperator.StartsWith, "veri", true)]
-    [InlineData(MatchOperator.StartsWith, "tasium", false)]
-    [InlineData(MatchOperator.Regex, "^v.*m$", true)]
+    [InlineData(MatchOperator.Contains, "ARCHIV", true)]
+    [InlineData(MatchOperator.StartsWith, "nasa", true)]
+    [InlineData(MatchOperator.StartsWith, "archive", false)]
+    [InlineData(MatchOperator.Regex, "^n.*e$", true)]
     [InlineData(MatchOperator.Regex, "([invalid", false)]
     public void Operators(MatchOperator op, string value, bool expected)
     {
@@ -99,7 +99,7 @@ public class RoutingTests
     public void Tokens_are_expanded_and_sanitized()
     {
         var dest = PathTemplate.Expand("/root/{site}/{channel}/{title}/{upload_date}", Video);
-        Assert.Equal("/root/Youtube/Veritasium/How_ things_work_/20240102", dest);
+        Assert.Equal("/root/ArchiveOrg/NASA Archive/How_ things_work_/20240102", dest);
     }
 
     [Fact]
@@ -109,9 +109,9 @@ public class RoutingTests
     }
 
     [Theory]
-    [InlineData(@"E:\ARCHIVE\{site}\{(channel|channel_id|uploader|uploader_id)}", @"E:\ARCHIVE\Youtube\Veritasium")]
-    [InlineData(@"E:\A\{uploader|uploader_id}", @"E:\A\@veritasium")]
-    [InlineData(@"E:\A\{ uploader | uploader_id }", @"E:\A\@veritasium")]
+    [InlineData(@"E:\ARCHIVE\{site}\{(channel|channel_id|uploader|uploader_id)}", @"E:\ARCHIVE\ArchiveOrg\NASA Archive")]
+    [InlineData(@"E:\A\{uploader|uploader_id}", @"E:\A\nasa_uploads")]
+    [InlineData(@"E:\A\{ uploader | uploader_id }", @"E:\A\nasa_uploads")]
     [InlineData(@"E:\A\{playlist|""Singles""}", @"E:\A\Singles")]
     public void Fallback_chains_use_first_available_value(string template, string expected)
     {
@@ -121,7 +121,7 @@ public class RoutingTests
     [Fact]
     public void Fallback_chain_for_uploader_only_sites()
     {
-        Assert.Equal(@"E:\A\Forss\forss", PathTemplate.Expand(@"E:\A\{channel|channel_id|uploader|uploader_id}\{channel_id|uploader_id}", UploaderOnly));
+        Assert.Equal(@"E:\A\Space Sounds\spacesounds", PathTemplate.Expand(@"E:\A\{channel|channel_id|uploader|uploader_id}\{channel_id|uploader_id}", UploaderOnly));
     }
 
     [Fact]

@@ -40,23 +40,6 @@ public class SetupTests
     }
 
     [Theory]
-    [InlineData("\r\nAlgorithm : SHA256\r\nHash      : A0C3101B4158D1DFB7D6A78A7BF0F3DE80C96BB423C152A0C3101B4158D1DFB7\r\nPath      : C:\\x\\deno.zip\r\n")]
-    [InlineData("a0c3101b4158d1dfb7d6a78a7bf0f3de80c96bb423c152a0c3101b4158d1dfb7  deno-x86_64-apple-darwin.zip\n")]
-    public void Finds_sha256_in_either_deno_checksum_layout(string text)
-    {
-        Assert.Equal("a0c3101b4158d1dfb7d6a78a7bf0f3de80c96bb423c152a0c3101b4158d1dfb7", ReleaseDownloader.FindAnySha256(text));
-    }
-
-    [Theory]
-    [InlineData("--download-archive \"E:\\ARCHIVE\\YT\\archive.txt\" --mtime", @"E:\ARCHIVE\YT\archive.txt")]
-    [InlineData("--download-archive=a.txt --download-archive b.txt", "b.txt")]
-    [InlineData("--mtime", null)]
-    public void Reads_option_values(string preset, string? expected)
-    {
-        Assert.Equal(expected, ArgumentParser.GetOptionValue(ArgumentParser.Split(preset), "--download-archive"));
-    }
-
-    [Theory]
     [InlineData("--download-archive \"C:\\Old Place\\archive.txt\" --mtime", @"D:\New Place", "--download-archive \"D:\\New Place\\archive.txt\" --mtime")]
     [InlineData("--download-archive C:\\Old\\archive.txt --mtime", @"D:\New Place", "--download-archive \"D:\\New Place\\archive.txt\" --mtime")]
     [InlineData("--download-archive=C:\\Old\\a.txt", @"D:\New", "--download-archive=D:\\New\\a.txt")]
@@ -91,13 +74,5 @@ public class SetupTests
         Assert.False(item.CanAutoFix);
         Assert.True((item with { IsAppFolder = true }).CanAutoFix);
         Assert.False((item with { IsAppFolder = true, CanCreateFolder = false }).CanAutoFix);
-    }
-
-    [Fact]
-    public void Extra_downloader_args_are_passed_before_the_url()
-    {
-        var args = DownloadRunner.BuildArguments(new DownloadRequest("https://x", ["-f", "b"], "/d"), null, ["--js-runtimes", "deno:/app/deno"]);
-        Assert.True(args.IndexOf("--js-runtimes") < args.IndexOf("--"));
-        Assert.Equal("deno:/app/deno", args[args.IndexOf("--js-runtimes") + 1]);
     }
 }

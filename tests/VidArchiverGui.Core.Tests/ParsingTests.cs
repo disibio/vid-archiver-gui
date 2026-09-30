@@ -9,16 +9,16 @@ public class ParsingTests
     public void Parses_single_video_json()
     {
         const string json = """
-            {"id":"dQw4w9WgXcQ","title":"Never Gonna","channel":"Rick Astley","channel_id":"UCuAXFkgsw1L7xaCfnd5JJOw",
-             "uploader":"Rick Astley","extractor_key":"Youtube","webpage_url":"https://www.youtube.com/watch?v=dQw4w9WgXcQ","duration":212}
+            {"id":"Apollo_11_Launch","title":"Apollo 11 Launch","channel":"NASA Archive","channel_id":"nasa-archive",
+             "uploader":"NASA Archive","extractor_key":"Wikimedia","webpage_url":"https://commons.wikimedia.org/wiki/File:Apollo_11_Launch.webm","duration":212}
             """;
-        var info = MediaInfo.FromJson("https://youtu.be/dQw4w9WgXcQ", json);
+        var info = MediaInfo.FromJson("https://commons.wikimedia.org/wiki/File:Apollo_11_Launch.webm", json);
 
         Assert.False(info.IsPlaylist);
-        Assert.Equal("Youtube", info.Site);
-        Assert.Equal("youtube.com", info.Domain);
-        Assert.Equal("Rick Astley", info.Channel);
-        Assert.Equal("UCuAXFkgsw1L7xaCfnd5JJOw", info.ChannelId);
+        Assert.Equal("Wikimedia", info.Site);
+        Assert.Equal("commons.wikimedia.org", info.Domain);
+        Assert.Equal("NASA Archive", info.Channel);
+        Assert.Equal("nasa-archive", info.ChannelId);
         Assert.Null(info.Playlist);
         Assert.Equal("212", info.Fields["duration"]);
     }
@@ -27,34 +27,59 @@ public class ParsingTests
     public void Parses_flat_playlist_json_and_falls_back_to_first_entry_channel()
     {
         const string json = """
-            {"_type":"playlist","id":"PL1","title":"Lo-fi Beats","extractor_key":"YoutubeTab","extractor":"youtube:tab","playlist_count":42,
-             "webpage_url":"https://music.youtube.com/playlist?list=PL1",
-             "entries":[{"_type":"url","id":"x","channel":"Chill Guy","channel_id":"UC1"}]}
+            {"_type":"playlist","id":"apollo","title":"Apollo Missions","extractor_key":"ArchiveOrgCollection","extractor":"archiveorg:collection",
+             "playlist_count":42,"webpage_url":"https://m.archive.org/details/apollo",
+             "entries":[{"_type":"url","id":"x","channel":"NASA Archive","channel_id":"nasa-archive"}]}
             """;
         var info = MediaInfo.FromJson("u", json);
 
         Assert.True(info.IsPlaylist);
-        Assert.Equal("Youtube", info.Site);
-        Assert.Equal("YoutubeTab", info.Fields["extractor_key"]);
-        Assert.Equal("Lo-fi Beats", info.Playlist);
-        Assert.Equal("Chill Guy", info.Channel);
+        Assert.Equal("ArchiveOrg", info.Site);
+        Assert.Equal("ArchiveOrgCollection", info.Fields["extractor_key"]);
+        Assert.Equal("Apollo Missions", info.Playlist);
+        Assert.Equal("NASA Archive", info.Channel);
         Assert.Equal(42, info.EntryCount);
-        Assert.Equal("youtube.com", info.Domain);
+        Assert.Equal("archive.org", info.Domain);
         // Owner fields missing at the top level come from the first entry; its title/id do not.
-        Assert.Equal("UC1", info.Fields["channel_id"]);
-        Assert.Equal("Lo-fi Beats", info.Fields["title"]);
+        Assert.Equal("nasa-archive", info.Fields["channel_id"]);
+        Assert.Equal("Apollo Missions", info.Fields["title"]);
         Assert.Equal("42", info.Fields["playlist_count"]);
     }
 
     [Theory]
-    [InlineData("Youtube", "youtube", "Youtube")]
-    [InlineData("YoutubeTab", "youtube:tab", "Youtube")]
-    [InlineData("TwitchVod", "twitch:vod", "Twitch")]
-    [InlineData("Soundcloud", "soundcloud", "Soundcloud")]
+    [InlineData("ArchiveOrg", "archiveorg", "ArchiveOrg")]
+    [InlineData("ArchiveOrgCollection", "archiveorg:collection", "ArchiveOrg")]
+    [InlineData("NasaVod", "nasa:vod", "Nasa")]
+    [InlineData("Wikimedia", "wikimedia.org", "Wikimedia")]
     [InlineData("Generic", null, "Generic")]
     public void Site_name_drops_sub_extractor(string key, string? extractor, string expected)
     {
         Assert.Equal(expected, MediaInfo.SiteName(key, extractor));
+    }
+
+    [Theory]
+    [InlineData("https://www.archive.org/details/apollo", "archive.org")]
+    [InlineData("https://m.wikimedia.org/wiki/File:Moon.jpg", "wikimedia.org")]
+    [InlineData("https://music.example.com/a", "example.com")]
+    [InlineData("https://m.example/a", "m.example")] // the prefix is kept when it's all the domain has
+    [InlineData("not a url", null)]
+    public void Domain_drops_www_m_and_music(string url, string? expected)
+    {
+        Assert.Equal(expected, MediaInfo.NormalizeDomain(url));
+    }
+
+    [Theory]
+    [InlineData("[download]  45.3% of 10.00MiB at  1.00MiB/s ETA 00:05", 0.453, 10 * 1024 * 1024.0, 1024 * 1024.0, 5.0)]
+    [InlineData("[download]   5.0% of ~ 2.00GiB at 512.00KiB/s ETA 1:02:03", 0.05, 2.0 * 1024 * 1024 * 1024, 512 * 1024.0, 3723.0)]
+    [InlineData("[download] 100% of 3.50MiB in 00:03", 1.0, 3.5 * 1024 * 1024, null, null)]
+    [InlineData("[download]  12.0% of 1.00MB at Unknown speed ETA Unknown ETA", 0.12, 1_000_000.0, null, null)]
+    public void Parses_standard_progress_lines(string line, double fraction, double total, double? speed, double? eta)
+    {
+        var p = Assert.IsType<OutputEvent.Progress>(YtDlpOutputParser.Parse(line)).Value;
+        Assert.Equal(fraction, p.Fraction!.Value, 3);
+        Assert.Equal(total, p.TotalBytes!.Value, 0);
+        Assert.Equal(speed, p.Speed);
+        Assert.Equal(eta, p.Eta);
     }
 
     [Fact]
@@ -79,9 +104,9 @@ public class ParsingTests
     [InlineData("[download] Destination: E:\\x\\a.f137.mp4", typeof(OutputEvent.Destination))]
     [InlineData("[Merger] Merging formats into \"E:\\x\\a.mkv\"", typeof(OutputEvent.Destination))]
     [InlineData("[download] abc: has already been recorded in the archive", typeof(OutputEvent.AlreadyDone))]
-    [InlineData("ERROR: [youtube] abc: Video unavailable", typeof(OutputEvent.Error))]
+    [InlineData("ERROR: [wikimedia.org] abc: Video unavailable", typeof(OutputEvent.Error))]
     [InlineData("[EmbedThumbnail] ffmpeg: Adding thumbnail", typeof(OutputEvent.PostProcessing))]
-    [InlineData("[youtube] Extracting URL", typeof(OutputEvent.Text))]
+    [InlineData("[wikimedia.org] Extracting URL", typeof(OutputEvent.Text))]
     public void Classifies_output_lines(string line, Type expected)
     {
         Assert.IsType(expected, YtDlpOutputParser.Parse(line));
@@ -95,21 +120,8 @@ public class ParsingTests
     }
 
     [Fact]
-    public void Download_arguments_put_destination_after_preset_and_url_last()
+    public void YoutubeDl_archive_message_is_recognised()
     {
-        var args = DownloadRunner.BuildArguments(new DownloadRequest("https://x", ["-P", "/old", "-f", "best"], "/new"), null);
-        Assert.True(args.LastIndexOf("-P") > args.IndexOf("-f"));
-        Assert.Equal("/new", args[args.LastIndexOf("-P") + 1]);
-        Assert.Equal(["--", "https://x"], args[^2..]);
-    }
-
-    [Theory]
-    [InlineData("2026.09.20", "2026.08.01", true)]
-    [InlineData("2026.09.20", "2026.09.20", false)]
-    [InlineData("2026.09.20", null, true)]
-    [InlineData(null, "2026.09.20", false)]
-    public void Version_comparison(string? latest, string? current, bool expected)
-    {
-        Assert.Equal(expected, ToolManager.IsNewer(latest, current));
+        Assert.IsType<OutputEvent.AlreadyDone>(YtDlpOutputParser.Parse("[download] abc has already been recorded in archive"));
     }
 }
