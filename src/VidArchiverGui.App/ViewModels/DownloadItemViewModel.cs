@@ -95,7 +95,7 @@ public partial class DownloadItemViewModel : ObservableObject
     /// <summary>The downloader this item uses: <see cref="EngineOverride"/>, else the preset's.</summary>
     internal Engine Engine => EngineOverride ?? _owner.Settings.EngineFor(Preset);
 
-    internal string AdviceFor(FailureKind kind) =>
+    private string AdviceFor(FailureKind kind) =>
         Resilience.Advice(kind, !Cookies.IsNone(CookieId)) is { } advice ? Environment.NewLine + advice : "";
 
     [ObservableProperty] private string _title;
@@ -257,9 +257,47 @@ public partial class DownloadItemViewModel : ObservableObject
         return _cts.Token;
     }
 
+    // ---------- reading info ----------
+
+    /// <summary>
+    /// Reads the video's info with this item's downloader, falling back to others if extraction is broken. Returns
+    /// false, with <see cref="Error"/> set, if no downloader could read it.
+    /// </summary>
+    internal async Task<bool> ReadInfoAsync(MetadataService metadata, AppSettings settings, CancellationToken ct)
+    {
+        var presetArgs = ArgumentParser.Split(Preset.Arguments);
+        var result = await Resilience.RunAsync(settings, Engine,
+            async (engine, attemptCt) =>
+            {
+                try
+                {
+                    var cookieArgs = Cookies.Args(settings, CookieId, engine.Flavor);
+                    Info = await metadata.FetchAsync(Url, presetArgs, engine, cookieArgs, attemptCt);
+                    return null;
+                }
+                catch (YtDlpException e)
+                {
+                    AppendLog("ERROR: " + e.Message);
+                    return e.Message;
+                }
+            },
+            message => Dispatcher.UIThread.Post(() => { ProgressText = message; AppendLog(message); }),
+            ct);
+
+        if (result.Error is not null)
+        {
+            State = DownloadState.Failed;
+            Error = "Could not read info: " + result.Error + AdviceFor(result.Kind);
+            return false;
+        }
+
+        EngineOverride = result.Engine == settings.EngineFor(Preset) ? null : result.Engine;
+        return true;
+    }
+
     // ---------- download ----------
 
-    internal async Task RunAsync(DownloadRunner runner, AppSettings settings)
+    internal async Task DownloadAsync(DownloadRunner runner, AppSettings settings)
     {
         var token = BeginOperation();
         State = DownloadState.Downloading;

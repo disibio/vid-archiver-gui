@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using VidArchiverGui.App.Services;
@@ -155,40 +154,20 @@ public partial class DownloadsViewModel : ObservableObject
         try
         {
             await _resolveGate.WaitAsync(token);
-            FallbackResult result;
+            bool gotInfo;
             try
             {
-                var presetArgs = ArgumentParser.Split(item.Preset.Arguments);
-                result = await Resilience.RunAsync(_host.Settings, item.Engine,
-                    async (engine, ct) =>
-                    {
-                        try
-                        {
-                            var cookieArgs = Cookies.Args(_host.Settings, item.CookieId, engine.Flavor);
-                            item.Info = await _host.Metadata.FetchAsync(item.Url, presetArgs, engine, cookieArgs, ct);
-                            return null;
-                        }
-                        catch (YtDlpException e)
-                        {
-                            item.AppendLog("ERROR: " + e.Message);
-                            return e.Message;
-                        }
-                    },
-                    message => Dispatcher.UIThread.Post(() => { item.ProgressText = message; item.AppendLog(message); }),
-                    token);
+                gotInfo = await item.ReadInfoAsync(_host.Metadata, _host.Settings, token);
             }
             finally
             {
                 _resolveGate.Release();
             }
 
-            if (result.Error is not null)
+            if (!gotInfo)
             {
-                item.State = DownloadState.Failed;
-                item.Error = "Could not read info: " + result.Error + item.AdviceFor(result.Kind);
                 return;
             }
-            item.EngineOverride = result.Engine == _host.Settings.EngineFor(item.Preset) ? null : result.Engine;
 
             ApplyRoute(item);
             item.State = DownloadState.Ready;
@@ -292,14 +271,14 @@ public partial class DownloadsViewModel : ObservableObject
             }
 
             running++;
-            _ = RunAsync(next);
+            _ = DownloadAsync(next);
         }
         UpdateSummary();
     }
 
-    private async Task RunAsync(DownloadItemViewModel item)
+    private async Task DownloadAsync(DownloadItemViewModel item)
     {
-        await item.RunAsync(_host.Runner, _host.Settings);
+        await item.DownloadAsync(_host.Runner, _host.Settings);
         if (item.State == DownloadState.Completed)
         {
             _host.SetStatus($"Finished: {item.Title}");
