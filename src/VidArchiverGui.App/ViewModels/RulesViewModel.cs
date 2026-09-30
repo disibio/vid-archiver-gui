@@ -14,20 +14,9 @@ public partial class RulesViewModel : ObservableObject
     public RulesViewModel(AppHost host)
     {
         _host = host;
+        LastChange = new UndoSlot(host);
         _selectedRule = host.Settings.Rules.FirstOrDefault();
         RefreshChoices();
-
-        // Undo puts back the rules as they were, so any edit since (to a rule or its conditions, the list or the
-        // fallback folder) withdraws it.
-        var watcher = new EditWatcher(LastChange.Clear);
-        watcher.WatchList(host.Settings.Rules, rule => watcher.WatchList(rule.Conditions));
-        host.Settings.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName == nameof(AppSettings.FallbackDestination))
-            {
-                LastChange.Clear();
-            }
-        };
     }
 
     public static MatchField[] Fields { get; } = Enum.GetValues<MatchField>();
@@ -150,8 +139,8 @@ public partial class RulesViewModel : ObservableObject
         });
     }
 
-    /// <summary>Shown with an Undo button after a delete or import, until the list changes again.</summary>
-    public UndoSlot LastChange { get; } = new();
+    /// <summary>Shown with an Undo button after a delete or import.</summary>
+    public UndoSlot LastChange { get; }
 
     [RelayCommand]
     private async Task Export()
@@ -240,7 +229,7 @@ public partial class RulesViewModel : ObservableObject
             before.Restore();
             SelectedRule = Rules.FirstOrDefault();
             _host.SetStatus("Undid the import.");
-        });
+        }, restoresAll: true);
         _host.SetStatus(imported.Warnings.Count == 0
             ? $"Imported {count} rule(s) from {path}"
             : $"Imported {count} rule(s). " + string.Join(" ", imported.Warnings));

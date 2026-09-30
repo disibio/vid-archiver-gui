@@ -11,52 +11,12 @@ namespace VidArchiverGui.App.ViewModels;
 public partial class PresetsViewModel : ObservableObject
 {
     private readonly AppHost _host;
-    private readonly HashSet<RoutingRule> _watchedRules = [];
 
     public PresetsViewModel(AppHost host)
     {
         _host = host;
+        LastChange = new UndoSlot(host);
         SelectedPreset = host.Settings.DefaultPreset;
-
-        // Undo puts back the presets as they were, and the rules' presets with them, so any edit since (to a preset,
-        // the list, the default, or which preset a rule uses) withdraws it.
-        new EditWatcher(LastChange.Clear).WatchList(host.Settings.Presets);
-        host.Settings.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName == nameof(AppSettings.DefaultPresetId))
-            {
-                LastChange.Clear();
-            }
-        };
-        foreach (var rule in host.Settings.Rules)
-        {
-            WatchRulePreset(rule);
-        }
-
-        host.Settings.Rules.CollectionChanged += (_, e) =>
-        {
-            foreach (var rule in e.NewItems?.OfType<RoutingRule>() ?? [])
-            {
-                WatchRulePreset(rule);
-            }
-        };
-    }
-
-    private void WatchRulePreset(RoutingRule rule)
-    {
-        // Rules come back into the list after an undo on the Rules tab; watch each one once.
-        if (!_watchedRules.Add(rule))
-        {
-            return;
-        }
-
-        rule.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName == nameof(RoutingRule.PresetId))
-            {
-                LastChange.Clear();
-            }
-        };
     }
 
     public ObservableCollection<Preset> Presets => _host.Settings.Presets;
@@ -199,8 +159,8 @@ public partial class PresetsViewModel : ObservableObject
         });
     }
 
-    /// <summary>Shown with an Undo button after a delete or import, until the presets change again.</summary>
-    public UndoSlot LastChange { get; } = new();
+    /// <summary>Shown with an Undo button after a delete or import.</summary>
+    public UndoSlot LastChange { get; }
 
     [RelayCommand]
     private async Task Export()
@@ -258,7 +218,7 @@ public partial class PresetsViewModel : ObservableObject
             SelectedPreset = _host.Settings.DefaultPreset;
             OnPropertyChanged(nameof(DefaultPresetText));
             _host.SetStatus("Undid the import.");
-        });
+        }, restoresAll: true);
         _host.SetStatus(imported.Warnings.Count == 0
             ? $"Imported {count} preset(s) from {path}"
             : $"Imported {count} preset(s). " + string.Join(" ", imported.Warnings));

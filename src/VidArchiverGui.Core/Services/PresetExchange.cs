@@ -145,7 +145,7 @@ public static class PresetExchange
 
 /// <summary>
 /// Everything a preset import can change (the presets and their values, the default, rules' presets), so it can be
-/// undone. <see cref="Restore"/> puts all of it back as it was, so it's only offered until one of those is edited.
+/// undone. <see cref="Restore"/> puts all of it back as it was, losing any edits made since.
 /// </summary>
 public sealed class PresetsSnapshot(AppSettings settings)
 {
