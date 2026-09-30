@@ -119,7 +119,7 @@ public partial class DownloadsViewModel : ObservableObject
     {
         var preset = SelectedPreset ?? _host.Settings.DefaultPreset;
         var added = 0;
-        foreach (var url in ExtractUrls(text))
+        foreach (var url in DownloadQueue.ExtractUrls(text))
         {
             if (Items.Any(i => i.Url == url && !i.IsFinished && i.State != DownloadState.Cancelled))
             {
@@ -138,12 +138,6 @@ public partial class DownloadsViewModel : ObservableObject
 
         return added;
     }
-
-    private static IEnumerable<string> ExtractUrls(string text) =>
-        text.Split((char[])[' ', '\t', '\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
-            .Select(s => s.Trim().Trim('"', '\'', '<', '>'))
-            .Where(s => s.Length > 0 && (s.Contains("://") || s.Contains('.')))
-            .Distinct();
 
     private async Task ResolveAsync(DownloadItemViewModel item)
     {
@@ -390,7 +384,7 @@ public partial class DownloadsViewModel : ObservableObject
 
         RefreshCookieChoices(); // a restored download may use a browser that's no longer installed
 
-        // The saved list stays until the next close replaces it, so a crash in between doesn't lose it.
+        // The saved list stays until the next autosave replaces it with the current list, which includes these.
         if (_restored.Count > 0)
         {
             _host.SetStatus($"Put back {_restored.Count} unfinished download(s) from last time.");
@@ -477,10 +471,5 @@ public partial class DownloadsViewModel : ObservableObject
         _host.SetStatus($"Added rule \"{rule.Name}\" → {rule.Destination}");
     }
 
-    private void UpdateSummary()
-    {
-        int Count(DownloadState s) => Items.Count(i => i.State == s);
-        Summary = $"{Items.Count} items  ·  {Count(DownloadState.Downloading)} downloading  ·  {Count(DownloadState.Queued)} queued  ·  " +
-                  $"{Count(DownloadState.Completed)} done  ·  {Count(DownloadState.Failed)} failed";
-    }
+    private void UpdateSummary() => Summary = DownloadQueue.ListSummary(Items.Select(i => i.State).ToList());
 }

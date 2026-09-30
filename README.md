@@ -75,7 +75,9 @@ Each condition can be Equals, Contains, StartsWith or Regex. None of them care a
 
 Folder paths can include tokens that get filled in per video:
 
-- `{site}`, `{domain}`, `{playlist}`, `{yyyy}` and `{mm}` are built in.
+- `{site}`, `{domain}` and `{playlist}` are built in. So are `{yyyy}` and `{mm}` (the year and month you download
+  it) and `{upload_yyyy}` and `{upload_mm}` (the year and month it was uploaded). A playlist or channel link usually
+  has no upload date, so use a fallback such as `{upload_yyyy|yyyy}`.
 - You can also use any field from yt-dlp's info JSON by name, like `{channel}`, `{channel_id}`, `{uploader}`,
   `{uploader_id}`, `{upload_date}`, `{title}`, `{id}` or `{extractor_key}`.
 - `{channel|channel_id|uploader}` uses the first one that has a value (`{(a|b)}` works too). Put text in quotes to

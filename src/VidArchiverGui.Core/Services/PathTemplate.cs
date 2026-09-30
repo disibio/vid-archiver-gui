@@ -7,7 +7,8 @@ namespace VidArchiverGui.Core.Services;
 /// <summary>
 /// Expands destination folders such as <c>E:\ARCHIVE\{site}\{channel|uploader_id}</c>.
 /// <list type="bullet">
-/// <item><c>{name}</c> — any yt-dlp info field (channel, uploader_id, upload_date, ...) or a built-in: site, domain, playlist, yyyy, mm.</item>
+/// <item><c>{name}</c> — any yt-dlp info field (channel, uploader_id, upload_date, ...) or a built-in: site, domain, playlist,
+/// yyyy and mm (today), upload_yyyy and upload_mm (from upload_date).</item>
 /// <item><c>{a|b|c}</c> or <c>{(a|b|c)}</c> — the first alternative that has a value.</item>
 /// <item><c>{a|"text"}</c> — a quoted alternative is used literally.</item>
 /// </list>
@@ -16,7 +17,7 @@ namespace VidArchiverGui.Core.Services;
 public static partial class PathTemplate
 {
     public const string Help =
-        "Tokens: {site} {domain} {playlist} {yyyy} {mm}, or any yt-dlp field such as {channel} {channel_id} {uploader} {uploader_id} {upload_date} {title} {id}. " +
+        "Tokens: {site} {domain} {playlist} {yyyy} {mm} (today's date) {upload_yyyy} {upload_mm} (upload date), or any yt-dlp field such as {channel} {channel_id} {uploader} {uploader_id} {upload_date} {title} {id}. " +
         "Fallbacks: {channel|uploader_id|\"Unknown channel\"} uses the first one that has a value.";
 
     public static string Expand(string template, MediaInfo info, DateTime? now = null)
@@ -59,8 +60,14 @@ public static partial class PathTemplate
         "playlist" => info.Playlist,
         "yyyy" => date.ToString("yyyy"),
         "mm" => date.ToString("MM"),
+        "upload_yyyy" => UploadDate(info)?[..4],
+        "upload_mm" => UploadDate(info)?[4..6],
         _ => info.Fields.TryGetValue(name, out var v) ? v : null,
     };
+
+    /// <summary>yt-dlp's upload_date (YYYYMMDD), if the info has a valid one. Playlists and channels usually don't.</summary>
+    private static string? UploadDate(MediaInfo info) =>
+        info.Fields.TryGetValue("upload_date", out var d) && d.Length == 8 && d.All(char.IsAsciiDigit) ? d : null;
 
     private static bool IsLiteral(string alt) => alt.Length >= 2 && alt[0] == '"' && alt[^1] == '"';
 

@@ -103,6 +103,21 @@ public class RoutingTests
     }
 
     [Fact]
+    public void Upload_date_tokens_come_from_upload_date_and_today_tokens_from_the_clock()
+    {
+        var today = new DateTime(2026, 9, 30);
+        Assert.Equal("/r/2024/01/2026/09", PathTemplate.Expand("/r/{upload_yyyy}/{upload_mm}/{yyyy}/{mm}", Video, today));
+    }
+
+    [Fact]
+    public void Upload_date_tokens_fall_back_when_there_is_no_upload_date()
+    {
+        var today = new DateTime(2026, 9, 30);
+        var noDate = Video with { Fields = new Dictionary<string, string> { ["upload_date"] = "NA" } };
+        Assert.Equal("/r/2026/Unknown", PathTemplate.Expand("/r/{upload_yyyy|yyyy}/{upload_mm}", noDate, today));
+    }
+
+    [Fact]
     public void Missing_token_value_becomes_Unknown()
     {
         Assert.Equal("/root/Unknown/Unknown", PathTemplate.Expand("/root/{playlist}/{no_such_field}", Video));

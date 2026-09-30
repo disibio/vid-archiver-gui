@@ -5,6 +5,34 @@ namespace VidArchiverGui.Core.Tests;
 
 public class DownloadQueueTests
 {
+    [Fact]
+    public void Extracts_links_and_ignores_other_words()
+    {
+        const string text = """
+            Watch this: https://archive.org/details/apollo-11. Also (commons.wikimedia.org/wiki/File:Moon.jpg), e.g. this one.
+            "https://images.nasa.gov/details/as11-40-5875", <https://archive.org/search?query=nasa&sort=date> and https://archive.org/details/apollo-11 again
+            localhost:8080/video Mr. Smith v1.2 ... (https://en.wikipedia.org/wiki/Mercury_(planet)).
+            """;
+        Assert.Equal(
+            [
+                "https://archive.org/details/apollo-11", "commons.wikimedia.org/wiki/File:Moon.jpg", "https://images.nasa.gov/details/as11-40-5875",
+                "https://archive.org/search?query=nasa&sort=date", "https://en.wikipedia.org/wiki/Mercury_(planet)",
+            ],
+            DownloadQueue.ExtractUrls(text));
+    }
+
+    [Fact]
+    public void Summary_counts_every_state_that_occurs_so_they_add_up()
+    {
+        Assert.Equal("0 items", DownloadQueue.ListSummary([]));
+        Assert.Equal("1 item  ·  1 ready", DownloadQueue.ListSummary([DownloadState.Ready]));
+        Assert.Equal("6 items  ·  1 downloading  ·  2 ready  ·  1 already archived  ·  1 failed  ·  1 cancelled",
+            DownloadQueue.ListSummary([
+                DownloadState.Ready, DownloadState.Failed, DownloadState.Downloading,
+                DownloadState.Skipped, DownloadState.Cancelled, DownloadState.Ready,
+            ]));
+    }
+
     private static IReadOnlyList<int> ToStart(int max, params DownloadState[] states) =>
         DownloadQueue.ToStart(Enumerable.Range(0, states.Length).ToList(), i => states[i], max);
 

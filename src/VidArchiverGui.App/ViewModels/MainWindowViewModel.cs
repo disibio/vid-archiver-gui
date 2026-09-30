@@ -30,8 +30,14 @@ public partial class MainWindowViewModel : ObservableObject
         host.StatusChanged += message => Dispatcher.UIThread.Post(() => Status = message);
         Downloads.RestoreUnfinished();
 
-        // Edits are kept without a Save button: the settings are written whenever they've changed.
-        _autosave.Tick += (_, _) => SaveError = host.Save();
+        // Edits are kept without a Save button: the settings are written whenever they've changed. The unfinished
+        // downloads are included, so a crash or power cut doesn't lose the list; progress isn't saved, so running
+        // downloads only cause a write when one is added, finishes or is removed.
+        _autosave.Tick += (_, _) =>
+        {
+            Downloads.SaveUnfinished();
+            SaveError = host.Save();
+        };
         _autosave.Start();
     }
 

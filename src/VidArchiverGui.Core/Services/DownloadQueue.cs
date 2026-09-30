@@ -1,13 +1,49 @@
+using System.Text.RegularExpressions;
 using VidArchiverGui.Core.Models;
 
 namespace VidArchiverGui.Core.Services;
 
 /// <summary>
-/// The download list's decisions, kept apart from the view models so they can be tested: which queued downloads to
-/// start, which ones to keep for next time, and what the "all done" notification says.
+/// The download list's decisions, kept apart from the view models so they can be tested: which links pasted text
+/// contains, which queued downloads to start, which ones to keep for next time, and what the summary and the
+/// "all done" notification say.
 /// </summary>
-public static class DownloadQueue
+public static partial class DownloadQueue
 {
+    /// <summary>
+    /// The links in typed, pasted or dropped text: anything with a scheme (https://…), or a bare domain with an
+    /// optional path (archive.org/details/…). Other words, such as "e.g." or the end of a sentence, are ignored.
+    /// </summary>
+    public static IReadOnlyList<string> ExtractUrls(string text) =>
+        text.Split((char[])[' ', '\t', '\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
+            .Select(StripSurroundings)
+            .Where(s => SchemeUrlRegex().IsMatch(s) || BareDomainUrlRegex().IsMatch(s))
+            .Distinct()
+            .ToList();
+
+    /// <summary>
+    /// Removes quotes, brackets and sentence punctuation around a link, such as in <c>(archive.org/details/a),</c>.
+    /// A closing bracket is kept when it closes one in the link, as in <c>wikipedia.org/wiki/Mercury_(planet)</c>.
+    /// </summary>
+    private static string StripSurroundings(string word)
+    {
+        word = word.TrimStart('"', '\'', '<', '(');
+        while (word.Length > 0 && (word[^1] is '"' or '\'' or '>' or '.' or ',' or ';'
+                                   || (word[^1] == ')' && word.Count(c => c == ')') > word.Count(c => c == '('))))
+        {
+            word = word[..^1];
+        }
+
+        return word;
+    }
+
+    [GeneratedRegex(@"^[a-z][a-z0-9+.-]*://\S+$", RegexOptions.IgnoreCase)]
+    private static partial Regex SchemeUrlRegex();
+
+    // Labels separated by dots, ending in a top-level domain of letters, then an optional port and path.
+    [GeneratedRegex(@"^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}(?::\d+)?(?:[/?#]\S*)?$", RegexOptions.IgnoreCase)]
+    private static partial Regex BareDomainUrlRegex();
+
     /// <summary>The queued items that fit beside the running ones under <paramref name="max"/>, in list order.</summary>
     public static IReadOnlyList<T> ToStart<T>(IReadOnlyCollection<T> items, Func<T, DownloadState> state, int max)
     {
@@ -18,6 +54,35 @@ public static class DownloadQueue
     /// <summary>Whether a download is put back in the list next time: anything not done (cancelling was the user's choice).</summary>
     public static bool KeepForNextSession(DownloadState state) =>
         state is not (DownloadState.Completed or DownloadState.Skipped or DownloadState.Cancelled);
+
+    /// <summary>
+    /// The line above the list: the total, then how many are in each state (only the states that occur), so the
+    /// numbers always add up to the total.
+    /// </summary>
+    public static string ListSummary(IReadOnlyCollection<DownloadState> states)
+    {
+        (DownloadState State, string Label)[] order =
+        [
+            (DownloadState.Downloading, "downloading"),
+            (DownloadState.Queued, "queued"),
+            (DownloadState.Resolving, "reading info"),
+            (DownloadState.Ready, "ready"),
+            (DownloadState.Completed, "done"),
+            (DownloadState.Skipped, "already archived"),
+            (DownloadState.Failed, "failed"),
+            (DownloadState.Cancelled, "cancelled"),
+        ];
+        var parts = new List<string> { states.Count == 1 ? "1 item" : $"{states.Count} items" };
+        foreach (var (state, label) in order)
+        {
+            if (states.Count(s => s == state) is var n and > 0)
+            {
+                parts.Add($"{n} {label}");
+            }
+        }
+
+        return string.Join("  ·  ", parts);
+    }
 
     /// <summary>The "all done" notification's text for downloads that ended since the queue was last empty.</summary>
     public static string BatchSummary(string firstTitle, int done, int skipped, int failed)
