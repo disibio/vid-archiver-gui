@@ -12,12 +12,6 @@ dotnet_diagnostic.IDE0161.severity = warning
 csharp_using_directive_placement = outside_namespace:warning
 dotnet_diagnostic.IDE0065.severity = warning
 
-# var wherever the type allows it.
-csharp_style_var_for_built_in_types = true:warning
-csharp_style_var_when_type_is_apparent = true:warning
-csharp_style_var_elsewhere = true:warning
-dotnet_diagnostic.IDE0007.severity = warning
-
 # Accessibility always written out, in the usual order.
 dotnet_style_require_accessibility_modifiers = for_non_interface_members:warning
 dotnet_diagnostic.IDE0040.severity = warning
