@@ -2,8 +2,6 @@ using VidArchiverGui.Core.Models;
 
 namespace VidArchiverGui.Core.Services;
 
-public sealed class YtDlpException(string message) : Exception(message);
-
 /// <summary>Reads just enough information about a URL (site, channel, playlist...) to route it.</summary>
 public sealed class MetadataService
 {

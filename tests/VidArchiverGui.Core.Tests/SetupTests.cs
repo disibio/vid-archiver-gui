@@ -81,7 +81,7 @@ public class SetupTests
     [Fact]
     public void Only_the_apps_own_archive_folder_is_created_automatically()
     {
-        var app = SettingsStore.AppVideosFolder;
+        var app = AppPaths.AppVideosFolder;
         Assert.True(AppPaths.IsUnder(app, app));
         Assert.True(AppPaths.IsUnder(Path.Combine(app, "sub"), app + Path.DirectorySeparatorChar));
         Assert.False(AppPaths.IsUnder(app + " (old)", app));

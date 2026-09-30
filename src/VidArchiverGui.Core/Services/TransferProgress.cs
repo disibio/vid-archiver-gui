@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace VidArchiverGui.Core.Services;
 
 /// <summary>How far a tool download has got, for showing to the user.</summary>
@@ -21,5 +23,5 @@ public sealed record TransferProgress(string File, long Received, long? Total, d
         return $"Downloading {File}: {amount}{speed}";
     }
 
-    private static string Megabytes(long bytes) => (bytes / 1_048_576.0).ToString("0.0", System.Globalization.CultureInfo.CurrentCulture);
+    private static string Megabytes(long bytes) => (bytes / 1_048_576.0).ToString("0.0", CultureInfo.CurrentCulture);
 }

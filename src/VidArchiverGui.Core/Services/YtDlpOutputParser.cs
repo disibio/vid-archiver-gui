@@ -84,30 +84,6 @@ public static partial class YtDlpOutputParser
             ? e[6..].Trim()
             : null;
 
-    public static string FormatBytes(double? bytes)
-    {
-        if (bytes is not { } b || b < 0)
-        {
-            return "?";
-        }
-
-        string[] units = ["B", "KiB", "MiB", "GiB", "TiB"];
-        var i = 0;
-        while (b >= 1024 && i < units.Length - 1) { b /= 1024; i++; }
-        return b.ToString(i == 0 ? "0" : "0.0", CultureInfo.InvariantCulture) + " " + units[i];
-    }
-
-    public static string FormatEta(double? seconds)
-    {
-        if (seconds is not { } s || s < 0)
-        {
-            return "--:--";
-        }
-
-        var t = TimeSpan.FromSeconds(Math.Round(s));
-        return t.TotalHours >= 1 ? t.ToString(@"h\:mm\:ss") : t.ToString(@"mm\:ss");
-    }
-
     private static double? Num(string s) =>
         double.TryParse(s.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : null;
 

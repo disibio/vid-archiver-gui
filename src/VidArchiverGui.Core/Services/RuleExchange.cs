@@ -87,7 +87,7 @@ public static class RuleExchange
 
             if (r.Cookies is not null)
             {
-                rule.CookieId = Cookies.IsNone(r.Cookies) || r.Cookies.StartsWith(Cookies.BrowserId(""), StringComparison.Ordinal)
+                rule.CookieId = Cookies.IsNone(r.Cookies) || Cookies.IsBrowser(r.Cookies)
                     ? r.Cookies
                     : settings.CookieSources.FirstOrDefault(c => string.Equals(c.Name, r.Cookies, StringComparison.OrdinalIgnoreCase))?.Id;
                 if (rule.CookieId is null)

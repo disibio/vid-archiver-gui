@@ -32,6 +32,23 @@ public static class AppPaths
     /// </summary>
     public static string DataDir { get; } = ResolveDataDir();
 
+    /// <summary>
+    /// The app's own folder under the user's Videos (Movies on macOS), where the default presets and rules save.
+    /// </summary>
+    public static string AppVideosFolder
+    {
+        get
+        {
+            var videos = Environment.GetFolderPath(Environment.SpecialFolder.MyVideos);
+            if (string.IsNullOrEmpty(videos))
+            {
+                videos = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Videos");
+            }
+
+            return Path.Combine(videos, "Vid Archiver GUI");
+        }
+    }
+
     public static string SettingsFile => Path.Combine(DataDir, "settings.json");
 
     public static string BinDir

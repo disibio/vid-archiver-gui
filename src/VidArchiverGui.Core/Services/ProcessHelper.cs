@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Text;
 
@@ -90,6 +91,6 @@ public static class ProcessHelper
             }
         }
         catch (InvalidOperationException) { }
-        catch (System.ComponentModel.Win32Exception) { }
+        catch (Win32Exception) { }
     }
 }

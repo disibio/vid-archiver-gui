@@ -12,6 +12,12 @@ public partial class DownloadsViewModel : ObservableObject
     private readonly AppHost _host;
     private readonly SemaphoreSlim _resolveGate = new(3);
 
+    // Downloads that ended since the queue was last empty, for the "all done" notification.
+    private readonly List<DownloadItemViewModel> _batch = [];
+
+    // Put back from last session, waiting for ResumeRestored to read their info.
+    private readonly List<DownloadItemViewModel> _restored = [];
+
     public DownloadsViewModel(AppHost host)
     {
         _host = host;
@@ -293,9 +299,6 @@ public partial class DownloadsViewModel : ObservableObject
         NotifyIfQueueDone();
     }
 
-    // Downloads that ended since the queue was last empty, for the "all done" notification.
-    private readonly List<DownloadItemViewModel> _batch = [];
-
     private void NotifyIfQueueDone()
     {
         if (Items.Any(i => i.State is DownloadState.Queued or DownloadState.Downloading or DownloadState.Resolving))
@@ -396,8 +399,6 @@ public partial class DownloadsViewModel : ObservableObject
             })
             .ToList();
     }
-
-    private readonly List<DownloadItemViewModel> _restored = [];
 
     /// <summary>
     /// Puts last session's unfinished downloads back in the list. Their info is read by <see cref="ResumeRestored"/>,

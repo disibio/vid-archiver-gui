@@ -283,7 +283,7 @@ public sealed class SetupChecker(AppSettings settings, ToolManager tools)
                 missing.Add(new SetupItem($"Archive folder ({preset.Name})", SetupStatus.Warning,
                     canCreate ? $"{folder} doesn't exist." : $"{folder} is on {root}, which isn't available. Plug the drive in, or choose another folder.",
                     why)
-                    { Fix = SetupFix.MissingFolder, Folder = folder, CanCreateFolder = canCreate, IsAppFolder = AppPaths.IsUnder(folder, SettingsStore.AppVideosFolder) });
+                    { Fix = SetupFix.MissingFolder, Folder = folder, CanCreateFolder = canCreate, IsAppFolder = AppPaths.IsUnder(folder, AppPaths.AppVideosFolder) });
             }
         }
 

@@ -1,3 +1,4 @@
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using VidArchiverGui.Core.Models;
@@ -10,26 +11,26 @@ public sealed class SettingsStore(string path)
     {
         WriteIndented = true,
         // Keep quotes, <, + and non-ASCII readable so settings.json is pleasant to edit by hand.
-        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
         Converters = { new JsonStringEnumConverter() },
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
 
-    public string Path { get; } = path;
+    public string FilePath { get; } = path;
 
     public AppSettings Load()
     {
         AppSettings? settings = null;
-        if (File.Exists(Path))
+        if (File.Exists(FilePath))
         {
             try
             {
-                settings = JsonSerializer.Deserialize<AppSettings>(ReadWithRetry(Path), Options);
+                settings = JsonSerializer.Deserialize<AppSettings>(ReadWithRetry(FilePath), Options);
             }
             catch (JsonException)
             {
                 // Keep the unreadable file for the user to inspect rather than silently overwriting it.
-                File.Copy(Path, Path + ".corrupt-" + DateTime.Now.ToString("yyyyMMdd-HHmmss"), overwrite: true);
+                File.Copy(FilePath, FilePath + ".corrupt-" + DateTime.Now.ToString("yyyyMMdd-HHmmss"), overwrite: true);
             }
         }
 
@@ -59,35 +60,18 @@ public sealed class SettingsStore(string path)
 
     public void Save(AppSettings settings)
     {
-        Directory.CreateDirectory(System.IO.Path.GetDirectoryName(Path)!);
-        var tmp = Path + ".tmp";
+        Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
+        var tmp = FilePath + ".tmp";
         File.WriteAllText(tmp, JsonSerializer.Serialize(settings, Options));
-        File.Move(tmp, Path, overwrite: true);
-    }
-
-    /// <summary>
-    /// The app's own folder under the user's Videos (Movies on macOS), where the default presets and rules save.
-    /// </summary>
-    public static string AppVideosFolder
-    {
-        get
-        {
-            var videos = Environment.GetFolderPath(Environment.SpecialFolder.MyVideos);
-            if (string.IsNullOrEmpty(videos))
-            {
-                videos = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Videos");
-            }
-
-            return System.IO.Path.Combine(videos, "Vid Archiver GUI");
-        }
+        File.Move(tmp, FilePath, overwrite: true);
     }
 
     public static AppSettings CreateDefaults()
     {
         // Per-user, per-OS locations: Videos on Windows/Linux, Movies on macOS.
         var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        var appVideos = AppVideosFolder;
-        var archiveFile = System.IO.Path.Combine(appVideos, "archive.txt");
+        var appVideos = AppPaths.AppVideosFolder;
+        var archiveFile = Path.Combine(appVideos, "archive.txt");
 
         var archive = new Preset
         {
@@ -130,7 +114,7 @@ public sealed class SettingsStore(string path)
                 """,
         };
 
-        var downloads = System.IO.Path.Combine(appVideos, "{site}", "{channel|uploader|\"Unknown\"}");
+        var downloads = Path.Combine(appVideos, "{site}", "{channel|uploader|\"Unknown\"}");
 
         return new AppSettings
         {
@@ -143,7 +127,7 @@ public sealed class SettingsStore(string path)
                 {
                     Name = "Example: Archive.org → Music (audio)",
                     Enabled = false,
-                    Destination = System.IO.Path.Combine(MusicFolder(home), "Internet Archive", "{title}"),
+                    Destination = Path.Combine(MusicFolder(home), "Internet Archive", "{title}"),
                     PresetId = audio.Id,
                     Conditions = [new RuleCondition { Field = MatchField.Domain, Operator = MatchOperator.Equals, Value = "archive.org" }],
                 },
@@ -152,7 +136,7 @@ public sealed class SettingsStore(string path)
     }
 
     private static string MusicFolder(string home) =>
-        Environment.GetFolderPath(Environment.SpecialFolder.MyMusic) is { Length: > 0 } music ? music : System.IO.Path.Combine(home, "Music");
+        Environment.GetFolderPath(Environment.SpecialFolder.MyMusic) is { Length: > 0 } music ? music : Path.Combine(home, "Music");
 
     private static void Normalize(AppSettings s)
     {

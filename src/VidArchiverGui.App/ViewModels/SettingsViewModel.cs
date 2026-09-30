@@ -28,11 +28,17 @@ public partial class EngineRowViewModel(Engine engine) : ObservableObject
 
 public partial class SettingsViewModel : ObservableObject
 {
-    private readonly AppHost host;
+    private readonly AppHost _host;
+
+    // Refreshes can be triggered back to back (e.g. several installs from "Fix now"); run them one at a time.
+    private readonly SemaphoreSlim _refreshGate = new(1);
+
+    // While InitializeAsync installs or updates tools, each install skips its usual refresh; one runs at the end.
+    private bool _initializing;
 
     public SettingsViewModel(AppHost host, SetupViewModel setup)
     {
-        this.host = host;
+        _host = host;
         Setup = setup;
         setup.ToolsChanged += async () =>
         {
@@ -41,11 +47,8 @@ public partial class SettingsViewModel : ObservableObject
         };
     }
 
-    // Refreshes can be triggered back to back (e.g. several installs from "Fix now"); run them one at a time.
-    private readonly SemaphoreSlim _refreshGate = new(1);
-
     public SetupViewModel Setup { get; }
-    public AppSettings Settings => host.Settings;
+    public AppSettings Settings => _host.Settings;
     public string DataFolder => AppPaths.DataDir;
     public string DataFolderHint => AppPaths.IsPackaged
         ? "Settings, rules and presets live in settings.json here. Windows removes this folder when the app is uninstalled."
@@ -68,7 +71,7 @@ public partial class SettingsViewModel : ObservableObject
             }
 
             Settings.Theme = value;
-            host.Save(quiet: true);
+            _host.Save(quiet: true);
             OnPropertyChanged();
         }
     }
@@ -135,7 +138,7 @@ public partial class SettingsViewModel : ObservableObject
                 }
 
                 Settings.LastYtDlpUpdateCheck = DateTimeOffset.Now;
-                host.Save(quiet: true);
+                _host.Save(quiet: true);
             }
         }
         finally
@@ -145,8 +148,6 @@ public partial class SettingsViewModel : ObservableObject
 
         await RefreshAsync();
     }
-
-    private bool _initializing;
 
     private async Task UpdateDenoIfNewer()
     {
@@ -226,6 +227,7 @@ public partial class SettingsViewModel : ObservableObject
                 return;
             }
 
+            // Shown while the (possibly slow) version check on the next line runs.
             row.Status = $"Running \"{Path.GetFileName(path)} --version\"…  —  {path}";
             row.Status = $"{await ToolManager.GetVersionAsync(path) ?? "version unknown (--version failed or didn't answer)"}  —  {path}";
             row.PreviousVersion = ToolManager.CanRollback(row.Engine)
@@ -233,10 +235,10 @@ public partial class SettingsViewModel : ObservableObject
                 : null;
         }));
 
-        var ff = host.Tools.ResolveFfmpeg();
+        var ff = _host.Tools.ResolveFfmpeg();
         FfmpegStatus = ff is null
             ? "Not found — merging video+audio and embedding thumbnails/subtitles need ffmpeg."
-            : $"{await host.Tools.GetFfmpegVersionAsync() ?? "version unknown"}  —  {ff}";
+            : $"{await _host.Tools.GetFfmpegVersionAsync() ?? "version unknown"}  —  {ff}";
     }
 
     [RelayCommand]
@@ -281,7 +283,7 @@ public partial class SettingsViewModel : ObservableObject
             await ToolManager.InstallAsync(engine, progress, ct);
             if (Settings.SkippedVersions.Remove(engine.Id))
             {
-                host.Save(quiet: true);
+                _host.Save(quiet: true);
             }
 
             return $"{engine.Name} updated {current} → {latest}.";
@@ -303,7 +305,7 @@ public partial class SettingsViewModel : ObservableObject
             if (from is not null)
             {
                 Settings.SkippedVersions[engine.Id] = from;
-                host.Save(quiet: true);
+                _host.Save(quiet: true);
             }
             return $"{engine.Name} rolled back {from} → {row.PreviousVersion}. The daily update check will skip {from}; " +
                    "press Roll back again to undo.";
@@ -334,8 +336,8 @@ public partial class SettingsViewModel : ObservableObject
         }
 
         Settings.DefaultEngineId = SelectedEngine.Engine.Id;
-        host.Save(quiet: true);
-        host.SetStatus($"Default downloader: {SelectedEngine.Engine.Name}");
+        _host.Save(quiet: true);
+        _host.SetStatus($"Default downloader: {SelectedEngine.Engine.Name}");
         foreach (var row in Engines)
         {
             row.IsDefault = row.Engine.Id == Settings.DefaultEngineId;
@@ -357,7 +359,7 @@ public partial class SettingsViewModel : ObservableObject
 
         Settings.Engines.Remove(engine);
         Settings.RemoveDanglingReferences();
-        host.Save(quiet: true);
+        _host.Save(quiet: true);
         SelectedEngine = null;
         await RefreshAsync();
     }
@@ -365,7 +367,7 @@ public partial class SettingsViewModel : ObservableObject
     [RelayCommand]
     private async Task BrowseNewEngine()
     {
-        if (await host.Dialogs.PickFileAsync("Select downloader executable") is { } path)
+        if (await _host.Dialogs.PickFileAsync("Select downloader executable") is { } path)
         {
             NewEnginePath = path;
             if (string.IsNullOrWhiteSpace(NewEngineName))
@@ -395,7 +397,7 @@ public partial class SettingsViewModel : ObservableObject
             Flavor = NewEngineFlavor,
         };
         Settings.Engines.Add(engine);
-        host.Save(quiet: true);
+        _host.Save(quiet: true);
         NewEngineName = NewEnginePath = "";
         await RefreshAsync();
         SelectedEngine = Engines.FirstOrDefault(r => r.Engine == engine);
@@ -413,7 +415,7 @@ public partial class SettingsViewModel : ObservableObject
     [RelayCommand]
     private async Task BrowseCookieFile()
     {
-        if (await host.Dialogs.PickFileAsync("Select cookies.txt") is { } path)
+        if (await _host.Dialogs.PickFileAsync("Select cookies.txt") is { } path)
         {
             NewCookieKind = CookieSourceKind.File;
             NewCookieValue = path;
@@ -446,7 +448,7 @@ public partial class SettingsViewModel : ObservableObject
             Value = value,
         };
         Settings.CookieSources.Add(source);
-        host.Save(quiet: true);
+        _host.Save(quiet: true);
         NewCookieName = NewCookieValue = "";
         SelectedCookieSource = source;
         CookieMessage = $"Added \"{source.Name}\". Pick it in the Cookies list on the Downloads tab.";
@@ -462,7 +464,7 @@ public partial class SettingsViewModel : ObservableObject
 
         Settings.CookieSources.Remove(source);
         Settings.RemoveDanglingReferences();
-        host.Save(quiet: true);
+        _host.Save(quiet: true);
         CookieMessage = $"Removed \"{source.Name}\".";
     }
 
@@ -479,7 +481,7 @@ public partial class SettingsViewModel : ObservableObject
     [RelayCommand]
     private async Task BrowseFfmpeg()
     {
-        if (await host.Dialogs.PickFileAsync("Select ffmpeg executable") is { } path)
+        if (await _host.Dialogs.PickFileAsync("Select ffmpeg executable") is { } path)
         {
             Settings.FfmpegPath = path;
             await RefreshAsync();
@@ -494,10 +496,10 @@ public partial class SettingsViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private Task OpenDataFolder() => host.Dialogs.OpenFolderAsync(AppPaths.DataDir);
+    private Task OpenDataFolder() => _host.Dialogs.OpenFolderAsync(AppPaths.DataDir);
 
     [RelayCommand]
-    private void Save() => host.Save();
+    private void Save() => _host.Save();
 
     private async Task RunBusy(string what, Func<IProgress<TransferProgress>, CancellationToken, Task<string>> action, bool quietOnError = false)
     {
@@ -508,22 +510,22 @@ public partial class SettingsViewModel : ObservableObject
 
         Setup.ShowWaiting(what);
         // The live text goes to the status bar too, so it's visible from every tab.
-        var result = await Busy.RunAsync(what, action, host.SetStatus);
+        var result = await Busy.RunAsync(what, action, _host.SetStatus);
         switch (result.Outcome)
         {
             case JobOutcome.Succeeded:
                 ToolOutput = result.Message;
-                host.SetStatus(result.Message.Split('\n').Last());
+                _host.SetStatus(result.Message.Split('\n').Last());
                 break;
             case JobOutcome.Cancelled:
                 ToolOutput = $"{what}: cancelled.";
-                host.SetStatus(ToolOutput);
+                _host.SetStatus(ToolOutput);
                 break;
             case JobOutcome.Failed:
                 ToolOutput = $"{what} failed: {result.Message}";
                 if (!quietOnError)
                 {
-                    host.SetStatus(ToolOutput);
+                    _host.SetStatus(ToolOutput);
                 }
 
                 break;

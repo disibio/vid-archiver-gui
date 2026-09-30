@@ -15,7 +15,7 @@ public partial class AboutViewModel : ObservableObject
 
     public string BuildSummary => Services.BuildInfo.Summary;
 
-    public string Copyright =>"Copyright 2026 The Vid Archiver GUI contributors";
+    public string Copyright => "Copyright 2026 The Vid Archiver GUI contributors";
 
     public const string AiNotice =
         "Vid Archiver GUI is written with Claude Opus 5.5.";

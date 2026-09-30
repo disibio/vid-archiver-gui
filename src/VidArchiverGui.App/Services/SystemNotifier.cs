@@ -15,6 +15,9 @@ public sealed class SystemNotifier(Window window)
 {
     private const string AppName = "Vid Archiver GUI";
 
+    /// <summary>The desktop entry and icon name (see packaging/flatpak).</summary>
+    private const string AppId = "io.github.disibio.vid-archiver-gui";
+
     public void Show(string title, string message)
     {
         try
@@ -27,11 +30,11 @@ public sealed class SystemNotifier(Window window)
             {
                 Run("osascript", ["-e", $"display notification {AppleScriptString(message)} with title {AppleScriptString(title)}"]);
             }
-            else if (!Run("notify-send", ["--app-name=" + AppName, "--icon=io.github.disibio.vid-archiver-gui", title, message]))
+            else if (!Run("notify-send", ["--app-name=" + AppName, "--icon=" + AppId, title, message]))
             {
                 // gdbus ships with GLib, so it's there on desktops (and in the Flatpak runtime) without libnotify's tools.
                 Run("gdbus", ["call", "--session", "--dest=org.freedesktop.Notifications", "--object-path=/org/freedesktop/Notifications",
-                    "--method=org.freedesktop.Notifications.Notify", AppName, "0", "io.github.disibio.vid-archiver-gui", title, message, "[]", "{}", "-1"]);
+                    "--method=org.freedesktop.Notifications.Notify", AppName, "0", AppId, title, message, "[]", "{}", "-1"]);
             }
         }
         catch (Exception e) when (e is Win32Exception or InvalidOperationException or DllNotFoundException or EntryPointNotFoundException)

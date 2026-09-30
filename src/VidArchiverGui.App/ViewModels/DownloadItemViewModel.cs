@@ -397,8 +397,8 @@ public partial class DownloadItemViewModel : ObservableObject
                 IsIndeterminate = p.Fraction is null;
                 Progress = (p.Fraction ?? 0) * 100;
                 ProgressText = _itemPrefix + (p.Fraction is { } f
-                    ? $"{f * 100:0.0}% of {YtDlpOutputParser.FormatBytes(p.TotalBytes)}  ·  {YtDlpOutputParser.FormatBytes(p.Speed)}/s  ·  ETA {YtDlpOutputParser.FormatEta(p.Eta)}"
-                    : $"{YtDlpOutputParser.FormatBytes(p.DownloadedBytes)}  ·  {YtDlpOutputParser.FormatBytes(p.Speed)}/s");
+                    ? $"{f * 100:0.0}% of {DisplayFormat.Bytes(p.TotalBytes)}  ·  {DisplayFormat.Bytes(p.Speed)}/s  ·  ETA {DisplayFormat.Eta(p.Eta)}"
+                    : $"{DisplayFormat.Bytes(p.DownloadedBytes)}  ·  {DisplayFormat.Bytes(p.Speed)}/s");
                 return; // progress lines are too chatty for the log
             case OutputEvent.PlaylistItem pi:
                 _itemPrefix = $"Item {pi.Index}/{pi.Count}  ·  ";

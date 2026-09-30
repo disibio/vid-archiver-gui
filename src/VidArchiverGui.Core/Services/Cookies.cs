@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using VidArchiverGui.Core.Models;
 
 namespace VidArchiverGui.Core.Services;
@@ -19,6 +20,9 @@ public static class Cookies
     ];
 
     public static string BrowserId(string key) => BrowserPrefix + key;
+
+    /// <summary>Whether <paramref name="id"/> is a detected browser rather than a user-added source.</summary>
+    public static bool IsBrowser([NotNullWhen(true)] string? id) => id?.StartsWith(BrowserPrefix, StringComparison.Ordinal) == true;
 
     /// <summary>Browsers whose profile folder exists on this computer.</summary>
     public static IReadOnlyList<Choice> DetectBrowsers() =>
@@ -88,12 +92,12 @@ public static class Cookies
 
     public static string DisplayName(AppSettings settings, string? id)
     {
-        if (id is null or NoneId)
+        if (IsNone(id))
         {
             return "No cookies";
         }
 
-        if (id.StartsWith(BrowserPrefix, StringComparison.Ordinal))
+        if (IsBrowser(id))
         {
             var key = id[BrowserPrefix.Length..];
             return Browsers.FirstOrDefault(b => b.Key == key).Name ?? key;
@@ -105,7 +109,7 @@ public static class Cookies
 
     /// <summary>False for a user source that has since been removed.</summary>
     public static bool Exists(AppSettings settings, string? id) =>
-        IsNone(id) || id!.StartsWith(BrowserPrefix, StringComparison.Ordinal) || settings.CookieSources.Any(c => c.Id == id);
+        IsNone(id) || IsBrowser(id) || settings.CookieSources.Any(c => c.Id == id);
 
     /// <summary>Downloader arguments for a cookie choice. Throws <see cref="YtDlpException"/> with a readable reason if it can't be used.</summary>
     public static IReadOnlyList<string> Args(AppSettings settings, string? id, EngineFlavor flavor)
@@ -116,7 +120,7 @@ public static class Cookies
         }
 
         string spec;
-        if (id!.StartsWith(BrowserPrefix, StringComparison.Ordinal))
+        if (IsBrowser(id))
         {
             spec = id[BrowserPrefix.Length..];
         }
