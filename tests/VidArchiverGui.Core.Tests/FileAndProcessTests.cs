@@ -88,6 +88,16 @@ public sealed class FileAndProcessTests : IDisposable
     }
 
     [Fact]
+    public void Loading_saved_settings_does_not_rewrite_them()
+    {
+        var path = Path.Combine(_dir, "settings.json");
+        new SettingsStore(path).SaveIfChanged(new SettingsStore(path).Load());
+
+        var store = new SettingsStore(path);
+        Assert.False(store.SaveIfChanged(store.Load()));
+    }
+
+    [Fact]
     public void Settings_keep_the_downloader_names_from_before_the_rename()
     {
         var path = Path.Combine(_dir, "settings.json");

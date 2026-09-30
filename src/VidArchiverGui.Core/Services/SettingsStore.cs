@@ -25,7 +25,9 @@ public sealed class SettingsStore(string path)
         {
             try
             {
-                settings = JsonSerializer.Deserialize<AppSettings>(ReadWithRetry(FilePath), Options);
+                var json = ReadWithRetry(FilePath);
+                settings = JsonSerializer.Deserialize<AppSettings>(json, Options);
+                _lastWritten = json; // so the first save only writes if loading changed something
             }
             catch (JsonException)
             {
