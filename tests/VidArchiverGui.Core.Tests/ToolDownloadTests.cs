@@ -62,7 +62,7 @@ public sealed class ToolDownloadTests : IDisposable
         var server = ServeAsync(TimeSpan.FromMilliseconds(400));
         var reports = new List<TransferProgress>();
 
-        await ToolManager.DownloadFileAsync(_url, Destination, new SyncProgress(reports.Add), CancellationToken.None, Sha, TimeSpan.FromSeconds(1));
+        await ReleaseDownloader.DownloadFileAsync(_url, Destination, new SyncProgress(reports.Add), CancellationToken.None, Sha, TimeSpan.FromSeconds(1));
 
         Assert.Equal(_content, File.ReadAllBytes(Destination));
         Assert.True(reports[0].Connecting);
@@ -78,7 +78,7 @@ public sealed class ToolDownloadTests : IDisposable
         var server = ServeAsync(TimeSpan.Zero, chunks: 2);
 
         var e = await Assert.ThrowsAsync<TimeoutException>(() =>
-            ToolManager.DownloadFileAsync(_url, Destination, null, CancellationToken.None, Sha, TimeSpan.FromSeconds(1)));
+            ReleaseDownloader.DownloadFileAsync(_url, Destination, null, CancellationToken.None, Sha, TimeSpan.FromSeconds(1)));
 
         Assert.Contains("no data arrived for 1 seconds", e.Message);
         Assert.False(File.Exists(Destination));
@@ -101,7 +101,7 @@ public sealed class ToolDownloadTests : IDisposable
         });
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-            ToolManager.DownloadFileAsync(_url, Destination, progress, cts.Token, Sha, TimeSpan.FromMinutes(1)));
+            ReleaseDownloader.DownloadFileAsync(_url, Destination, progress, cts.Token, Sha, TimeSpan.FromMinutes(1)));
 
         Assert.False(File.Exists(Destination));
         Assert.False(File.Exists(Destination + ".download"));

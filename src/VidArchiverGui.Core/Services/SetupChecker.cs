@@ -125,7 +125,7 @@ public sealed class SetupChecker(AppSettings settings, ToolManager tools)
         else
         {
             activity?.Invoke(DownloaderSection, $"Running \"{exeName} --version\"…");
-            var version = await tools.GetVersionAsync(path, ct);
+            var version = await ToolManager.GetVersionAsync(path, ct);
             Done(DownloaderSection, version is not null
                 ? new SetupItem(engine.Name, SetupStatus.Ok, $"{version}  —  {path}", DownloaderWhy)
                 : new SetupItem(engine.Name, SetupStatus.Warning,
@@ -139,7 +139,7 @@ public sealed class SetupChecker(AppSettings settings, ToolManager tools)
             var asking = $"Asking yt-dlp which helper tools it can find (\"{exeName} -v\")…";
             activity?.Invoke(FfmpegSection, asking);
             activity?.Invoke(DenoSection, asking);
-            probe = await ProbeAsync(tools.Resolve(engine), ct);
+            probe = await ProbeAsync(ToolManager.Resolve(engine), ct);
         }
 
         // 2. ffmpeg.
@@ -196,30 +196,25 @@ public sealed class SetupChecker(AppSettings settings, ToolManager tools)
 
         args.AddRange(engine.ExtraArgs);
 
-        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        timeout.CancelAfter(ToolManager.QueryTimeout);
-        try
-        {
-            // With no URL yt-dlp prints its debug header and then exits with an error; the header is all we need.
-            var r = await ProcessHelper.RunAsync(engine.Path, args, timeout.Token);
-            var probe = YtDlpProbe.Parse(r.StdErr + "\n" + r.StdOut);
-            return probe.HasFfmpeg is null && probe.JsRuntimes is null ? null : probe;
-        }
-        catch (Exception e) when (e is OperationCanceledException && !ct.IsCancellationRequested || e is System.ComponentModel.Win32Exception)
+        // With no URL yt-dlp prints its debug header and then exits with an error; the header is all we need.
+        if (await ToolManager.TryRunAsync(engine.Path, args, ct) is not { } r)
         {
             return null;
         }
+
+        var probe = YtDlpProbe.Parse(r.StdErr + "\n" + r.StdOut);
+        return probe.HasFfmpeg is null && probe.JsRuntimes is null ? null : probe;
     }
 
     private SetupItem FfmpegMissing()
     {
         var item = new SetupItem("ffmpeg", SetupStatus.Missing, "Not found.", FfmpegWhy);
-        if (tools.CanDownloadFfmpeg)
+        if (ToolManager.CanDownloadFfmpeg)
         {
             return item with { Fix = SetupFix.InstallFfmpeg };
         }
 
-        if (FfmpegInstallCommand() is { } command)
+        if (ToolManager.FfmpegInstallCommand() is { } command)
         {
             return item with { Detail = "Not found. Install it with the command below.", Fix = SetupFix.CopyCommand, Command = command };
         }
@@ -230,42 +225,6 @@ public sealed class SetupChecker(AppSettings settings, ToolManager tools)
                 ? "Not found. Install Homebrew from https://brew.sh, then run: brew install ffmpeg"
                 : "Not found. Install ffmpeg with your system's package manager.",
         };
-    }
-
-    /// <summary>The install command for this system's package manager, if one is recognised.</summary>
-    public static string? FfmpegInstallCommand()
-    {
-        if (OperatingSystem.IsMacOS())
-        {
-            return ToolManager.FindOnPath("brew") is not null ? "brew install ffmpeg" : null;
-        }
-
-        if (!OperatingSystem.IsLinux())
-        {
-            return null;
-        }
-
-        if (ToolManager.FindOnPath("apt-get") is not null)
-        {
-            return "sudo apt install ffmpeg";
-        }
-
-        if (ToolManager.FindOnPath("dnf") is not null)
-        {
-            return "sudo dnf install ffmpeg";
-        }
-
-        if (ToolManager.FindOnPath("pacman") is not null)
-        {
-            return "sudo pacman -S ffmpeg";
-        }
-
-        if (ToolManager.FindOnPath("zypper") is not null)
-        {
-            return "sudo zypper install ffmpeg";
-        }
-
-        return null;
     }
 
     private SetupItem CheckDestinationDrives()

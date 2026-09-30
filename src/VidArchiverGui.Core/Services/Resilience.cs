@@ -102,7 +102,7 @@ public static class Resilience
     /// is on, moving to the next of the <see cref="FallbackEngines"/> when extraction is broken.
     /// </summary>
     public static async Task<FallbackResult> RunAsync(
-        ToolManager tools, AppSettings settings, Engine primary,
+        AppSettings settings, Engine primary,
         Func<ResolvedEngine, CancellationToken, Task<string?>> attempt, Action<string> status, CancellationToken ct,
         IReadOnlyList<TimeSpan>? networkRetryDelays = null)
     {
@@ -116,7 +116,7 @@ public static class Resilience
             ResolvedEngine resolved;
             if (engine == primary)
             {
-                resolved = tools.Resolve(engine); // a missing primary is reported as-is
+                resolved = ToolManager.Resolve(engine); // a missing primary is reported as-is
             }
             else
             {
@@ -125,10 +125,10 @@ public static class Resilience
                     if (engine.IsManaged && !ToolManager.IsInstalledByApp(engine) && ToolManager.LocatePath(engine) is null)
                     {
                         status($"Installing {engine.Name} to try it…");
-                        await tools.EnsureInstalledAsync(engine, ct,
-                            new Progress<TransferProgress>(p => status($"Installing {engine.Name} to try it: {p}")));
+                        await ToolManager.EnsureInstalledAsync(engine,
+                            new Progress<TransferProgress>(p => status($"Installing {engine.Name} to try it: {p}")), ct);
                     }
-                    resolved = tools.Resolve(engine);
+                    resolved = ToolManager.Resolve(engine);
                 }
                 catch (Exception e) when (e is not OperationCanceledException)
                 {

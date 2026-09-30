@@ -259,7 +259,7 @@ public partial class DownloadItemViewModel : ObservableObject
 
     // ---------- download ----------
 
-    internal async Task RunAsync(DownloadRunner runner, ToolManager tools, AppSettings settings)
+    internal async Task RunAsync(DownloadRunner runner, AppSettings settings)
     {
         var token = BeginOperation();
         State = DownloadState.Downloading;
@@ -276,7 +276,7 @@ public partial class DownloadItemViewModel : ObservableObject
         {
             var primary = Engine;
             var presetArgs = ArgumentParser.Split(Preset.Arguments);
-            var result = await Resilience.RunAsync(tools, settings, primary,
+            var result = await Resilience.RunAsync(settings, primary,
                 async (engine, ct) =>
                 {
                     var request = new DownloadRequest(Url, presetArgs, Destination)

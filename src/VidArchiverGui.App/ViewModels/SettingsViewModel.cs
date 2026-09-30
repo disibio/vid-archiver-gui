@@ -50,7 +50,7 @@ public partial class SettingsViewModel : ObservableObject
     public string DataFolderHint => AppPaths.IsPackaged
         ? "Settings, rules and presets live in settings.json here. Windows removes this folder when the app is uninstalled."
         : "Settings, rules and presets live in settings.json here. Put a file named portable.txt next to the app to keep data beside it instead.";
-    public bool CanDownloadFfmpeg => host.Tools.CanDownloadFfmpeg;
+    public bool CanDownloadFfmpeg => ToolManager.CanDownloadFfmpeg;
     public string FfmpegHint => ToolManager.FfmpegInstallHint;
     public static EngineFlavor[] Flavors { get; } = Enum.GetValues<EngineFlavor>();
     public static AppTheme[] Themes { get; } = Enum.GetValues<AppTheme>();
@@ -152,14 +152,14 @@ public partial class SettingsViewModel : ObservableObject
     {
         await RunBusy("Checking for deno updates", async (progress, ct) =>
         {
-            var current = await host.Tools.GetDenoVersionAsync(ToolManager.ManagedDenoPath, ct);
-            var latest = await host.Tools.GetLatestDenoVersionAsync(ct);
+            var current = await ToolManager.GetDenoVersionAsync(ToolManager.ManagedDenoPath, ct);
+            var latest = await ToolManager.GetLatestDenoVersionAsync(ct);
             if (!ToolManager.IsNewer(latest, current))
             {
                 return $"deno is up to date ({current}).";
             }
 
-            await host.Tools.InstallDenoAsync(progress, ct);
+            await ToolManager.InstallDenoAsync(progress, ct);
             return $"deno updated {current} → {latest}.";
         }, quietOnError: true);
     }
@@ -227,9 +227,9 @@ public partial class SettingsViewModel : ObservableObject
             }
 
             row.Status = $"Running \"{Path.GetFileName(path)} --version\"…  —  {path}";
-            row.Status = $"{await host.Tools.GetVersionAsync(path) ?? "version unknown (--version failed or didn't answer)"}  —  {path}";
+            row.Status = $"{await ToolManager.GetVersionAsync(path) ?? "version unknown (--version failed or didn't answer)"}  —  {path}";
             row.PreviousVersion = ToolManager.CanRollback(row.Engine)
-                ? await host.Tools.GetVersionAsync(ToolManager.PreviousPath(row.Engine)) ?? "previous version"
+                ? await ToolManager.GetVersionAsync(ToolManager.PreviousPath(row.Engine)) ?? "previous version"
                 : null;
         }));
 
@@ -248,7 +248,7 @@ public partial class SettingsViewModel : ObservableObject
         {
             if (ToolManager.LocatePath(engine) is { } exe)
             {
-                await RunBusy($"Running {engine.Name} -U", async (_, ct) => await host.Tools.SelfUpdateAsync(exe, ct));
+                await RunBusy($"Running {engine.Name} -U", async (_, ct) => await ToolManager.SelfUpdateAsync(exe, ct));
             }
 
             return;
@@ -258,7 +258,7 @@ public partial class SettingsViewModel : ObservableObject
         {
             await RunBusy($"Installing {engine.Name}", async (progress, ct) =>
             {
-                await host.Tools.InstallAsync(engine, progress, ct);
+                await ToolManager.InstallAsync(engine, progress, ct);
                 return $"{engine.Name} installed to {ToolManager.ManagedPath(engine)}";
             });
             return;
@@ -266,8 +266,8 @@ public partial class SettingsViewModel : ObservableObject
 
         await RunBusy($"Checking for {engine.Name} updates", async (progress, ct) =>
         {
-            var current = await host.Tools.GetVersionAsync(ToolManager.ManagedPath(engine), ct);
-            var latest = await host.Tools.GetLatestVersionAsync(engine, ct);
+            var current = await ToolManager.GetVersionAsync(ToolManager.ManagedPath(engine), ct);
+            var latest = await ToolManager.GetLatestVersionAsync(engine, ct);
             if (!ToolManager.IsNewer(latest, current))
             {
                 return $"{engine.Name} is up to date ({current}).";
@@ -278,7 +278,7 @@ public partial class SettingsViewModel : ObservableObject
                 return $"{engine.Name} {latest} was rolled back, so it isn't re-installed automatically. Use \"Check for update\" to install it anyway.";
             }
 
-            await host.Tools.InstallAsync(engine, progress, ct);
+            await ToolManager.InstallAsync(engine, progress, ct);
             if (Settings.SkippedVersions.Remove(engine.Id))
             {
                 host.Save(quiet: true);
@@ -298,8 +298,8 @@ public partial class SettingsViewModel : ObservableObject
 
         await RunBusy($"Rolling back {engine.Name}", async (_, _) =>
         {
-            var from = await host.Tools.GetVersionAsync(ToolManager.ManagedPath(engine));
-            await host.Tools.RollbackAsync(engine);
+            var from = await ToolManager.GetVersionAsync(ToolManager.ManagedPath(engine));
+            await ToolManager.RollbackAsync(engine);
             if (from is not null)
             {
                 Settings.SkippedVersions[engine.Id] = from;
@@ -320,7 +320,7 @@ public partial class SettingsViewModel : ObservableObject
 
         await RunBusy($"Re-downloading {engine.Name}", async (progress, ct) =>
         {
-            await host.Tools.InstallAsync(engine, progress, ct);
+            await ToolManager.InstallAsync(engine, progress, ct);
             return $"{engine.Name} re-downloaded.";
         });
     }
@@ -471,7 +471,7 @@ public partial class SettingsViewModel : ObservableObject
     {
         await RunBusy("Downloading ffmpeg (≈100 MB)", async (progress, ct) =>
         {
-            await host.Tools.DownloadFfmpegAsync(progress, ct);
+            await ToolManager.DownloadFfmpegAsync(progress, ct);
             return "ffmpeg installed to " + AppPaths.BinDir;
         });
     }

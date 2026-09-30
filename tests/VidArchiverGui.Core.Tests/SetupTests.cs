@@ -44,7 +44,7 @@ public class SetupTests
     [InlineData("a0c3101b4158d1dfb7d6a78a7bf0f3de80c96bb423c152a0c3101b4158d1dfb7  deno-x86_64-apple-darwin.zip\n")]
     public void Finds_sha256_in_either_deno_checksum_layout(string text)
     {
-        Assert.Equal("a0c3101b4158d1dfb7d6a78a7bf0f3de80c96bb423c152a0c3101b4158d1dfb7", ToolManager.FindAnySha256(text));
+        Assert.Equal("a0c3101b4158d1dfb7d6a78a7bf0f3de80c96bb423c152a0c3101b4158d1dfb7", ReleaseDownloader.FindAnySha256(text));
     }
 
     [Theory]

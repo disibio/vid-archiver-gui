@@ -33,17 +33,14 @@ public class ResilienceTests
     {
         public readonly string Exe = Path.GetTempFileName();
         public readonly AppSettings Settings = new();
-        public readonly ToolManager Tools;
         public readonly List<string> Calls = [];
         public readonly List<string> Status = [];
-
-        public Fixture() => Tools = new ToolManager(Settings);
 
         public Task<FallbackResult> Run(Engine primary, bool fallback, params string?[] results)
         {
             var queue = new Queue<string?>(results);
             Settings.AutoFallback = fallback;
-            return Resilience.RunAsync(Tools, Settings, primary,
+            return Resilience.RunAsync(Settings, primary,
                 (engine, _) =>
                 {
                     Calls.Add(engine.Engine.Name);

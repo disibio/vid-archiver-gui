@@ -247,13 +247,13 @@ public partial class SetupViewModel(AppHost host) : ObservableObject
             switch (item.Item.Fix)
             {
                 case SetupFix.InstallDownloader:
-                    await host.Tools.InstallAsync(host.Settings.DefaultEngine, progress, ct);
+                    await ToolManager.InstallAsync(host.Settings.DefaultEngine, progress, ct);
                     break;
                 case SetupFix.InstallDeno:
-                    await host.Tools.InstallDenoAsync(progress, ct);
+                    await ToolManager.InstallDenoAsync(progress, ct);
                     break;
                 case SetupFix.InstallFfmpeg:
-                    await host.Tools.DownloadFfmpegAsync(progress, ct);
+                    await ToolManager.DownloadFfmpegAsync(progress, ct);
                     break;
                 case SetupFix.MissingFolder:
                     Directory.CreateDirectory(item.Item.Folder!);

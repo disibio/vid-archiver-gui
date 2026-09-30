@@ -159,7 +159,7 @@ public partial class DownloadsViewModel : ObservableObject
             try
             {
                 var presetArgs = ArgumentParser.Split(item.Preset.Arguments);
-                result = await Resilience.RunAsync(_host.Tools, _host.Settings, item.Engine,
+                result = await Resilience.RunAsync(_host.Settings, item.Engine,
                     async (engine, ct) =>
                     {
                         try
@@ -299,7 +299,7 @@ public partial class DownloadsViewModel : ObservableObject
 
     private async Task RunAsync(DownloadItemViewModel item)
     {
-        await item.RunAsync(_host.Runner, _host.Tools, _host.Settings);
+        await item.RunAsync(_host.Runner, _host.Settings);
         if (item.State == DownloadState.Completed)
         {
             _host.SetStatus($"Finished: {item.Title}");

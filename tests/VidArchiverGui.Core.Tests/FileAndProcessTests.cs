@@ -21,7 +21,7 @@ public sealed class FileAndProcessTests : IDisposable
         // A running executable is open with read + delete sharing: it can be renamed but not overwritten.
         using (new FileStream(target, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete))
         {
-            ToolManager.ReplaceFile(update, target);
+            ReleaseDownloader.ReplaceFile(update, target);
         }
 
         Assert.Equal("new", File.ReadAllText(target));
@@ -37,7 +37,7 @@ public sealed class FileAndProcessTests : IDisposable
         File.WriteAllText(target + ".old", "older");
         File.WriteAllText(update, "new");
 
-        ToolManager.ReplaceFile(update, target);
+        ReleaseDownloader.ReplaceFile(update, target);
 
         Assert.Equal("new", File.ReadAllText(target));
         Assert.False(File.Exists(target + ".old"));

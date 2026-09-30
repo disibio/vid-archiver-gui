@@ -65,10 +65,10 @@ public class EngineTests
             66674953FE251B89F4D08C5F0E35E0728679BD67AB3D7D05C0562AF101DD3E7A  yt-dlp.exe
             0823edc54e49e5b2aff1762c745c8dae13d8ba93d6977926a071b6f999f61537 *ffmpeg-master-latest-win64-gpl.zip
             """;
-        Assert.Equal("66674953fe251b89f4d08c5f0e35e0728679bd67ab3d7d05c0562af101dd3e7a", ToolManager.FindChecksum(sums, "yt-dlp.exe"));
-        Assert.Equal("1fa6733c37ea6fb51c99ad8fe785e7b7e5f3246c9b980230329d4fb72ed8d4d6", ToolManager.FindChecksum(sums, "yt-dlp"));
-        Assert.NotNull(ToolManager.FindChecksum(sums, "ffmpeg-master-latest-win64-gpl.zip"));
-        Assert.Null(ToolManager.FindChecksum(sums, "yt-dlp_macos"));
+        Assert.Equal("66674953fe251b89f4d08c5f0e35e0728679bd67ab3d7d05c0562af101dd3e7a", ReleaseDownloader.FindChecksum(sums, "yt-dlp.exe"));
+        Assert.Equal("1fa6733c37ea6fb51c99ad8fe785e7b7e5f3246c9b980230329d4fb72ed8d4d6", ReleaseDownloader.FindChecksum(sums, "yt-dlp"));
+        Assert.NotNull(ReleaseDownloader.FindChecksum(sums, "ffmpeg-master-latest-win64-gpl.zip"));
+        Assert.Null(ReleaseDownloader.FindChecksum(sums, "yt-dlp_macos"));
     }
 
     [Fact]
