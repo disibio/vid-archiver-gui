@@ -8,9 +8,6 @@ public sealed class AppHost
 {
     private readonly SettingsStore _store;
 
-    // The last save error shown, so a file that stays locked doesn't repeat it on every autosave.
-    private string? _lastSaveError;
-
     public AppHost(AppSettings settings, SettingsStore store, IDialogs dialogs)
     {
         Settings = settings;
@@ -25,21 +22,20 @@ public sealed class AppHost
 
     public void SetStatus(string message) => StatusChanged?.Invoke(message);
 
-    /// <summary>Writes the settings if anything changed. Called every few seconds and on exit, so edits never need a Save button.</summary>
-    public void Save()
+    /// <summary>
+    /// Writes the settings if anything changed. Called every few seconds and on exit, so edits never need a Save
+    /// button. Returns why the file couldn't be written, or null once it could.
+    /// </summary>
+    public string? Save()
     {
         try
         {
             _store.SaveIfChanged(Settings);
-            _lastSaveError = null;
+            return null;
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
-            if (e.Message != _lastSaveError)
-            {
-                _lastSaveError = e.Message;
-                SetStatus("Could not save settings: " + e.Message);
-            }
+            return "Settings aren't being saved: " + e.Message;
         }
     }
 }

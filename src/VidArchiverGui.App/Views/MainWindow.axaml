@@ -10,7 +10,13 @@
         WindowStartupLocation="CenterScreen">
   <DockPanel>
     <Border DockPanel.Dock="Bottom" Padding="12,5" BorderThickness="0,1,0,0" BorderBrush="#40808080">
-      <TextBlock Text="{Binding Status}" FontSize="12" TextTrimming="CharacterEllipsis" />
+      <DockPanel>
+        <!-- Stays until a save works again, so it isn't lost under the next status message. -->
+        <TextBlock DockPanel.Dock="Right" Text="{Binding SaveError}" Classes="error" FontSize="12" Margin="12,0,0,0"
+                   TextTrimming="CharacterEllipsis" MaxWidth="560" ToolTip.Tip="{Binding SaveError}"
+                   IsVisible="{Binding SaveError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        <TextBlock Text="{Binding Status}" FontSize="12" TextTrimming="CharacterEllipsis" />
+      </DockPanel>
     </Border>
 
     <!-- Setup banner: shown when something downloads need is missing. -->

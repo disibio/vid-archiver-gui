@@ -31,7 +31,7 @@ public partial class MainWindowViewModel : ObservableObject
         Downloads.RestoreUnfinished();
 
         // Edits are kept without a Save button: the settings are written whenever they've changed.
-        _autosave.Tick += (_, _) => host.Save();
+        _autosave.Tick += (_, _) => SaveError = host.Save();
         _autosave.Start();
     }
 
@@ -44,6 +44,9 @@ public partial class MainWindowViewModel : ObservableObject
     public AboutViewModel About { get; } = new();
 
     [ObservableProperty] private string _status = "Ready";
+
+    /// <summary>Why the last autosave failed; shown beside the status until a save works again.</summary>
+    [ObservableProperty] private string? _saveError;
 
     /// <summary>The TabControl's SelectedIndex; see <see cref="CurrentTab"/>.</summary>
     [ObservableProperty]
