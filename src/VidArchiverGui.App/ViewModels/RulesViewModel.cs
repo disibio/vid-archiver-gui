@@ -17,8 +17,17 @@ public partial class RulesViewModel : ObservableObject
         _selectedRule = host.Settings.Rules.FirstOrDefault();
         RefreshChoices();
 
-        // Undoing an import puts the old list back, which would drop rules added or moved since.
-        host.Settings.Rules.CollectionChanged += (_, _) => LastChange.Clear();
+        // Undo puts back the rules as they were, so any edit since (to a rule or its conditions, the list or the
+        // fallback folder) withdraws it.
+        var watcher = new EditWatcher(LastChange.Clear);
+        watcher.WatchList(host.Settings.Rules, rule => watcher.WatchList(rule.Conditions));
+        host.Settings.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(AppSettings.FallbackDestination))
+            {
+                LastChange.Clear();
+            }
+        };
     }
 
     public static MatchField[] Fields { get; } = Enum.GetValues<MatchField>();

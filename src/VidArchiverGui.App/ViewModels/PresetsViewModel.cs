@@ -17,8 +17,15 @@ public partial class PresetsViewModel : ObservableObject
         _host = host;
         SelectedPreset = host.Settings.DefaultPreset;
 
-        // Undoing an import puts the old presets back, which would drop presets added since.
-        host.Settings.Presets.CollectionChanged += (_, _) => LastChange.Clear();
+        // Undo puts back the presets as they were, so any edit since (to a preset, the list or the default) withdraws it.
+        new EditWatcher(LastChange.Clear).WatchList(host.Settings.Presets);
+        host.Settings.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(AppSettings.DefaultPresetId))
+            {
+                LastChange.Clear();
+            }
+        };
     }
 
     public ObservableCollection<Preset> Presets => _host.Settings.Presets;
@@ -68,9 +75,6 @@ public partial class PresetsViewModel : ObservableObject
 
     private void OnPresetPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        // ...and would undo this edit too.
-        LastChange.Clear();
-
         if (e.PropertyName == nameof(Preset.Arguments))
         {
             UpdatePreview();
