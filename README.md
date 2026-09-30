@@ -40,6 +40,11 @@ Grab the latest build from [Releases](https://github.com/disibio/vid-archiver-gu
 
 The first time you open it, the app offers to install yt-dlp, FFmpeg and deno for you.
 
+The versions from Releases check once a day whether a newer version is out and, if so, show a link to it. They don't
+download or install anything themselves. To turn the check off, click **Stop checking** on that notice or clear the
+box in **Settings > Updates**. The Microsoft Store, Flatpak and AUR versions don't check, because those keep the app
+up to date for you. Packagers can turn the check off by putting an empty `no-update-check.txt` next to the program.
+
 ## Screenshots
 
 | Folder rules | Presets |

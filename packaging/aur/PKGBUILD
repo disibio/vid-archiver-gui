@@ -34,6 +34,8 @@ sha256sums_aarch64=('deff85aeb6150466e158d3aaa82f3269e176c190808433e99a3bbbf76f5
 package() {
   cd vid-archiver-gui
   install -Dm755 VidArchiverGui "$pkgdir/opt/vid-archiver-gui/VidArchiverGui"
+  # pacman updates this package, so the app doesn't check GitHub for new versions of itself.
+  install -Dm644 /dev/null "$pkgdir/opt/vid-archiver-gui/no-update-check.txt"
   install -dm755 "$pkgdir/usr/bin"
   ln -s /opt/vid-archiver-gui/VidArchiverGui "$pkgdir/usr/bin/vid-archiver-gui"
 

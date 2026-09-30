@@ -54,6 +54,13 @@ public partial class AppSettings : ObservableObject
     /// </summary>
     public Dictionary<string, string> SkippedVersions { get; set; } = [];
 
+    /// <summary>Ask GitHub once a day whether a newer version of the app is out (never on the Store, Flatpak or AUR builds).</summary>
+    [ObservableProperty] private bool _checkForAppUpdates = true;
+    [ObservableProperty] private DateTimeOffset? _lastAppUpdateCheck;
+
+    /// <summary>An app version the user chose "Skip this version" for; newer ones are still offered.</summary>
+    [ObservableProperty] private string? _skippedAppVersion;
+
     /// <summary>Cookie files and browser specs the user added (installed browsers are detected, not stored).</summary>
     public ObservableCollection<CookieSource> CookieSources { get; set; } = [];
 

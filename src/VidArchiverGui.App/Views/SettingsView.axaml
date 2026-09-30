@@ -173,6 +173,14 @@
                    Text="Download gently: pause between requests and videos, and wait longer before retrying. Slower, but much less likely to be throttled or asked to sign in. Recommended for archiving whole channels, together with 1 simultaneous download." />
       </CheckBox>
 
+      <StackPanel Spacing="6" IsVisible="{Binding CanCheckForAppUpdates}">
+        <TextBlock Text="Updates" Classes="h2" />
+        <CheckBox IsChecked="{Binding Settings.CheckForAppUpdates}">
+          <TextBlock TextWrapping="Wrap"
+                     Text="Check once a day whether a new version of Vid Archiver GUI is out, and show a link to it. Nothing is downloaded or installed." />
+        </CheckBox>
+      </StackPanel>
+
       <TextBlock Text="App data" Classes="h2" />
       <SelectableTextBlock Text="{Binding DataFolder}" />
       <TextBlock Classes="hint" Text="{Binding DataFolderHint}" />

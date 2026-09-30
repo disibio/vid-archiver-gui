@@ -13,8 +13,10 @@ analytics, no telemetry and no advertising, and its developers receive no data f
 ## Network connections
 
 - **GitHub** (github.com, api.github.com): to install and update yt-dlp, FFmpeg and deno from their official releases,
-  and to check for new versions of them once a day. These are ordinary downloads; nothing about you or your downloads
-  is sent.
+  and to check for new versions of them once a day. The downloaded versions of the app (not the Microsoft Store,
+  Flatpak or AUR ones, which are updated for you) also check once a day whether a new version of the app is out; turn
+  this off in Settings > Updates. These are ordinary requests that say only which version of the app is asking;
+  nothing about you or your downloads is sent.
 - **The sites of the links you add**: yt-dlp connects to them to look up and download the media you asked for.
 
 Those services have their own privacy policies.

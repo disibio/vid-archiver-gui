@@ -1,6 +1,7 @@
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using VidArchiverGui.App.Services;
+using VidArchiverGui.Core.Services;
 
 namespace VidArchiverGui.App.ViewModels;
 
@@ -26,6 +27,7 @@ public partial class MainWindowViewModel : ObservableObject
         Rules = new RulesViewModel(host);
         Presets = new PresetsViewModel(host);
         SettingsTab = new SettingsViewModel(host);
+        Updates = new AppUpdateViewModel(host, About.Version, AppUpdate.UpdatedElsewhere, AppUpdate.GetLatestTagAsync);
         Setup.DetailsRequested += () => CurrentTab = MainTab.Settings;
         host.StatusChanged += message => Dispatcher.UIThread.Post(() => Status = message);
         Downloads.RestoreUnfinished();
@@ -48,6 +50,9 @@ public partial class MainWindowViewModel : ObservableObject
     public SettingsViewModel SettingsTab { get; }
     public SetupViewModel Setup => SettingsTab.Setup;
     public AboutViewModel About { get; } = new();
+
+    /// <summary>The "a new version is out" banner.</summary>
+    public AppUpdateViewModel Updates { get; }
 
     [ObservableProperty] private string _status = "Ready";
 
@@ -92,6 +97,8 @@ public partial class MainWindowViewModel : ObservableObject
         {
             Downloads.ResumeRestored();
         }
+
+        await Updates.CheckIfDueAsync();
     }
 
     public void Shutdown()

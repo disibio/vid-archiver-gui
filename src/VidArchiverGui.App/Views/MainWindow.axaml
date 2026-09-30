@@ -42,6 +42,22 @@
       </Grid>
     </Border>
 
+    <!-- New version banner: only a link to the release; nothing is downloaded. -->
+    <Border DockPanel.Dock="Top" IsVisible="{Binding Updates.ShowBanner}" Background="#263D8BFD" BorderBrush="#3D8BFD"
+            BorderThickness="0,0,0,1" Padding="12,6">
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock Text="{Binding Updates.BannerText}" TextWrapping="Wrap" VerticalAlignment="Center" />
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" Margin="12,0,0,0" VerticalAlignment="Center">
+          <HyperlinkButton Content="Download" NavigateUri="{Binding Updates.ReleaseUrl}"
+                           ToolTip.Tip="Opens the release page on GitHub" />
+          <Button Content="Skip this version" Command="{Binding Updates.SkipVersionCommand}" />
+          <Button Content="Stop checking" Command="{Binding Updates.StopCheckingCommand}"
+                  ToolTip.Tip="Don't check for new versions again (Settings > Updates turns it back on)" />
+          <Button Content="✕" Command="{Binding Updates.DismissCommand}" ToolTip.Tip="Hide until next start" />
+        </StackPanel>
+      </Grid>
+    </Border>
+
     <TabControl SelectedIndex="{Binding SelectedTab}" Padding="12,8,12,8">
       <TabItem Header="Downloads">
         <v:DownloadsView DataContext="{Binding Downloads}" />
