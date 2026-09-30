@@ -20,10 +20,24 @@ public sealed class SettingsTests : IDisposable
         store.SaveIfChanged(saved);
 
         var locked = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
-        _ = Task.Delay(300).ContinueWith(_ => locked.Dispose());
+        // Its own thread rather than a thread-pool continuation: on a busy CI machine, running tests in parallel, the
+        // pool can take longer to get to it than Load keeps retrying.
+        var unlocker = new Thread(() =>
+        {
+            Thread.Sleep(250);
+            locked.Dispose();
+        });
+        unlocker.Start();
 
-        Assert.Equal(4, store.Load().MaxConcurrentDownloads);
-        Assert.Empty(Directory.GetFiles(_dir, "*.corrupt-*"));
+        try
+        {
+            Assert.Equal(4, store.Load().MaxConcurrentDownloads);
+            Assert.Empty(Directory.GetFiles(_dir, "*.corrupt-*"));
+        }
+        finally
+        {
+            unlocker.Join(); // unlocked before Dispose deletes the folder
+        }
     }
 
     [Fact]
