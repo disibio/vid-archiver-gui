@@ -101,4 +101,42 @@ public static class RuleExchange
 
         return new ImportedRules(rules, string.IsNullOrWhiteSpace(file.FallbackDestination) ? null : file.FallbackDestination, warnings);
     }
+
+    /// <summary>Replaces the rules with the imported ones, and the fallback folder if the file has one.</summary>
+    public static void Replace(AppSettings settings, ImportedRules imported)
+    {
+        settings.Rules.Clear();
+        Append(settings, imported);
+        if (imported.FallbackDestination is { } fallback)
+        {
+            settings.FallbackDestination = fallback;
+        }
+    }
+
+    /// <summary>Adds the imported rules below the existing ones.</summary>
+    public static void Append(AppSettings settings, ImportedRules imported)
+    {
+        foreach (var rule in imported.Rules)
+        {
+            settings.Rules.Add(rule);
+        }
+    }
+}
+
+/// <summary>Everything a rule import can change (the rules and their order, the fallback folder), so it can be undone.</summary>
+public sealed class RulesSnapshot(AppSettings settings)
+{
+    private readonly List<RoutingRule> _rules = [.. settings.Rules];
+    private readonly string _fallbackDestination = settings.FallbackDestination;
+
+    public void Restore()
+    {
+        settings.Rules.Clear();
+        foreach (var rule in _rules)
+        {
+            settings.Rules.Add(rule);
+        }
+
+        settings.FallbackDestination = _fallbackDestination;
+    }
 }

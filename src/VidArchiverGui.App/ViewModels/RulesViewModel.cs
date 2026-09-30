@@ -166,32 +166,20 @@ public partial class RulesViewModel : ObservableObject
             $"The file has {count} rule(s). Replace your {Rules.Count} current rule(s) and the fallback folder, or add the new rules below yours?",
             "Replace", "Add below mine");
 
-        var before = Rules.ToList();
-        var fallbackBefore = Settings.FallbackDestination;
+        var before = new RulesSnapshot(Settings);
         if (replace)
         {
-            Rules.Clear();
-            if (imported.FallbackDestination is { } fallback)
-            {
-                Settings.FallbackDestination = fallback;
-            }
+            RuleExchange.Replace(Settings, imported);
         }
-
-        foreach (var rule in imported.Rules)
+        else
         {
-            Rules.Add(rule);
+            RuleExchange.Append(Settings, imported);
         }
 
         SelectedRule = imported.Rules.FirstOrDefault() ?? Rules.FirstOrDefault();
         LastChange.Offer(replace ? $"Replaced your rules with {count} imported rule(s)." : $"Added {count} imported rule(s).", () =>
         {
-            Rules.Clear();
-            foreach (var rule in before)
-            {
-                Rules.Add(rule);
-            }
-
-            Settings.FallbackDestination = fallbackBefore;
+            before.Restore();
             SelectedRule = Rules.FirstOrDefault();
             _host.SetStatus("Undid the import.");
         });

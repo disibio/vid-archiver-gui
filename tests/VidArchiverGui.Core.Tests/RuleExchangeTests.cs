@@ -66,6 +66,34 @@ public class RuleExchangeTests
         Assert.Equal(2, imported.Warnings.Count);
     }
 
+    [Fact]
+    public void Replace_swaps_the_rules_and_fallback_and_the_snapshot_puts_them_back()
+    {
+        var settings = Settings("Audio", "Work");
+        var original = settings.Rules.ToList();
+        var imported = new ImportedRules([new RoutingRule { Name = "New" }], @"F:\Other", []);
+
+        var before = new RulesSnapshot(settings);
+        RuleExchange.Replace(settings, imported);
+
+        Assert.Equal(["New"], settings.Rules.Select(r => r.Name));
+        Assert.Equal(@"F:\Other", settings.FallbackDestination);
+
+        before.Restore();
+        Assert.Equal(original, settings.Rules);
+        Assert.Equal(@"E:\Videos\{site}", settings.FallbackDestination);
+    }
+
+    [Fact]
+    public void Append_keeps_the_rules_and_fallback_and_adds_below()
+    {
+        var settings = Settings("Audio", "Work");
+        RuleExchange.Append(settings, new ImportedRules([new RoutingRule { Name = "New" }], @"F:\Other", []));
+
+        Assert.Equal(["Music", "Firefox", "New"], settings.Rules.Select(r => r.Name));
+        Assert.Equal(@"E:\Videos\{site}", settings.FallbackDestination);
+    }
+
     [Theory]
     [InlineData("not json")]
     [InlineData("""{ "Presets": [] }""")]
