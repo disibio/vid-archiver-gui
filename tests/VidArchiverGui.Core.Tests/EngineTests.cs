@@ -117,4 +117,33 @@ public class EngineTests
         preset.EngineId = "youtube-dl";
         Assert.Equal(EngineFlavor.YoutubeDl, s.EngineFor(preset).Flavor);
     }
+
+    [Fact]
+    public void Removing_things_drops_the_choices_that_pointed_at_them()
+    {
+        var s = SettingsStore.CreateDefaults();
+        var custom = new Engine { Name = "Fork", ExecutablePath = "fork" };
+        var cookies = new CookieSource { Name = "Work" };
+        s.Engines = [.. Engine.CreateBuiltIns(), custom];
+        s.CookieSources.Add(cookies);
+        s.DefaultEngineId = custom.Id;
+        s.Presets[1].EngineId = custom.Id;
+        s.LastCookieId = cookies.Id;
+        var deletedPreset = s.Presets[0]; // the default
+        var rule = new RoutingRule { PresetId = deletedPreset.Id, CookieId = cookies.Id };
+        var browserRule = new RoutingRule { PresetId = s.Presets[1].Id, CookieId = Cookies.BrowserId("firefox") };
+        s.Rules = [rule, browserRule];
+
+        s.Engines.Remove(custom);
+        s.CookieSources.Remove(cookies);
+        s.Presets.Remove(deletedPreset);
+        s.RemoveDanglingReferences();
+
+        Assert.Equal(Engine.StableId, s.DefaultEngineId);
+        Assert.Null(s.Presets[0].EngineId);
+        Assert.Equal(s.Presets[0].Id, s.DefaultPresetId);
+        Assert.Null(s.LastCookieId);
+        Assert.Equal((null, null), (rule.PresetId, rule.CookieId));
+        Assert.Equal((s.Presets[0].Id, Cookies.BrowserId("firefox")), (browserRule.PresetId, browserRule.CookieId));
+    }
 }

@@ -164,37 +164,13 @@ public sealed class SettingsStore(string path)
             }
         }
 
-        if (s.FindPreset(s.DefaultPresetId) is null)
-        {
-            s.DefaultPresetId = s.Presets[0].Id;
-        }
-
         if (string.IsNullOrWhiteSpace(s.FallbackDestination))
         {
             s.FallbackDestination = CreateDefaults().FallbackDestination;
         }
 
         s.MaxConcurrentDownloads = Math.Clamp(s.MaxConcurrentDownloads, 1, 10);
-        NormalizeEngines(s);
-        NormalizeCookies(s);
-    }
 
-    private static void NormalizeCookies(AppSettings s)
-    {
-        // Choices pointing at a removed cookie source fall back to "no cookies" / "keep".
-        if (!Cookies.Exists(s, s.LastCookieId))
-        {
-            s.LastCookieId = null;
-        }
-
-        foreach (var rule in s.Rules.Where(r => !Cookies.Exists(s, r.CookieId)))
-        {
-            rule.CookieId = null;
-        }
-    }
-
-    private static void NormalizeEngines(AppSettings s)
-    {
         // Built-ins always come first and their definitions come from code (so fixes to repos/names apply).
         var custom = s.Engines.Where(e => e.GitHubRepo is null && !string.IsNullOrWhiteSpace(e.ExecutablePath)).ToList();
         s.Engines.Clear();
@@ -203,14 +179,6 @@ public sealed class SettingsStore(string path)
             s.Engines.Add(e);
         }
 
-        if (s.FindEngine(s.DefaultEngineId) is null)
-        {
-            s.DefaultEngineId = Engine.StableId;
-        }
-
-        foreach (var p in s.Presets.Where(p => p.EngineId is not null && s.FindEngine(p.EngineId) is null))
-        {
-            p.EngineId = null;
-        }
+        s.RemoveDanglingReferences();
     }
 }

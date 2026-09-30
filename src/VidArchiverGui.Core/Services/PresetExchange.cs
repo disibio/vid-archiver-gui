@@ -76,6 +76,53 @@ public static class PresetExchange
         return new ImportedPresets(presets, file.DefaultPreset, warnings);
     }
 
+    /// <summary>
+    /// Replaces the presets with the imported ones and makes the file's default the default. An imported preset with
+    /// the same name as an existing one updates that one in place, so folder rules and waiting downloads that use it
+    /// keep pointing at it. Returns the presets now in the list.
+    /// </summary>
+    public static IReadOnlyList<Preset> Replace(AppSettings settings, ImportedPresets imported)
+    {
+        var before = settings.Presets.ToList();
+        var result = new List<Preset>();
+        foreach (var p in imported.Presets)
+        {
+            var existing = before.FirstOrDefault(e => !result.Contains(e) && SameName(e.Name, p.Name));
+            if (existing is not null)
+            {
+                existing.Name = p.Name;
+                existing.Arguments = p.Arguments;
+                existing.EngineId = p.EngineId;
+            }
+
+            result.Add(existing ?? p);
+        }
+
+        settings.Presets.Clear();
+        foreach (var p in result)
+        {
+            settings.Presets.Add(p);
+        }
+
+        settings.DefaultPresetId = (result.FirstOrDefault(p => SameName(p.Name, imported.DefaultPresetName)) ?? result[0]).Id;
+        settings.RemoveDanglingReferences();
+        return result;
+    }
+
+    /// <summary>Adds the imported presets below the existing ones, numbering any whose name is taken. Returns the added presets.</summary>
+    public static IReadOnlyList<Preset> Append(AppSettings settings, ImportedPresets imported)
+    {
+        foreach (var p in imported.Presets)
+        {
+            p.Name = UniqueName(p.Name, settings.Presets);
+            settings.Presets.Add(p);
+        }
+
+        return imported.Presets;
+    }
+
+    private static bool SameName(string? a, string? b) => string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
+
     /// <summary><paramref name="name"/>, or "name (2)", "name (3)"… if a preset already has it.</summary>
     public static string UniqueName(string name, IEnumerable<Preset> existing)
     {
@@ -87,5 +134,33 @@ public static class PresetExchange
         }
 
         return candidate;
+    }
+}
+
+/// <summary>Everything a preset import can change (the presets and their values, the default, rules' presets), so it can be undone.</summary>
+public sealed class PresetsSnapshot(AppSettings settings)
+{
+    private readonly List<(Preset Preset, string Name, string Arguments, string? EngineId)> _presets =
+        settings.Presets.Select(p => (p, p.Name, p.Arguments, p.EngineId)).ToList();
+
+    private readonly string? _defaultPresetId = settings.DefaultPresetId;
+    private readonly List<(RoutingRule Rule, string? PresetId)> _rulePresets = settings.Rules.Select(r => (r, r.PresetId)).ToList();
+
+    public void Restore()
+    {
+        settings.Presets.Clear();
+        foreach (var (preset, name, arguments, engineId) in _presets)
+        {
+            preset.Name = name;
+            preset.Arguments = arguments;
+            preset.EngineId = engineId;
+            settings.Presets.Add(preset);
+        }
+
+        settings.DefaultPresetId = _defaultPresetId;
+        foreach (var (rule, presetId) in _rulePresets)
+        {
+            rule.PresetId = presetId;
+        }
     }
 }

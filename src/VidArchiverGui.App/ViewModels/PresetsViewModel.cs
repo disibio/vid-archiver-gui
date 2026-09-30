@@ -103,7 +103,7 @@ public partial class PresetsViewModel : ObservableObject
     [RelayCommand]
     private void AddBuiltInPreset(Preset template)
     {
-        var name = Presets.Any(p => p.Name == template.Name) ? template.Name + " (copy)" : template.Name;
+        var name = PresetExchange.UniqueName(template.Name, Presets);
         var p = new Preset { Name = name, Arguments = template.Arguments };
         Presets.Add(p);
         SelectedPreset = p;
@@ -136,7 +136,7 @@ public partial class PresetsViewModel : ObservableObject
         var wasDefault = _host.Settings.DefaultPresetId == deleted.Id;
         var rules = _host.Settings.Rules.Where(r => r.PresetId == deleted.Id).ToList();
         // Put it back where it was, as the default and on its rules if it was before.
-        OfferUndo($"Deleted \"{deleted.Name}\"" + (rules.Count > 0 ? $" (used by {rules.Count} folder rule{(rules.Count == 1 ? "" : "s")})." : "."), () =>
+        LastChange.Offer($"Deleted \"{deleted.Name}\"" + (rules.Count > 0 ? $" (used by {rules.Count} folder rule{(rules.Count == 1 ? "" : "s")})." : "."), () =>
         {
             Presets.Insert(Math.Min(index, Presets.Count), deleted);
             if (wasDefault)
@@ -155,43 +155,13 @@ public partial class PresetsViewModel : ObservableObject
         });
 
         Presets.Remove(deleted);
-        if (wasDefault)
-        {
-            _host.Settings.DefaultPresetId = Presets[0].Id;
-        }
-
-        foreach (var rule in rules)
-        {
-            rule.PresetId = null;
-        }
-
+        _host.Settings.RemoveDanglingReferences();
         SelectedPreset = Presets[Math.Min(index, Presets.Count - 1)];
         OnPropertyChanged(nameof(DefaultPresetText));
     }
 
-    private Action? _undo;
-
-    /// <summary>Shown with an Undo button after a delete or import; null when there's nothing to undo.</summary>
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(CanUndo))]
-    private string? _undoText;
-
-    public bool CanUndo => UndoText is not null;
-
-    private void OfferUndo(string text, Action undo)
-    {
-        _undo = undo;
-        UndoText = text;
-    }
-
-    [RelayCommand]
-    private void Undo()
-    {
-        var undo = _undo;
-        _undo = null;
-        UndoText = null;
-        undo?.Invoke();
-    }
+    /// <summary>Shown with an Undo button after a delete or import.</summary>
+    public UndoSlot LastChange { get; } = new();
 
     [RelayCommand]
     private async Task Export()
@@ -231,84 +201,20 @@ public partial class PresetsViewModel : ObservableObject
             return;
         }
 
-        var settings = _host.Settings;
         var count = imported.Presets.Count;
         var replace = await _host.Dialogs.ConfirmAsync("Import presets",
             $"The file has {count} preset(s). Replace your {Presets.Count} current preset(s) and the default, or add the new presets below yours?",
             "Replace", "Add below mine");
 
-        // Everything an import can change, so Undo can put it all back.
-        var before = Presets.ToList();
-        var valuesBefore = before.Select(p => (p, p.Name, p.Arguments, p.EngineId)).ToList();
-        var defaultBefore = settings.DefaultPresetId;
-        var rulePresetsBefore = settings.Rules.Select(r => (r, r.PresetId)).ToList();
-
-        List<Preset> added;
-        if (replace)
-        {
-            // A preset with the same name as one of yours updates yours in place, so folder rules and
-            // waiting downloads that use it keep pointing at it.
-            added = [];
-            foreach (var p in imported.Presets)
-            {
-                var existing = before.FirstOrDefault(e => !added.Contains(e) && string.Equals(e.Name, p.Name, StringComparison.OrdinalIgnoreCase));
-                if (existing is not null)
-                {
-                    existing.Name = p.Name;
-                    existing.Arguments = p.Arguments;
-                    existing.EngineId = p.EngineId;
-                }
-
-                added.Add(existing ?? p);
-            }
-
-            Presets.Clear();
-            foreach (var p in added)
-            {
-                Presets.Add(p);
-            }
-
-            settings.DefaultPresetId = (added.FirstOrDefault(p => string.Equals(p.Name, imported.DefaultPresetName, StringComparison.OrdinalIgnoreCase)) ?? added[0]).Id;
-            foreach (var rule in settings.Rules.Where(r => r.PresetId is not null && settings.FindPreset(r.PresetId) is null))
-            {
-                rule.PresetId = null;
-            }
-        }
-        else
-        {
-            added = imported.Presets;
-            foreach (var p in added)
-            {
-                p.Name = PresetExchange.UniqueName(p.Name, Presets);
-                Presets.Add(p);
-            }
-        }
-
+        var before = new PresetsSnapshot(_host.Settings);
+        var added = replace ? PresetExchange.Replace(_host.Settings, imported) : PresetExchange.Append(_host.Settings, imported);
         SelectedPreset = added[0];
         OnPropertyChanged(nameof(DefaultPresetText));
-        OfferUndo((replace ? $"Replaced your presets with {count} imported preset(s)." : $"Added {count} imported preset(s).") +
+        LastChange.Offer((replace ? $"Replaced your presets with {count} imported preset(s)." : $"Added {count} imported preset(s).") +
             " Click Save presets to keep them.", () =>
         {
-            foreach (var (p, name, arguments, engineId) in valuesBefore)
-            {
-                p.Name = name;
-                p.Arguments = arguments;
-                p.EngineId = engineId;
-            }
-
-            Presets.Clear();
-            foreach (var p in before)
-            {
-                Presets.Add(p);
-            }
-
-            settings.DefaultPresetId = defaultBefore;
-            foreach (var (rule, presetId) in rulePresetsBefore)
-            {
-                rule.PresetId = presetId;
-            }
-
-            SelectedPreset = settings.DefaultPreset;
+            before.Restore();
+            SelectedPreset = _host.Settings.DefaultPreset;
             OnPropertyChanged(nameof(DefaultPresetText));
             _host.SetStatus("Undid the import.");
         });

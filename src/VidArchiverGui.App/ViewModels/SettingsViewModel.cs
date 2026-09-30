@@ -356,16 +356,7 @@ public partial class SettingsViewModel : ObservableObject
         }
 
         Settings.Engines.Remove(engine);
-        if (Settings.DefaultEngineId == engine.Id)
-        {
-            Settings.DefaultEngineId = Engine.StableId;
-        }
-
-        foreach (var p in Settings.Presets.Where(p => p.EngineId == engine.Id))
-        {
-            p.EngineId = null;
-        }
-
+        Settings.RemoveDanglingReferences();
         host.Save(quiet: true);
         SelectedEngine = null;
         await RefreshAsync();
@@ -470,16 +461,7 @@ public partial class SettingsViewModel : ObservableObject
         }
 
         Settings.CookieSources.Remove(source);
-        if (Settings.LastCookieId == source.Id)
-        {
-            Settings.LastCookieId = null;
-        }
-
-        foreach (var rule in Settings.Rules.Where(r => r.CookieId == source.Id))
-        {
-            rule.CookieId = null;
-        }
-
+        Settings.RemoveDanglingReferences();
         host.Save(quiet: true);
         CookieMessage = $"Removed \"{source.Name}\".";
     }

@@ -76,4 +76,44 @@ public partial class AppSettings : ObservableObject
     public Engine DefaultEngine => FindEngine(DefaultEngineId) ?? Engines.First();
 
     public Engine EngineFor(Preset preset) => FindEngine(preset.EngineId) ?? DefaultEngine;
+
+    /// <summary>
+    /// After a preset, downloader or cookie source is removed: choices that pointed at it fall back to the default
+    /// (the first preset, stable yt-dlp) or to "keep what was chosen" / "no cookies".
+    /// </summary>
+    public void RemoveDanglingReferences()
+    {
+        if (Presets.Count > 0 && FindPreset(DefaultPresetId) is null)
+        {
+            DefaultPresetId = Presets[0].Id;
+        }
+
+        if (FindEngine(DefaultEngineId) is null)
+        {
+            DefaultEngineId = Engine.StableId;
+        }
+
+        foreach (var preset in Presets.Where(p => p.EngineId is not null && FindEngine(p.EngineId) is null))
+        {
+            preset.EngineId = null;
+        }
+
+        if (!Services.Cookies.Exists(this, LastCookieId))
+        {
+            LastCookieId = null;
+        }
+
+        foreach (var rule in Rules)
+        {
+            if (rule.PresetId is not null && FindPreset(rule.PresetId) is null)
+            {
+                rule.PresetId = null;
+            }
+
+            if (!Services.Cookies.Exists(this, rule.CookieId))
+            {
+                rule.CookieId = null;
+            }
+        }
+    }
 }

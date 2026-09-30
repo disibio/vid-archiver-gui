@@ -112,7 +112,7 @@ public partial class RulesViewModel : ObservableObject
         var deleted = SelectedRule;
         var index = Rules.IndexOf(deleted);
         // Put it back at its old position, which matters: the first match wins.
-        OfferUndo($"Deleted \"{deleted.Name}\".", () =>
+        LastChange.Offer($"Deleted \"{deleted.Name}\".", () =>
         {
             Rules.Insert(Math.Min(index, Rules.Count), deleted);
             SelectedRule = deleted;
@@ -122,29 +122,8 @@ public partial class RulesViewModel : ObservableObject
         SelectedRule = Rules.Count == 0 ? null : Rules[Math.Min(index, Rules.Count - 1)];
     }
 
-    private Action? _undo;
-
-    /// <summary>Shown with an Undo button after a delete or import; null when there's nothing to undo.</summary>
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(CanUndo))]
-    private string? _undoText;
-
-    public bool CanUndo => UndoText is not null;
-
-    private void OfferUndo(string text, Action undo)
-    {
-        _undo = undo;
-        UndoText = text;
-    }
-
-    [RelayCommand]
-    private void Undo()
-    {
-        var undo = _undo;
-        _undo = null;
-        UndoText = null;
-        undo?.Invoke();
-    }
+    /// <summary>Shown with an Undo button after a delete or import.</summary>
+    public UndoSlot LastChange { get; } = new();
 
     [RelayCommand]
     private async Task Export()
@@ -206,7 +185,7 @@ public partial class RulesViewModel : ObservableObject
         }
 
         SelectedRule = imported.Rules.FirstOrDefault() ?? Rules.FirstOrDefault();
-        OfferUndo((replace ? $"Replaced your rules with {count} imported rule(s)." : $"Added {count} imported rule(s).") +
+        LastChange.Offer((replace ? $"Replaced your rules with {count} imported rule(s)." : $"Added {count} imported rule(s).") +
             " Click Save rules to keep them.", () =>
         {
             Rules.Clear();
