@@ -39,7 +39,7 @@ public partial class AppUpdateViewModel : ObservableObject
 
     public bool ShowBanner => AvailableVersion is not null && !Dismissed && _host.Settings.CheckForAppUpdates;
 
-    public string BannerText => $"Vid Archiver GUI {AvailableVersion} is available (you have {_currentVersion}).";
+    public string BannerText => $"Vid Archiver GUI {AvailableVersion} is available.";
 
     public string ReleaseUrl => AvailableVersion is null ? "" : AppUpdate.ReleasePage(AvailableVersion);
 
