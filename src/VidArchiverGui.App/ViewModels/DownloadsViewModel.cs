@@ -506,7 +506,6 @@ public partial class DownloadsViewModel : ObservableObject
             Conditions = [new RuleCondition { Field = field, Operator = MatchOperator.Equals, Value = value }],
         };
         _host.Settings.Rules.Insert(0, rule);
-        _host.Save(quiet: true);
 
         item.RouteDescription = "Rule: " + rule.Name;
         item.DestinationEdited = false;

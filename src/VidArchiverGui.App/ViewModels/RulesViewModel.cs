@@ -183,8 +183,7 @@ public partial class RulesViewModel : ObservableObject
         }
 
         SelectedRule = imported.Rules.FirstOrDefault() ?? Rules.FirstOrDefault();
-        LastChange.Offer((replace ? $"Replaced your rules with {count} imported rule(s)." : $"Added {count} imported rule(s).") +
-            " Click Save rules to keep them.", () =>
+        LastChange.Offer(replace ? $"Replaced your rules with {count} imported rule(s)." : $"Added {count} imported rule(s).", () =>
         {
             Rules.Clear();
             foreach (var rule in before)
@@ -254,9 +253,6 @@ public partial class RulesViewModel : ObservableObject
             Settings.FallbackDestination = path;
         }
     }
-
-    [RelayCommand]
-    private void Save() => _host.Save();
 
     [RelayCommand]
     private async Task Test()

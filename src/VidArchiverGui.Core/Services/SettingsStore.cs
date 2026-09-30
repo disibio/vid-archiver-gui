@@ -58,12 +58,24 @@ public sealed class SettingsStore(string path)
         }
     }
 
-    public void Save(AppSettings settings)
+    // What was last written, so saving often (see AppHost) only touches the file when something changed.
+    private string? _lastWritten;
+
+    /// <summary>Writes the settings if they differ from what was last written. Returns whether it wrote.</summary>
+    public bool SaveIfChanged(AppSettings settings)
     {
+        var json = JsonSerializer.Serialize(settings, Options);
+        if (json == _lastWritten)
+        {
+            return false;
+        }
+
         Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
         var tmp = FilePath + ".tmp";
-        File.WriteAllText(tmp, JsonSerializer.Serialize(settings, Options));
+        File.WriteAllText(tmp, json);
         File.Move(tmp, FilePath, overwrite: true);
+        _lastWritten = json;
+        return true;
     }
 
     public static AppSettings CreateDefaults()

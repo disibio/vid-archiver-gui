@@ -17,6 +17,7 @@ public enum MainTab
 public partial class MainWindowViewModel : ObservableObject
 {
     private readonly AppHost _host;
+    private readonly DispatcherTimer _autosave = new() { Interval = TimeSpan.FromSeconds(2) };
 
     public MainWindowViewModel(AppHost host)
     {
@@ -29,6 +30,10 @@ public partial class MainWindowViewModel : ObservableObject
         Settings = new SettingsViewModel(host, Setup);
         host.StatusChanged += message => Dispatcher.UIThread.Post(() => Status = message);
         Downloads.RestoreUnfinished();
+
+        // Edits are kept without a Save button: the settings are written whenever they've changed.
+        _autosave.Tick += (_, _) => host.Save();
+        _autosave.Start();
     }
 
     public DownloadsViewModel Downloads { get; }
@@ -84,6 +89,7 @@ public partial class MainWindowViewModel : ObservableObject
     {
         Downloads.SaveUnfinished();
         Downloads.CancelEverything();
-        _host.Save(quiet: true);
+        _autosave.Stop();
+        _host.Save();
     }
 }

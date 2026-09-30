@@ -65,7 +65,7 @@
       <TextBlock Text="Appearance" Classes="h2" />
       <StackPanel Orientation="Horizontal" Spacing="8">
         <TextBlock Text="Theme" VerticalAlignment="Center" />
-        <ComboBox ItemsSource="{x:Static vm:SettingsViewModel.Themes}" SelectedItem="{Binding Theme}" MinWidth="160">
+        <ComboBox ItemsSource="{x:Static vm:SettingsViewModel.Themes}" SelectedItem="{Binding Settings.Theme}" MinWidth="160">
           <ComboBox.ItemTemplate>
             <DataTemplate x:DataType="m:AppTheme">
               <TextBlock Text="{Binding Converter={x:Static vm:ThemeNameConverter.Instance}}" />
@@ -185,7 +185,6 @@
       <TextBlock Classes="hint" Text="{Binding DataFolderHint}" />
       <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,6,0,0">
         <Button Content="Open data folder" Command="{Binding OpenDataFolderCommand}" />
-        <Button Content="Save settings" Command="{Binding SaveCommand}" Classes="accent" />
       </StackPanel>
     </StackPanel>
   </ScrollViewer>

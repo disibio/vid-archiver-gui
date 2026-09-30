@@ -291,7 +291,6 @@ public partial class SetupViewModel(AppHost host) : ObservableObject
             return;
         }
 
-        host.Save(quiet: true);
         Message = $"Archive folder changed to {newFolder} for {string.Join(", ", changed.Select(p => p.Name))}.";
         host.SetStatus(Message);
         await CheckAsync();

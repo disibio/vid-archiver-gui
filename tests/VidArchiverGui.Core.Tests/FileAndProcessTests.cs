@@ -66,13 +66,25 @@ public sealed class FileAndProcessTests : IDisposable
         var store = new SettingsStore(path);
         var saved = SettingsStore.CreateDefaults();
         saved.MaxConcurrentDownloads = 4;
-        store.Save(saved);
+        store.SaveIfChanged(saved);
 
         var locked = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
         _ = Task.Delay(300).ContinueWith(_ => locked.Dispose());
 
         Assert.Equal(4, store.Load().MaxConcurrentDownloads);
         Assert.Empty(Directory.GetFiles(_dir, "*.corrupt-*"));
+    }
+
+    [Fact]
+    public void Settings_are_only_written_when_they_changed()
+    {
+        var store = new SettingsStore(Path.Combine(_dir, "settings.json"));
+        var settings = SettingsStore.CreateDefaults();
+
+        Assert.True(store.SaveIfChanged(settings));
+        Assert.False(store.SaveIfChanged(settings));
+        settings.MaxConcurrentDownloads = 3;
+        Assert.True(store.SaveIfChanged(settings));
     }
 
     [Fact]
@@ -86,7 +98,7 @@ public sealed class FileAndProcessTests : IDisposable
             new SavedDownload { Url = "https://example.com/a", PresetId = saved.Presets[0].Id, Destination = @"D:\Picked" },
             new SavedDownload { Url = "https://example.com/b" },
         ];
-        store.Save(saved);
+        store.SaveIfChanged(saved);
 
         var loaded = store.Load();
         Assert.False(loaded.NotifyWhenDone);

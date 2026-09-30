@@ -208,8 +208,7 @@ public partial class PresetsViewModel : ObservableObject
         var added = replace ? PresetExchange.Replace(_host.Settings, imported) : PresetExchange.Append(_host.Settings, imported);
         SelectedPreset = added[0];
         OnPropertyChanged(nameof(DefaultPresetText));
-        LastChange.Offer((replace ? $"Replaced your presets with {count} imported preset(s)." : $"Added {count} imported preset(s).") +
-            " Click Save presets to keep them.", () =>
+        LastChange.Offer(replace ? $"Replaced your presets with {count} imported preset(s)." : $"Added {count} imported preset(s).", () =>
         {
             before.Restore();
             SelectedPreset = _host.Settings.DefaultPreset;
@@ -232,7 +231,4 @@ public partial class PresetsViewModel : ObservableObject
         _host.Settings.DefaultPresetId = SelectedPreset.Id;
         OnPropertyChanged(nameof(DefaultPresetText));
     }
-
-    [RelayCommand]
-    private void Save() => _host.Save();
 }

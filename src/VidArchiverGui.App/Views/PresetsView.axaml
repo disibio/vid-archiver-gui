@@ -71,7 +71,6 @@
         </WrapPanel>
       </StackPanel>
       <DockPanel Grid.Row="5" Grid.ColumnSpan="2" Margin="0,8,0,0">
-        <Button DockPanel.Dock="Right" Content="Save presets" Command="{Binding SaveCommand}" Classes="accent" />
         <TextBlock Text="{Binding Warning}" Classes="error" VerticalAlignment="Center" />
       </DockPanel>
     </Grid>

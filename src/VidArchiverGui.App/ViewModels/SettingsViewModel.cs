@@ -59,23 +59,6 @@ public partial class SettingsViewModel : ObservableObject
     public static AppTheme[] Themes { get; } = Enum.GetValues<AppTheme>();
     public static CookieSourceKind[] CookieKinds { get; } = Enum.GetValues<CookieSourceKind>();
 
-    /// <summary>Theme changes apply immediately; save right away so they stick even without pressing Save.</summary>
-    public AppTheme Theme
-    {
-        get => Settings.Theme;
-        set
-        {
-            if (Settings.Theme == value)
-            {
-                return;
-            }
-
-            Settings.Theme = value;
-            _host.Save(quiet: true);
-            OnPropertyChanged();
-        }
-    }
-
     public ObservableCollection<EngineRowViewModel> Engines { get; } = [];
 
     [ObservableProperty]
@@ -138,7 +121,6 @@ public partial class SettingsViewModel : ObservableObject
                 }
 
                 Settings.LastYtDlpUpdateCheck = DateTimeOffset.Now;
-                _host.Save(quiet: true);
             }
         }
         finally
@@ -281,10 +263,7 @@ public partial class SettingsViewModel : ObservableObject
             }
 
             await ToolManager.InstallAsync(engine, progress, ct);
-            if (Settings.SkippedVersions.Remove(engine.Id))
-            {
-                _host.Save(quiet: true);
-            }
+            Settings.SkippedVersions.Remove(engine.Id);
 
             return $"{engine.Name} updated {current} → {latest}.";
         }, quietOnError: auto);
@@ -305,7 +284,6 @@ public partial class SettingsViewModel : ObservableObject
             if (from is not null)
             {
                 Settings.SkippedVersions[engine.Id] = from;
-                _host.Save(quiet: true);
             }
             return $"{engine.Name} rolled back {from} → {row.PreviousVersion}. The daily update check will skip {from}; " +
                    "press Roll back again to undo.";
@@ -336,7 +314,6 @@ public partial class SettingsViewModel : ObservableObject
         }
 
         Settings.DefaultEngineId = SelectedEngine.Engine.Id;
-        _host.Save(quiet: true);
         _host.SetStatus($"Default downloader: {SelectedEngine.Engine.Name}");
         foreach (var row in Engines)
         {
@@ -359,7 +336,6 @@ public partial class SettingsViewModel : ObservableObject
 
         Settings.Engines.Remove(engine);
         Settings.RemoveDanglingReferences();
-        _host.Save(quiet: true);
         SelectedEngine = null;
         await RefreshAsync();
     }
@@ -397,7 +373,6 @@ public partial class SettingsViewModel : ObservableObject
             Flavor = NewEngineFlavor,
         };
         Settings.Engines.Add(engine);
-        _host.Save(quiet: true);
         NewEngineName = NewEnginePath = "";
         await RefreshAsync();
         SelectedEngine = Engines.FirstOrDefault(r => r.Engine == engine);
@@ -448,7 +423,6 @@ public partial class SettingsViewModel : ObservableObject
             Value = value,
         };
         Settings.CookieSources.Add(source);
-        _host.Save(quiet: true);
         NewCookieName = NewCookieValue = "";
         SelectedCookieSource = source;
         CookieMessage = $"Added \"{source.Name}\". Pick it in the Cookies list on the Downloads tab.";
@@ -464,7 +438,6 @@ public partial class SettingsViewModel : ObservableObject
 
         Settings.CookieSources.Remove(source);
         Settings.RemoveDanglingReferences();
-        _host.Save(quiet: true);
         CookieMessage = $"Removed \"{source.Name}\".";
     }
 
@@ -497,9 +470,6 @@ public partial class SettingsViewModel : ObservableObject
 
     [RelayCommand]
     private Task OpenDataFolder() => _host.Dialogs.OpenFolderAsync(AppPaths.DataDir);
-
-    [RelayCommand]
-    private void Save() => _host.Save();
 
     private async Task RunBusy(string what, Func<IProgress<TransferProgress>, CancellationToken, Task<string>> action, bool quietOnError = false)
     {
