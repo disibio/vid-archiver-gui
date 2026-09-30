@@ -11,6 +11,12 @@ public interface IDialogs
 {
     Task<string?> PickFolderAsync(string title, string? startPath = null);
     Task<string?> PickFileAsync(string title);
+
+    /// <summary>Picks a JSON file to open.</summary>
+    Task<string?> PickJsonFileAsync(string title);
+
+    /// <summary>Asks where to save a JSON file; null if cancelled.</summary>
+    Task<string?> SaveJsonFileAsync(string title, string suggestedName);
     Task OpenFolderAsync(string path);
     Task CopyTextAsync(string text);
 
@@ -87,6 +93,32 @@ public sealed class WindowDialogs(Window window) : IDialogs
     {
         var result = await window.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions { Title = title, AllowMultiple = false });
         return result.Count > 0 ? result[0].TryGetLocalPath() : null;
+    }
+
+    private static readonly FilePickerFileType[] JsonTypes =
+    [
+        new("JSON files") { Patterns = ["*.json"], MimeTypes = ["application/json"] },
+        FilePickerFileTypes.All,
+    ];
+
+    public async Task<string?> PickJsonFileAsync(string title)
+    {
+        var result = await window.StorageProvider.OpenFilePickerAsync(
+            new FilePickerOpenOptions { Title = title, AllowMultiple = false, FileTypeFilter = JsonTypes });
+        return result.Count > 0 ? result[0].TryGetLocalPath() : null;
+    }
+
+    public async Task<string?> SaveJsonFileAsync(string title, string suggestedName)
+    {
+        var file = await window.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = title,
+            SuggestedFileName = suggestedName,
+            DefaultExtension = "json",
+            FileTypeChoices = JsonTypes,
+            ShowOverwritePrompt = true,
+        });
+        return file?.TryGetLocalPath();
     }
 
     public async Task OpenFolderAsync(string path)

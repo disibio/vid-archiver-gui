@@ -87,6 +87,11 @@ under its site.
 
 Not sure what a link will match? Use **Test a URL** on the rules tab to see its fields and which folder it would go to.
 
+To back up your rules or move them to another computer, use **Export…** and **Import…** above the list. The file has
+every rule plus the fallback folder. When you import, you can replace your rules or add the new ones below them.
+Presets and cookies are matched by name, so a rule whose preset or cookie source doesn't exist on the other computer
+falls back to whatever is picked when a link is added.
+
 ## Presets
 
 A preset is a set of normal yt-dlp options ([full list](https://github.com/yt-dlp/yt-dlp#usage-and-options)), so you

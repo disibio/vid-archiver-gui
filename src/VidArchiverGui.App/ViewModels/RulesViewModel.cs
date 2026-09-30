@@ -111,35 +111,117 @@ public partial class RulesViewModel : ObservableObject
 
         var deleted = SelectedRule;
         var index = Rules.IndexOf(deleted);
-        _undoDelete = (deleted, index);
-        UndoText = $"Deleted \"{deleted.Name}\".";
+        // Put it back at its old position, which matters: the first match wins.
+        OfferUndo($"Deleted \"{deleted.Name}\".", () =>
+        {
+            Rules.Insert(Math.Min(index, Rules.Count), deleted);
+            SelectedRule = deleted;
+            _host.SetStatus($"Restored rule \"{deleted.Name}\".");
+        });
         Rules.RemoveAt(index);
         SelectedRule = Rules.Count == 0 ? null : Rules[Math.Min(index, Rules.Count - 1)];
     }
 
-    private (RoutingRule Rule, int Index)? _undoDelete;
+    private Action? _undo;
 
-    /// <summary>Shown with an Undo button after a delete; null when there's nothing to undo.</summary>
+    /// <summary>Shown with an Undo button after a delete or import; null when there's nothing to undo.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(CanUndoDelete))]
+    [NotifyPropertyChangedFor(nameof(CanUndo))]
     private string? _undoText;
 
-    public bool CanUndoDelete => UndoText is not null;
+    public bool CanUndo => UndoText is not null;
 
-    /// <summary>Puts the last deleted rule back at its old position (which matters: the first match wins).</summary>
-    [RelayCommand]
-    private void UndoDelete()
+    private void OfferUndo(string text, Action undo)
     {
-        if (_undoDelete is not var (rule, index))
+        _undo = undo;
+        UndoText = text;
+    }
+
+    [RelayCommand]
+    private void Undo()
+    {
+        var undo = _undo;
+        _undo = null;
+        UndoText = null;
+        undo?.Invoke();
+    }
+
+    [RelayCommand]
+    private async Task Export()
+    {
+        if (await _host.Dialogs.SaveJsonFileAsync("Export folder rules", "folder-rules.json") is not { } path)
         {
             return;
         }
 
-        Rules.Insert(Math.Min(index, Rules.Count), rule);
-        _undoDelete = null;
-        UndoText = null;
-        SelectedRule = rule;
-        _host.SetStatus($"Restored rule \"{rule.Name}\".");
+        try
+        {
+            await File.WriteAllTextAsync(path, RuleExchange.Export(Settings));
+            _host.SetStatus($"Exported {Rules.Count} rule(s) to {path}");
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            _host.SetStatus("Could not export rules: " + e.Message);
+        }
+    }
+
+    [RelayCommand]
+    private async Task Import()
+    {
+        if (await _host.Dialogs.PickJsonFileAsync("Import folder rules") is not { } path)
+        {
+            return;
+        }
+
+        ImportedRules imported;
+        try
+        {
+            imported = RuleExchange.Import(await File.ReadAllTextAsync(path), Settings);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or FormatException)
+        {
+            _host.SetStatus("Could not import rules: " + e.Message);
+            return;
+        }
+
+        var count = imported.Rules.Count;
+        var replace = Rules.Count == 0 || await _host.Dialogs.ConfirmAsync("Import folder rules",
+            $"The file has {count} rule(s). Replace your {Rules.Count} current rule(s) and the fallback folder, or add the new rules below yours?",
+            "Replace", "Add below mine");
+
+        var before = Rules.ToList();
+        var fallbackBefore = Settings.FallbackDestination;
+        if (replace)
+        {
+            Rules.Clear();
+            if (imported.FallbackDestination is { } fallback)
+            {
+                Settings.FallbackDestination = fallback;
+            }
+        }
+
+        foreach (var rule in imported.Rules)
+        {
+            Rules.Add(rule);
+        }
+
+        SelectedRule = imported.Rules.FirstOrDefault() ?? Rules.FirstOrDefault();
+        OfferUndo((replace ? $"Replaced your rules with {count} imported rule(s)." : $"Added {count} imported rule(s).") +
+            " Click Save rules to keep them.", () =>
+        {
+            Rules.Clear();
+            foreach (var rule in before)
+            {
+                Rules.Add(rule);
+            }
+
+            Settings.FallbackDestination = fallbackBefore;
+            SelectedRule = Rules.FirstOrDefault();
+            _host.SetStatus("Undid the import.");
+        });
+        _host.SetStatus(imported.Warnings.Count == 0
+            ? $"Imported {count} rule(s) from {path}"
+            : $"Imported {count} rule(s). " + string.Join(" ", imported.Warnings));
     }
 
     [RelayCommand]

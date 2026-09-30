@@ -6,7 +6,7 @@ namespace VidArchiverGui.Core.Services;
 
 public sealed class SettingsStore(string path)
 {
-    private static readonly JsonSerializerOptions Options = new()
+    internal static readonly JsonSerializerOptions Options = new()
     {
         WriteIndented = true,
         // Keep quotes, <, + and non-ASCII readable so settings.json is pleasant to edit by hand.
