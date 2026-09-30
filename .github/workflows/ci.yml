@@ -1,0 +1,36 @@
+# Builds and tests every push and pull request on Windows, Linux and macOS, so a problem on one of them shows up
+# before a release is tagged. Warnings fail the build here, which is what keeps the .editorconfig style enforced.
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+permissions:
+  contents: read
+
+# A newer push to the same branch replaces a run that's still going.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+      # Debug includes the screenshot helper (App.Snapshots.cs); Release is what gets packaged.
+      - name: Build (Debug)
+        run: dotnet build -warnaserror
+      - name: Build (Release)
+        run: dotnet build -c Release -warnaserror
+      - name: Test
+        run: dotnet test --no-build
