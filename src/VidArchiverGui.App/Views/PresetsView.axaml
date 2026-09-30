@@ -43,7 +43,7 @@
                 HorizontalAlignment="Stretch" Margin="10,4,0,10"
                 ToolTip.Tip="Options differ between downloaders (e.g. youtube-dl has no --embed-chapters), so a preset is usually written for one of them.">
         <ComboBox.ItemTemplate>
-          <DataTemplate x:DataType="vm:EngineChoice">
+          <DataTemplate x:DataType="m:Choice">
             <TextBlock Text="{Binding Name}" />
           </DataTemplate>
         </ComboBox.ItemTemplate>

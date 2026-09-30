@@ -45,7 +45,7 @@ public partial class DownloadItemViewModel : ObservableObject
     public string Url { get; }
 
     public ObservableCollection<Preset> Presets => _owner.Presets;
-    public ObservableCollection<CookieChoice> CookieChoices => _owner.CookieChoices;
+    public ObservableCollection<Choice> CookieChoices => _owner.CookieChoices;
 
     /// <summary>Cookie source for this download (see <see cref="Cookies"/>); null = no cookies.</summary>
     public string? CookieId
@@ -64,7 +64,7 @@ public partial class DownloadItemViewModel : ObservableObject
     }
     private string? _cookieId;
 
-    public CookieChoice? SelectedCookie
+    public Choice? SelectedCookie
     {
         get => _owner.FindCookieChoice(CookieId);
         set

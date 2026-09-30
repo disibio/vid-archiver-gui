@@ -2,9 +2,6 @@ using VidArchiverGui.Core.Models;
 
 namespace VidArchiverGui.Core.Services;
 
-/// <summary>An entry in a cookies drop-down. <see cref="Id"/> null means "keep what was chosen" where that applies.</summary>
-public sealed record CookieChoice(string? Id, string Name);
-
 /// <summary>
 /// Turns a cookie choice (none, a detected browser, or a user-added source) into downloader arguments.
 /// Cookies are always opt-in per download: they tie the download to the user's account.
@@ -24,8 +21,8 @@ public static class Cookies
     public static string BrowserId(string key) => BrowserPrefix + key;
 
     /// <summary>Browsers whose profile folder exists on this computer.</summary>
-    public static IReadOnlyList<CookieChoice> DetectBrowsers() =>
-        Browsers.Where(b => ProfileDirs(b.Key).Any(Directory.Exists)).Select(b => new CookieChoice(BrowserId(b.Key), b.Name)).ToList();
+    public static IReadOnlyList<Choice> DetectBrowsers() =>
+        Browsers.Where(b => ProfileDirs(b.Key).Any(Directory.Exists)).Select(b => new Choice(BrowserId(b.Key), b.Name)).ToList();
 
     /// <summary>Where each browser keeps its profiles (the places yt-dlp looks by default).</summary>
     internal static IEnumerable<string> ProfileDirs(string browser)
@@ -82,10 +79,10 @@ public static class Cookies
     }
 
     /// <summary>"No cookies", then detected browsers, then the user's own sources.</summary>
-    public static List<CookieChoice> Choices(AppSettings settings, IReadOnlyList<CookieChoice> browsers)
+    public static List<Choice> Choices(AppSettings settings, IReadOnlyList<Choice> browsers)
     {
-        List<CookieChoice> choices = [new(NoneId, "No cookies"), .. browsers];
-        choices.AddRange(settings.CookieSources.Select(c => new CookieChoice(c.Id, c.Name)));
+        List<Choice> choices = [new(NoneId, "No cookies"), .. browsers];
+        choices.AddRange(settings.CookieSources.Select(c => new Choice(c.Id, c.Name)));
         return choices;
     }
 

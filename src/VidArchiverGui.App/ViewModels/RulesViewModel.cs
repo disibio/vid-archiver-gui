@@ -7,8 +7,6 @@ using VidArchiverGui.Core.Services;
 
 namespace VidArchiverGui.App.ViewModels;
 
-public sealed record PresetChoice(string? Id, string Name);
-
 public partial class RulesViewModel : ObservableObject
 {
     private readonly AppHost _host;
@@ -34,10 +32,10 @@ public partial class RulesViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(HasSelection))]
     private RoutingRule? _selectedRule;
 
-    [ObservableProperty] private ObservableCollection<PresetChoice> _presetChoices = [];
-    [ObservableProperty] private PresetChoice? _selectedPresetChoice;
-    [ObservableProperty] private ObservableCollection<CookieChoice> _cookieChoices = [];
-    [ObservableProperty] private CookieChoice? _selectedCookieChoice;
+    [ObservableProperty] private ObservableCollection<Choice> _presetChoices = [];
+    [ObservableProperty] private Choice? _selectedPresetChoice;
+    [ObservableProperty] private ObservableCollection<Choice> _cookieChoices = [];
+    [ObservableProperty] private Choice? _selectedCookieChoice;
     [ObservableProperty] private string _testUrl = "";
     [ObservableProperty] private string _testResult = "";
     [ObservableProperty] private bool _isTesting;
@@ -46,7 +44,7 @@ public partial class RulesViewModel : ObservableObject
 
     partial void OnSelectedRuleChanged(RoutingRule? value) => RefreshPresetChoices();
 
-    partial void OnSelectedPresetChoiceChanged(PresetChoice? value)
+    partial void OnSelectedPresetChoiceChanged(Choice? value)
     {
         if (SelectedRule is not null && value is not null)
         {
@@ -54,7 +52,7 @@ public partial class RulesViewModel : ObservableObject
         }
     }
 
-    partial void OnSelectedCookieChoiceChanged(CookieChoice? value)
+    partial void OnSelectedCookieChoiceChanged(Choice? value)
     {
         if (SelectedRule is not null && value is not null)
         {
@@ -65,17 +63,17 @@ public partial class RulesViewModel : ObservableObject
     /// <summary>Called when the tab is shown, since presets may have been renamed or added meanwhile.</summary>
     public void RefreshPresetChoices()
     {
-        var choices = new ObservableCollection<PresetChoice> { new(null, "(keep the preset chosen when adding)") };
+        var choices = new ObservableCollection<Choice> { new(null, "(keep the preset chosen when adding)") };
         foreach (var p in _host.Settings.Presets)
         {
-            choices.Add(new PresetChoice(p.Id, p.Name));
+            choices.Add(new Choice(p.Id, p.Name));
         }
 
         PresetChoices = choices;
         SelectedPresetChoice = choices.FirstOrDefault(c => c.Id == SelectedRule?.PresetId) ?? choices[0];
 
-        var cookies = new ObservableCollection<CookieChoice>(
-            [new CookieChoice(null, "(keep the cookies chosen when adding)"), .. Cookies.Choices(_host.Settings, Cookies.DetectBrowsers())]);
+        var cookies = new ObservableCollection<Choice>(
+            [new Choice(null, "(keep the cookies chosen when adding)"), .. Cookies.Choices(_host.Settings, Cookies.DetectBrowsers())]);
         CookieChoices = cookies;
         SelectedCookieChoice = cookies.FirstOrDefault(c => c.Id == SelectedRule?.CookieId) ?? cookies[0];
     }

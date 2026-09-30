@@ -38,9 +38,9 @@ public partial class DownloadsViewModel : ObservableObject
     /// Shared by the Add bar and every item. Updated in place (so the drop-downs keep their items); selections are
     /// stored as ids, which is why the selected-item properties ignore the null a drop-down reports while it's cleared.
     /// </summary>
-    public ObservableCollection<CookieChoice> CookieChoices { get; } = [];
+    public ObservableCollection<Choice> CookieChoices { get; } = [];
 
-    public CookieChoice? SelectedCookie
+    public Choice? SelectedCookie
     {
         get => FindCookieChoice(_host.Settings.LastCookieId);
         set
@@ -75,7 +75,7 @@ public partial class DownloadsViewModel : ObservableObject
         }
     }
 
-    internal CookieChoice? FindCookieChoice(string? id) =>
+    internal Choice? FindCookieChoice(string? id) =>
         CookieChoices.FirstOrDefault(c => c.Id == (id ?? Cookies.NoneId)) ?? CookieChoices.FirstOrDefault();
 
     /// <summary>Called when the tab is shown, since browsers may have been installed or cookie sources edited.</summary>

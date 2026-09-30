@@ -2,7 +2,6 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:VidArchiverGui.App.ViewModels"
              xmlns:m="using:VidArchiverGui.Core.Models"
-             xmlns:svc="using:VidArchiverGui.Core.Services"
              x:Class="VidArchiverGui.App.Views.DownloadsView"
              x:DataType="vm:DownloadsViewModel">
   <UserControl.KeyBindings>
@@ -26,7 +25,7 @@
         <ComboBox ItemsSource="{Binding CookieChoices}" SelectedItem="{Binding SelectedCookie}" HorizontalAlignment="Stretch"
                   ToolTip.Tip="Cookies let the downloader act as your logged-in browser (members-only, age-restricted, &quot;confirm you're not a bot&quot;). They are tied to your account, so only use them when needed.">
           <ComboBox.ItemTemplate>
-            <DataTemplate x:DataType="svc:CookieChoice">
+            <DataTemplate x:DataType="m:Choice">
               <TextBlock Text="{Binding Name}" />
             </DataTemplate>
           </ComboBox.ItemTemplate>
@@ -99,7 +98,7 @@
               <ComboBox Grid.Column="5" ItemsSource="{Binding CookieChoices}" SelectedItem="{Binding SelectedCookie}" Margin="4,0,0,0"
                         HorizontalAlignment="Stretch" FontSize="12" MinHeight="28" ToolTip.Tip="Cookies for this download">
                 <ComboBox.ItemTemplate>
-                  <DataTemplate x:DataType="svc:CookieChoice">
+                  <DataTemplate x:DataType="m:Choice">
                     <TextBlock Text="{Binding Name}" />
                   </DataTemplate>
                 </ComboBox.ItemTemplate>

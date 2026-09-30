@@ -2,7 +2,6 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:VidArchiverGui.App.ViewModels"
              xmlns:m="using:VidArchiverGui.Core.Models"
-             xmlns:svc="using:VidArchiverGui.Core.Services"
              x:Class="VidArchiverGui.App.Views.RulesView"
              x:DataType="vm:RulesViewModel">
   <Grid RowDefinitions="*,Auto" ColumnDefinitions="320,*">
@@ -84,7 +83,7 @@
           <TextBlock Text="Preset to use when this rule matches" Margin="0,12,0,0" />
           <ComboBox ItemsSource="{Binding PresetChoices}" SelectedItem="{Binding SelectedPresetChoice}" MinWidth="320">
             <ComboBox.ItemTemplate>
-              <DataTemplate x:DataType="vm:PresetChoice">
+              <DataTemplate x:DataType="m:Choice">
                 <TextBlock Text="{Binding Name}" />
               </DataTemplate>
             </ComboBox.ItemTemplate>
@@ -93,7 +92,7 @@
           <TextBlock Text="Cookies to use when this rule matches" Margin="0,12,0,0" />
           <ComboBox ItemsSource="{Binding CookieChoices}" SelectedItem="{Binding SelectedCookieChoice}" MinWidth="320">
             <ComboBox.ItemTemplate>
-              <DataTemplate x:DataType="svc:CookieChoice">
+              <DataTemplate x:DataType="m:Choice">
                 <TextBlock Text="{Binding Name}" />
               </DataTemplate>
             </ComboBox.ItemTemplate>

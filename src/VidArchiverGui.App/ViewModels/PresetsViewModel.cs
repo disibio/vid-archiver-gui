@@ -8,8 +8,6 @@ using VidArchiverGui.Core.Services;
 
 namespace VidArchiverGui.App.ViewModels;
 
-public sealed record EngineChoice(string? Id, string Name);
-
 public partial class PresetsViewModel : ObservableObject
 {
     private readonly AppHost _host;
@@ -25,8 +23,8 @@ public partial class PresetsViewModel : ObservableObject
     [ObservableProperty] private Preset? _selectedPreset;
     [ObservableProperty] private string _parsedPreview = "";
     [ObservableProperty] private string _warning = "";
-    [ObservableProperty] private ObservableCollection<EngineChoice> _engineChoices = [];
-    [ObservableProperty] private EngineChoice? _selectedEngineChoice;
+    [ObservableProperty] private ObservableCollection<Choice> _engineChoices = [];
+    [ObservableProperty] private Choice? _selectedEngineChoice;
 
     public string DefaultPresetText => "Default preset: " + _host.Settings.DefaultPreset.Name;
 
@@ -44,7 +42,7 @@ public partial class PresetsViewModel : ObservableObject
         RefreshEngineChoices();
     }
 
-    partial void OnSelectedEngineChoiceChanged(EngineChoice? value)
+    partial void OnSelectedEngineChoiceChanged(Choice? value)
     {
         if (SelectedPreset is not null && value is not null)
         {
@@ -55,10 +53,10 @@ public partial class PresetsViewModel : ObservableObject
     /// <summary>Called when the tab is shown, since downloaders may have been added or the default changed.</summary>
     public void RefreshEngineChoices()
     {
-        var choices = new ObservableCollection<EngineChoice> { new(null, $"Default downloader ({_host.Settings.DefaultEngine.Name})") };
+        var choices = new ObservableCollection<Choice> { new(null, $"Default downloader ({_host.Settings.DefaultEngine.Name})") };
         foreach (var e in _host.Settings.Engines)
         {
-            choices.Add(new EngineChoice(e.Id, e.Name));
+            choices.Add(new Choice(e.Id, e.Name));
         }
 
         EngineChoices = choices;
