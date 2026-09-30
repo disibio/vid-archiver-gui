@@ -143,7 +143,10 @@ public static class PresetExchange
     }
 }
 
-/// <summary>Everything a preset import can change (the presets and their values, the default, rules' presets), so it can be undone.</summary>
+/// <summary>
+/// Everything a preset import can change (the presets and their values, the default, rules' presets), so it can be
+/// undone. <see cref="Restore"/> puts all of it back as it was, so it's only offered until one of those is edited.
+/// </summary>
 public sealed class PresetsSnapshot(AppSettings settings)
 {
     private readonly List<(Preset Preset, string Name, string Arguments, string? DownloaderId)> _presets =
@@ -164,12 +167,12 @@ public sealed class PresetsSnapshot(AppSettings settings)
         }
 
         settings.DefaultPresetId = _defaultPresetId;
-
-        // Only rules left pointing at nothing (the import cleared them, or they picked an imported preset that's now
-        // gone); a rule changed since to one of the restored presets keeps that choice.
-        foreach (var (rule, presetId) in _rulePresets.Where(r => settings.FindPreset(r.Rule.PresetId) is null))
+        foreach (var (rule, presetId) in _rulePresets)
         {
             rule.PresetId = presetId;
         }
+
+        // A rule added since may use an imported preset that's gone again.
+        settings.RemoveDanglingReferences();
     }
 }

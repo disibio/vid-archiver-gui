@@ -102,22 +102,17 @@ public class PresetExchangeTests
     }
 
     [Fact]
-    public void Snapshot_keeps_a_rule_preset_chosen_after_the_import()
+    public void Snapshot_clears_a_rule_added_since_that_uses_an_imported_preset()
     {
         var settings = Settings();
-        var (audio, video) = (settings.Presets[0], settings.Presets[1]);
-        var changed = new RoutingRule { PresetId = video.Id };
-        var cleared = new RoutingRule { PresetId = video.Id };
-        settings.Rules = [changed, cleared];
         var snapshot = new PresetsSnapshot(settings);
+        var imported = PresetExchange.Replace(settings, new ImportedPresets([new Preset { Name = "New" }], null, []));
+        var added = new RoutingRule { PresetId = imported[0].Id };
+        settings.Rules.Add(added);
 
-        // Replacing with only "Audio" drops "Video", which clears both rules; the user then points one at "Audio".
-        PresetExchange.Replace(settings, new ImportedPresets([new Preset { Name = "Audio" }], null, []));
-        changed.PresetId = audio.Id;
         snapshot.Restore();
 
-        Assert.Equal(audio.Id, changed.PresetId);
-        Assert.Equal(video.Id, cleared.PresetId);
+        Assert.Null(added.PresetId);
     }
 
     [Theory]

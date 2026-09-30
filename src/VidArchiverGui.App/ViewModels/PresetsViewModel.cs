@@ -11,17 +11,48 @@ namespace VidArchiverGui.App.ViewModels;
 public partial class PresetsViewModel : ObservableObject
 {
     private readonly AppHost _host;
+    private readonly HashSet<RoutingRule> _watchedRules = [];
 
     public PresetsViewModel(AppHost host)
     {
         _host = host;
         SelectedPreset = host.Settings.DefaultPreset;
 
-        // Undo puts back the presets as they were, so any edit since (to a preset, the list or the default) withdraws it.
+        // Undo puts back the presets as they were, and the rules' presets with them, so any edit since (to a preset,
+        // the list, the default, or which preset a rule uses) withdraws it.
         new EditWatcher(LastChange.Clear).WatchList(host.Settings.Presets);
         host.Settings.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(AppSettings.DefaultPresetId))
+            {
+                LastChange.Clear();
+            }
+        };
+        foreach (var rule in host.Settings.Rules)
+        {
+            WatchRulePreset(rule);
+        }
+
+        host.Settings.Rules.CollectionChanged += (_, e) =>
+        {
+            foreach (var rule in e.NewItems?.OfType<RoutingRule>() ?? [])
+            {
+                WatchRulePreset(rule);
+            }
+        };
+    }
+
+    private void WatchRulePreset(RoutingRule rule)
+    {
+        // Rules come back into the list after an undo on the Rules tab; watch each one once.
+        if (!_watchedRules.Add(rule))
+        {
+            return;
+        }
+
+        rule.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(RoutingRule.PresetId))
             {
                 LastChange.Clear();
             }
@@ -157,7 +188,7 @@ public partial class PresetsViewModel : ObservableObject
                 _host.Settings.DefaultPresetId = deleted.Id;
             }
 
-            foreach (var rule in rules.Where(r => r.PresetId is null && _host.Settings.Rules.Contains(r)))
+            foreach (var rule in rules.Where(_host.Settings.Rules.Contains))
             {
                 rule.PresetId = deleted.Id;
             }
