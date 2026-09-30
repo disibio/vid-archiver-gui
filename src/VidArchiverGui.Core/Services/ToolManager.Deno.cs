@@ -53,6 +53,7 @@ public static partial class ToolManager
             ?? throw new InvalidDataException($"No checksum published for {asset}; refusing to install it.");
 
         var zipPath = Path.Combine(Path.GetTempPath(), "vidarchivergui-" + asset);
+        Directory.CreateDirectory(AppPaths.BinDir);
         try
         {
             await ReleaseDownloader.DownloadFileAsync(releaseBase + asset, zipPath, progress, ct, expected);

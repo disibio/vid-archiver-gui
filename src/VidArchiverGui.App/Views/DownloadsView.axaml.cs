@@ -23,7 +23,7 @@ public partial class DownloadsView : UserControl
         if (DataContext is DownloadsViewModel vm)
         {
             // Start from the height actually shown, which may be capped below the remembered one.
-            vm.LogHeight = Math.Clamp(Math.Min(vm.LogHeight, MaxLogHeight) - e.Vector.Y, 80, MaxLogHeight);
+            vm.Settings.LogHeight = Math.Clamp(Math.Min(vm.Settings.LogHeight, MaxLogHeight) - e.Vector.Y, 80, MaxLogHeight);
         }
     }
 }

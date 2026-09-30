@@ -284,7 +284,7 @@ public partial class DownloadItemViewModel : ObservableObject
             message => Dispatcher.UIThread.Post(() => { ProgressText = message; AppendLog(message); }),
             ct);
 
-        if (result.Error is not null)
+        if (!result.Succeeded)
         {
             State = DownloadState.Failed;
             Error = "Could not read info: " + result.Error + AdviceFor(result.Kind);
@@ -338,7 +338,7 @@ public partial class DownloadItemViewModel : ObservableObject
                 }),
                 token);
 
-            if (result.Error is null)
+            if (result.Succeeded)
             {
                 if (result.Engine != primary)
                 {

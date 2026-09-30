@@ -20,7 +20,10 @@ public enum FailureKind
 }
 
 /// <summary>The outcome of <see cref="Resilience.RunAsync"/>. <see cref="Error"/> is null on success.</summary>
-public sealed record FallbackResult(Engine Engine, string? Error, FailureKind Kind);
+public sealed record FallbackResult(Engine Engine, string? Error, FailureKind Kind)
+{
+    public bool Succeeded => Error is null;
+}
 
 /// <summary>Classifies downloader errors and retries them the way that has a chance of working.</summary>
 public static class Resilience

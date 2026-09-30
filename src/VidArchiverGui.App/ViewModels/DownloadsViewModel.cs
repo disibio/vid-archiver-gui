@@ -37,7 +37,7 @@ public partial class DownloadsViewModel : ObservableObject
 
     public ObservableCollection<Preset> Presets => _host.Settings.Presets;
     public ObservableCollection<DownloadItemViewModel> Items { get; } = [];
-    internal AppSettings Settings => _host.Settings;
+    public AppSettings Settings => _host.Settings;
 
     /// <summary>
     /// Shared by the Add bar and every item. Updated in place (so the drop-downs keep their items); selections are
@@ -56,26 +56,6 @@ public partial class DownloadsViewModel : ObservableObject
             }
 
             _host.Settings.LastCookieId = Cookies.IsNone(value.Id) ? null : value.Id;
-            OnPropertyChanged();
-        }
-    }
-
-    public bool ShowLog
-    {
-        get => _host.Settings.ShowLog;
-        set
-        {
-            _host.Settings.ShowLog = value;
-            OnPropertyChanged();
-        }
-    }
-
-    public double LogHeight
-    {
-        get => _host.Settings.LogHeight;
-        set
-        {
-            _host.Settings.LogHeight = value;
             OnPropertyChanged();
         }
     }

@@ -51,15 +51,8 @@ public static class AppPaths
 
     public static string SettingsFile => Path.Combine(DataDir, "settings.json");
 
-    public static string BinDir
-    {
-        get
-        {
-            var dir = Path.Combine(DataDir, "bin");
-            Directory.CreateDirectory(dir);
-            return dir;
-        }
-    }
+    /// <summary>Where the app keeps the tools it installs (created by the installs).</summary>
+    public static string BinDir => Path.Combine(DataDir, "bin");
 
     /// <summary>Whether <paramref name="path"/> is <paramref name="folder"/> or inside it.</summary>
     public static bool IsUnder(string path, string folder)

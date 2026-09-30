@@ -37,8 +37,8 @@
   </ItemGroup>
 
   <!--
-    Build info for the About page: build time, git commit (+ whether the tree had uncommitted changes) and the date of
-    the last commit that touched the UI project. Git is optional; values are simply left out if it isn't available.
+    Build info for the About page: build time and git commit (+ whether the tree had uncommitted changes). Git is
+    optional; values are simply left out if it isn't available.
   -->
   <Target Name="AddBuildInfo" BeforeTargets="GetAssemblyAttributes" Condition="'$(DesignTimeBuild)' != 'true'">
     <Exec Command="git rev-parse --short HEAD" WorkingDirectory="$(MSBuildProjectDirectory)" ConsoleToMSBuild="true"
@@ -51,16 +51,10 @@
           Condition="'$(_GitCommitExit)' == '0'">
       <Output TaskParameter="ConsoleOutput" PropertyName="_GitStatus" />
     </Exec>
-    <Exec Command="git log -1 --format=%%cI -- ." WorkingDirectory="$(MSBuildProjectDirectory)" ConsoleToMSBuild="true"
-          IgnoreExitCode="true" StandardOutputImportance="low" StandardErrorImportance="low" EchoOff="true"
-          Condition="'$(_GitCommitExit)' == '0'">
-      <Output TaskParameter="ConsoleOutput" PropertyName="_UiUpdated" />
-    </Exec>
     <ItemGroup>
       <AssemblyMetadata Include="BuildTimestamp" Value="$([System.DateTime]::UtcNow.ToString('o'))" />
       <AssemblyMetadata Include="GitCommit" Value="$(_GitCommit)" Condition="'$(_GitCommitExit)' == '0'" />
       <AssemblyMetadata Include="GitDirty" Value="true" Condition="'$(_GitCommitExit)' == '0' And '$(_GitStatus)' != ''" />
-      <AssemblyMetadata Include="UiUpdated" Value="$(_UiUpdated)" Condition="'$(_GitCommitExit)' == '0' And '$(_UiUpdated)' != ''" />
     </ItemGroup>
   </Target>
 

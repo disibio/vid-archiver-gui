@@ -100,6 +100,7 @@ public static partial class ToolManager
         var asset = FfmpegAsset();
         var archivePath = Path.Combine(Path.GetTempPath(), "vidarchivergui-" + asset);
         var extractDir = Path.Combine(Path.GetTempPath(), "vidarchivergui-ffmpeg-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(AppPaths.BinDir);
         try
         {
             // FFmpeg-Builds re-publishes "latest" in place; if it changes between these two requests the hash

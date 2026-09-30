@@ -77,7 +77,7 @@ public class ResilienceTests
 
         var result = await f.Run(a, fallback: true, "[youtube] x: Unable to extract nsig function code", null);
 
-        Assert.Null(result.Error);
+        Assert.True(result.Succeeded);
         Assert.Same(b, result.Engine);
         Assert.Equal(["a", "b"], f.Calls);
     }

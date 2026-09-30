@@ -152,9 +152,10 @@ public sealed class SettingsStore(string path)
 
     private static void Normalize(AppSettings s)
     {
+        var defaults = CreateDefaults();
         if (s.Presets.Count == 0)
         {
-            foreach (var p in CreateDefaults().Presets)
+            foreach (var p in defaults.Presets)
             {
                 s.Presets.Add(p);
             }
@@ -162,7 +163,7 @@ public sealed class SettingsStore(string path)
 
         if (string.IsNullOrWhiteSpace(s.FallbackDestination))
         {
-            s.FallbackDestination = CreateDefaults().FallbackDestination;
+            s.FallbackDestination = defaults.FallbackDestination;
         }
 
         s.MaxConcurrentDownloads = Math.Clamp(s.MaxConcurrentDownloads, 1, 10);

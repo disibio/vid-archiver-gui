@@ -120,7 +120,7 @@
     <!-- Log of the selected item -->
     <DockPanel Grid.Row="3">
       <!-- Drag to resize the log (only while it's open). -->
-      <Thumb DockPanel.Dock="Top" Height="8" Cursor="SizeNorthSouth" Background="Transparent" IsVisible="{Binding ShowLog}"
+      <Thumb DockPanel.Dock="Top" Height="8" Cursor="SizeNorthSouth" Background="Transparent" IsVisible="{Binding Settings.ShowLog}"
              DragDelta="OnLogResize" ToolTip.Tip="Drag to resize the log">
         <Thumb.Template>
           <ControlTemplate>
@@ -130,8 +130,8 @@
           </ControlTemplate>
         </Thumb.Template>
       </Thumb>
-      <Expander Classes="drawer" Header="Log (selected item)" IsExpanded="{Binding ShowLog}" Margin="0,8,0,0" HorizontalAlignment="Stretch">
-        <TextBox x:Name="LogBox" Text="{Binding SelectedItem.LogText, FallbackValue=''}" IsReadOnly="True" Classes="mono" Height="{Binding LogHeight}"
+      <Expander Classes="drawer" Header="Log (selected item)" IsExpanded="{Binding Settings.ShowLog}" Margin="0,8,0,0" HorizontalAlignment="Stretch">
+        <TextBox x:Name="LogBox" Text="{Binding SelectedItem.LogText, FallbackValue=''}" IsReadOnly="True" Classes="mono" Height="{Binding Settings.LogHeight}"
                  TextWrapping="NoWrap" AcceptsReturn="True" CaretIndex="{Binding SelectedItem.LogText.Length, FallbackValue=0}" />
       </Expander>
     </DockPanel>

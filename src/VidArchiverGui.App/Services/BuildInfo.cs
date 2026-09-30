@@ -15,21 +15,13 @@ public static class BuildInfo
     public static DateTimeOffset? BuiltAt => Date("BuildTimestamp");
     public static string? Commit => Metadata.GetValueOrDefault("GitCommit");
     public static bool HadLocalChanges => Metadata.GetValueOrDefault("GitDirty") == "true";
-    public static DateTimeOffset? UiUpdatedAt => Date("UiUpdated");
-
-    /// <summary>e.g. "Built Sep 25, 2026, 07:18 PM (commit 5c8c493) · UI updated Sep 25, 2026, 03:27 PM".</summary>
+    /// <summary>e.g. "Built Sep 25, 2026, 07:18 PM (commit 5c8c493)".</summary>
     public static string Summary
     {
         get
         {
             var commit = Commit is null ? "commit unknown" : "commit " + Commit + (HadLocalChanges ? ", modified" : "");
-            var text = $"Built {Format(BuiltAt)} ({commit})";
-            if (UiUpdatedAt is { } ui)
-            {
-                text += $" · UI updated {Format(ui)}";
-            }
-
-            return text;
+            return $"Built {Format(BuiltAt)} ({commit})";
         }
     }
 
