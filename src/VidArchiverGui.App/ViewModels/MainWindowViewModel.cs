@@ -64,7 +64,7 @@ public partial class MainWindowViewModel : ObservableObject
                 Downloads.RefreshCookieChoices();
                 break;
             case MainTab.Rules:
-                Rules.RefreshPresetChoices();
+                Rules.RefreshChoices();
                 break;
             case MainTab.Presets:
                 Presets.RefreshEngineChoices();

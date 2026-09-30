@@ -15,7 +15,7 @@ public partial class RulesViewModel : ObservableObject
     {
         _host = host;
         _selectedRule = host.Settings.Rules.FirstOrDefault();
-        RefreshPresetChoices();
+        RefreshChoices();
     }
 
     public static MatchField[] Fields { get; } = Enum.GetValues<MatchField>();
@@ -42,7 +42,7 @@ public partial class RulesViewModel : ObservableObject
 
     public bool HasSelection => SelectedRule is not null;
 
-    partial void OnSelectedRuleChanged(RoutingRule? value) => RefreshPresetChoices();
+    partial void OnSelectedRuleChanged(RoutingRule? value) => SelectRuleChoices();
 
     partial void OnSelectedPresetChoiceChanged(Choice? value)
     {
@@ -60,22 +60,22 @@ public partial class RulesViewModel : ObservableObject
         }
     }
 
-    /// <summary>Called when the tab is shown, since presets may have been renamed or added meanwhile.</summary>
-    public void RefreshPresetChoices()
+    /// <summary>
+    /// Rebuilds the preset and cookie lists. Called when the tab is shown, since presets, cookie sources and installed
+    /// browsers may have changed meanwhile.
+    /// </summary>
+    public void RefreshChoices()
     {
-        var choices = new ObservableCollection<Choice> { new(null, "(keep the preset chosen when adding)") };
-        foreach (var p in _host.Settings.Presets)
-        {
-            choices.Add(new Choice(p.Id, p.Name));
-        }
+        PresetChoices = [new Choice(null, "(keep the preset chosen when adding)"), .. _host.Settings.Presets.Select(p => new Choice(p.Id, p.Name))];
+        CookieChoices = [new Choice(null, "(keep the cookies chosen when adding)"), .. Cookies.Choices(_host.Settings, Cookies.DetectBrowsers())];
+        SelectRuleChoices();
+    }
 
-        PresetChoices = choices;
-        SelectedPresetChoice = choices.FirstOrDefault(c => c.Id == SelectedRule?.PresetId) ?? choices[0];
-
-        var cookies = new ObservableCollection<Choice>(
-            [new Choice(null, "(keep the cookies chosen when adding)"), .. Cookies.Choices(_host.Settings, Cookies.DetectBrowsers())]);
-        CookieChoices = cookies;
-        SelectedCookieChoice = cookies.FirstOrDefault(c => c.Id == SelectedRule?.CookieId) ?? cookies[0];
+    /// <summary>Shows the selected rule's preset and cookies in the drop-downs.</summary>
+    private void SelectRuleChoices()
+    {
+        SelectedPresetChoice = PresetChoices.FirstOrDefault(c => c.Id == SelectedRule?.PresetId) ?? PresetChoices[0];
+        SelectedCookieChoice = CookieChoices.FirstOrDefault(c => c.Id == SelectedRule?.CookieId) ?? CookieChoices[0];
     }
 
     [RelayCommand]
