@@ -93,14 +93,9 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private string _ffmpegStatus = "Checking…";
     [ObservableProperty] private string _toolOutput = "";
 
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsIdle))]
-    private bool _isBusy;
-
     /// <summary>What the current install/update is doing, with a Cancel button.</summary>
     public BusyStatusViewModel Busy { get; } = new();
 
-    public bool IsIdle => !IsBusy;
     public bool HasSelection => SelectedEngine is not null;
     public bool CanRemoveSelected => SelectedEngine is { Engine.IsManaged: false };
     public string InstallButtonText => SelectedEngine?.Engine switch
@@ -524,42 +519,37 @@ public partial class SettingsViewModel : ObservableObject
 
     private async Task RunBusy(string what, Func<IProgress<TransferProgress>, CancellationToken, Task<string>> action, bool quietOnError = false)
     {
-        if (IsBusy)
+        if (Busy.IsActive)
         {
             return;
         }
 
-        IsBusy = true;
-        // The live text goes to the status bar too, so it's visible from every tab.
-        var ct = Busy.Start(what, host.SetStatus);
         Setup.ShowWaiting(what);
-        try
+        // The live text goes to the status bar too, so it's visible from every tab.
+        var result = await Busy.RunAsync(what, action, host.SetStatus);
+        switch (result.Outcome)
         {
-            var message = await action(Busy.Progress, ct);
-            ToolOutput = message;
-            host.SetStatus(message.Split('\n').Last());
-        }
-        catch (OperationCanceledException) when (Busy.WasCancelled)
-        {
-            ToolOutput = $"{what}: cancelled.";
-            host.SetStatus(ToolOutput);
-        }
-        catch (Exception e)
-        {
-            ToolOutput = $"{what} failed: {e.Message}";
-            if (!quietOnError)
-            {
+            case JobOutcome.Succeeded:
+                ToolOutput = result.Message;
+                host.SetStatus(result.Message.Split('\n').Last());
+                break;
+            case JobOutcome.Cancelled:
+                ToolOutput = $"{what}: cancelled.";
                 host.SetStatus(ToolOutput);
-            }
+                break;
+            case JobOutcome.Failed:
+                ToolOutput = $"{what} failed: {result.Message}";
+                if (!quietOnError)
+                {
+                    host.SetStatus(ToolOutput);
+                }
+
+                break;
         }
-        finally
+
+        if (!_initializing)
         {
-            Busy.Stop();
-            IsBusy = false;
-            if (!_initializing)
-            {
-                await RefreshAsync();
-            }
+            await RefreshAsync();
         }
     }
 }

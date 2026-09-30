@@ -54,9 +54,9 @@ public sealed class ToolManager(AppSettings settings)
 
     public static bool CanRollback(Engine engine) => engine.IsManaged && File.Exists(PreviousPath(engine)) && File.Exists(ManagedPath(engine));
 
-    // Installs and rollbacks write the same files; downloads that fall back to another downloader may install one
-    // at the same time as the Settings tab does.
-    private static readonly SemaphoreSlim InstallGate = new(1);
+    // Installs and rollbacks of one tool write the same files, and can be started from several places at once: the
+    // Settings tab, the setup checklist, and downloads that fall back to another downloader.
+    private static readonly SemaphoreSlim InstallGate = new(1), DenoGate = new(1), FfmpegGate = new(1);
 
     public ResolvedEngine Resolve(Engine engine) =>
         LocatePath(engine) is { } path
@@ -83,23 +83,23 @@ public sealed class ToolManager(AppSettings settings)
             throw new InvalidOperationException($"{engine.Name} is a custom executable and can't be installed by the app.");
         }
 
-        await WithInstallGate(() => InstallCoreAsync(engine, progress, ct), ct);
+        await WithGate(InstallGate, () => InstallCoreAsync(engine, progress, ct), ct);
     }
 
     /// <summary>Installs <paramref name="engine"/> unless it's already there (e.g. installed meanwhile by another download).</summary>
     public Task EnsureInstalledAsync(Engine engine, CancellationToken ct = default, IProgress<TransferProgress>? progress = null) =>
-        WithInstallGate(() => IsInstalledByApp(engine) ? Task.CompletedTask : InstallCoreAsync(engine, progress, ct), ct);
+        WithGate(InstallGate, () => IsInstalledByApp(engine) ? Task.CompletedTask : InstallCoreAsync(engine, progress, ct), ct);
 
-    private static async Task WithInstallGate(Func<Task> action, CancellationToken ct)
+    private static async Task WithGate(SemaphoreSlim gate, Func<Task> action, CancellationToken ct)
     {
-        await InstallGate.WaitAsync(ct);
+        await gate.WaitAsync(ct);
         try
         {
             await action();
         }
         finally
         {
-            InstallGate.Release();
+            gate.Release();
         }
     }
 
@@ -129,7 +129,7 @@ public sealed class ToolManager(AppSettings settings)
     }
 
     /// <summary>Swaps the current and previous versions, so rolling back can itself be undone.</summary>
-    public Task RollbackAsync(Engine engine, CancellationToken ct = default) => WithInstallGate(() =>
+    public Task RollbackAsync(Engine engine, CancellationToken ct = default) => WithGate(InstallGate, () =>
     {
         if (!CanRollback(engine))
         {
@@ -262,7 +262,10 @@ public sealed class ToolManager(AppSettings settings)
             ? version
             : null;
 
-    public async Task InstallDenoAsync(IProgress<TransferProgress>? progress = null, CancellationToken ct = default)
+    public Task InstallDenoAsync(IProgress<TransferProgress>? progress = null, CancellationToken ct = default) =>
+        WithGate(DenoGate, () => InstallDenoCoreAsync(progress, ct), ct);
+
+    private async Task InstallDenoCoreAsync(IProgress<TransferProgress>? progress, CancellationToken ct)
     {
         var tag = await GetLatestTagAsync("denoland/deno", ct) ?? throw new InvalidDataException("No deno release found.");
         var asset = $"deno-{DenoTarget()}.zip";
@@ -374,13 +377,13 @@ public sealed class ToolManager(AppSettings settings)
         return await TryRunAsync(exe, ["-version"], ct) is { ExitCode: 0 } r ? r.StdOut.Split('\n', 2)[0].Trim() : null;
     }
 
-    public async Task DownloadFfmpegAsync(IProgress<TransferProgress>? progress = null, CancellationToken ct = default)
-    {
-        if (!CanDownloadFfmpeg)
-        {
-            throw new PlatformNotSupportedException(FfmpegInstallHint);
-        }
+    public Task DownloadFfmpegAsync(IProgress<TransferProgress>? progress = null, CancellationToken ct = default) =>
+        CanDownloadFfmpeg
+            ? WithGate(FfmpegGate, () => DownloadFfmpegCoreAsync(progress, ct), ct)
+            : throw new PlatformNotSupportedException(FfmpegInstallHint);
 
+    private static async Task DownloadFfmpegCoreAsync(IProgress<TransferProgress>? progress, CancellationToken ct)
+    {
         var asset = FfmpegAsset();
         var archivePath = Path.Combine(Path.GetTempPath(), "vidarchivergui-" + asset);
         var extractDir = Path.Combine(Path.GetTempPath(), "vidarchivergui-ffmpeg-" + Guid.NewGuid().ToString("N"));

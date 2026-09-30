@@ -5,6 +5,16 @@ using VidArchiverGui.Core.Services;
 
 namespace VidArchiverGui.App.ViewModels;
 
+public enum JobOutcome
+{
+    Succeeded,
+    Cancelled,
+    Failed,
+}
+
+/// <summary>How a job run by <see cref="BusyStatusViewModel.RunAsync"/> ended: its result on success, the error message on failure.</summary>
+public readonly record struct JobResult(JobOutcome Outcome, string Message);
+
 /// <summary>
 /// Live status for a long-running tool job (installing, updating): what it's doing, how far a download has got, how
 /// long it has been waiting, and a way to cancel it. Updated every second so a stuck step is visible as stuck.
@@ -22,17 +32,43 @@ public partial class BusyStatusViewModel : ObservableObject
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(CancelCommand))]
+    [NotifyPropertyChangedFor(nameof(IsIdle))]
     private bool _isActive;
+
+    public bool IsIdle => !IsActive;
 
     [ObservableProperty] private string _text = "";
     [ObservableProperty] private double _percent;
     [ObservableProperty] private bool _isIndeterminate = true;
 
     /// <summary>
-    /// Starts showing <paramref name="what"/>; the returned token is cancelled by the Cancel button.
-    /// <paramref name="onText"/> also gets every change of the text until <see cref="Stop"/>.
+    /// Runs <paramref name="job"/> while showing <paramref name="what"/> and its progress, with the Cancel button
+    /// cancelling the token it's given. <paramref name="onText"/> also gets every change of the status text.
+    /// Callers check <see cref="IsActive"/> first: one job runs at a time.
     /// </summary>
-    public CancellationToken Start(string what, Action<string>? onText = null)
+    public async Task<JobResult> RunAsync(string what, Func<IProgress<TransferProgress>, CancellationToken, Task<string>> job,
+        Action<string>? onText = null)
+    {
+        var ct = Start(what, onText);
+        try
+        {
+            return new JobResult(JobOutcome.Succeeded, await job(Progress, ct));
+        }
+        catch (OperationCanceledException) when (WasCancelled)
+        {
+            return new JobResult(JobOutcome.Cancelled, "");
+        }
+        catch (Exception e)
+        {
+            return new JobResult(JobOutcome.Failed, e.Message);
+        }
+        finally
+        {
+            Stop();
+        }
+    }
+
+    private CancellationToken Start(string what, Action<string>? onText)
     {
         _cts?.Dispose();
         _cts = new CancellationTokenSource();
@@ -47,7 +83,7 @@ public partial class BusyStatusViewModel : ObservableObject
     }
 
     /// <summary>Feed download progress here; it replaces the plain "what" text while a download is running.</summary>
-    public IProgress<TransferProgress> Progress => new Progress<TransferProgress>(p =>
+    private IProgress<TransferProgress> Progress => new Progress<TransferProgress>(p =>
     {
         if (p.Received != _transfer?.Received || p.Connecting != _transfer?.Connecting)
         {
@@ -58,7 +94,7 @@ public partial class BusyStatusViewModel : ObservableObject
         Update();
     });
 
-    public void Stop()
+    private void Stop()
     {
         _onText = null;
         _timer.Stop();
@@ -69,7 +105,7 @@ public partial class BusyStatusViewModel : ObservableObject
 
     partial void OnTextChanged(string value) => _onText?.Invoke(value);
 
-    public bool WasCancelled => _cts?.IsCancellationRequested == true;
+    private bool WasCancelled => _cts?.IsCancellationRequested == true;
 
     [RelayCommand(CanExecute = nameof(IsActive))]
     private void Cancel()

@@ -67,10 +67,6 @@ public partial class SetupViewModel(AppHost host) : ObservableObject
 
     public ObservableCollection<SetupItemViewModel> Items { get; } = [];
 
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsIdle))]
-    private bool _isBusy;
-
     /// <summary>What the current fix is doing (e.g. download progress), with a Cancel button.</summary>
     public BusyStatusViewModel Busy { get; } = new();
     [ObservableProperty] private string _message = "";
@@ -85,7 +81,6 @@ public partial class SetupViewModel(AppHost host) : ObservableObject
 
     [ObservableProperty] private bool _canAutoFix;
 
-    public bool IsIdle => !IsBusy;
     public bool ShowBanner => BannerText.Length > 0 && !BannerDismissed;
 
     /// <summary>Raised after a fix installed something, so other views can refresh their tool status.</summary>
@@ -235,22 +230,20 @@ public partial class SetupViewModel(AppHost host) : ObservableObject
 
     private async Task<bool> RunFixAsync(SetupItemViewModel item)
     {
-        if (IsBusy)
+        if (Busy.IsActive)
         {
             return false;
         }
 
-        IsBusy = true;
         Message = "";
-        var ct = Busy.Start(item.Item.Fix switch
+        var what = item.Item.Fix switch
         {
             SetupFix.InstallFfmpeg => "Installing ffmpeg (≈100 MB download)",
             SetupFix.MissingFolder => $"Creating {item.Item.Folder}",
             _ => $"Installing {item.Name}",
-        }, host.SetStatus);
-        try
+        };
+        var result = await Busy.RunAsync(what, async (progress, ct) =>
         {
-            var progress = Busy.Progress;
             switch (item.Item.Fix)
             {
                 case SetupFix.InstallDownloader:
@@ -266,34 +259,25 @@ public partial class SetupViewModel(AppHost host) : ObservableObject
                     Directory.CreateDirectory(item.Item.Folder!);
                     break;
             }
-            Message = $"{item.Name}: done.";
-            host.SetStatus(Message);
-            ToolsChanged?.Invoke();
-            return true;
-        }
-        catch (OperationCanceledException) when (Busy.WasCancelled)
+
+            return "done.";
+        }, host.SetStatus);
+
+        Message = result.Outcome == JobOutcome.Cancelled ? $"{item.Name}: cancelled." : $"{item.Name}: {result.Message}";
+        host.SetStatus(Message);
+        if (result.Outcome != JobOutcome.Succeeded)
         {
-            Message = $"{item.Name}: cancelled.";
-            host.SetStatus(Message);
             return false;
         }
-        catch (Exception e)
-        {
-            Message = $"{item.Name}: {e.Message}";
-            host.SetStatus(Message);
-            return false;
-        }
-        finally
-        {
-            Busy.Stop();
-            IsBusy = false;
-        }
+
+        ToolsChanged?.Invoke();
+        return true;
     }
 
     /// <summary>Instead of creating a missing archive folder, point the presets that use it at another folder.</summary>
     public async Task ChooseFolderAsync(SetupItemViewModel item)
     {
-        if (IsBusy || item.Item.Folder is not { } oldFolder
+        if (Busy.IsActive || item.Item.Folder is not { } oldFolder
             || await host.Dialogs.PickFolderAsync("Choose where to keep the download archive", oldFolder) is not { } newFolder)
         {
             return;
