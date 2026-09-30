@@ -61,7 +61,8 @@ public partial class SetupItemViewModel(SetupItem item, SetupViewModel owner, Se
 }
 
 /// <summary>The setup checklist: what downloads need on this machine, with one-click fixes where possible.</summary>
-public partial class SetupViewModel(AppHost host) : ObservableObject
+/// <param name="refresh">Refreshes the tool status and re-runs this check; called after a fix installed something.</param>
+public partial class SetupViewModel(AppHost host, Func<Task> refresh) : ObservableObject
 {
     private readonly SetupChecker _checker = new(host.Settings, host.Tools);
     private readonly SemaphoreSlim _gate = new(1);
@@ -83,9 +84,6 @@ public partial class SetupViewModel(AppHost host) : ObservableObject
     [ObservableProperty] private bool _canAutoFix;
 
     public bool ShowBanner => BannerText.Length > 0 && !BannerDismissed;
-
-    /// <summary>Raised after a fix installed something, so other views can refresh their tool status.</summary>
-    public event Action? ToolsChanged;
 
     /// <summary>Raised when the banner's "Details" is clicked.</summary>
     public event Action? DetailsRequested;
@@ -212,7 +210,7 @@ public partial class SetupViewModel(AppHost host) : ObservableObject
             }
         }
 
-        await CheckAsync();
+        await refresh();
     }
 
     public async Task FixAsync(SetupItemViewModel item)
@@ -225,7 +223,7 @@ public partial class SetupViewModel(AppHost host) : ObservableObject
         }
         if (await RunFixAsync(item))
         {
-            await CheckAsync();
+            await refresh();
         }
     }
 
@@ -266,13 +264,7 @@ public partial class SetupViewModel(AppHost host) : ObservableObject
 
         Message = result.Outcome == JobOutcome.Cancelled ? $"{item.Name}: cancelled." : $"{item.Name}: {result.Message}";
         host.SetStatus(Message);
-        if (result.Outcome != JobOutcome.Succeeded)
-        {
-            return false;
-        }
-
-        ToolsChanged?.Invoke();
-        return true;
+        return result.Outcome == JobOutcome.Succeeded;
     }
 
     /// <summary>Instead of creating a missing archive folder, point the presets that use it at another folder.</summary>

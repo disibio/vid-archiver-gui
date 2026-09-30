@@ -33,18 +33,10 @@ public partial class SettingsViewModel : ObservableObject
     // Refreshes can be triggered back to back (e.g. several installs from "Fix now"); run them one at a time.
     private readonly SemaphoreSlim _refreshGate = new(1);
 
-    // While InitializeAsync installs or updates tools, each install skips its usual refresh; one runs at the end.
-    private bool _initializing;
-
-    public SettingsViewModel(AppHost host, SetupViewModel setup)
+    public SettingsViewModel(AppHost host)
     {
         _host = host;
-        Setup = setup;
-        setup.ToolsChanged += async () =>
-        {
-            try { await RefreshToolsAsync(); }
-            catch (Exception e) { ToolOutput = "Refresh failed: " + e.Message; }
-        };
+        Setup = new SetupViewModel(host, RefreshAsync);
     }
 
     public SetupViewModel Setup { get; }
@@ -97,35 +89,26 @@ public partial class SettingsViewModel : ObservableObject
         Setup.ShowWaiting(VersionCheckText());
         await RefreshToolsAsync();
 
-        // The installs below skip their usual refresh; one runs at the end instead.
-        _initializing = true;
-        try
+        // Prefer our own copy over whatever is on PATH (e.g. an outdated pip install) so it can be kept current.
+        var engine = Settings.DefaultEngine;
+        if (engine.IsManaged && !ToolManager.IsInstalledByApp(engine))
         {
-            // Prefer our own copy over whatever is on PATH (e.g. an outdated pip install) so it can be kept current.
-            var engine = Settings.DefaultEngine;
-            if (engine.IsManaged && !ToolManager.IsInstalledByApp(engine))
-            {
-                await InstallOrUpdate(engine, auto: false);
-            }
-            else if (Settings.AutoUpdateYtDlp
-                     && (Settings.LastYtDlpUpdateCheck is null || DateTimeOffset.Now - Settings.LastYtDlpUpdateCheck > TimeSpan.FromHours(24)))
-            {
-                foreach (var e in Settings.Engines.Where(ToolManager.IsInstalledByApp).ToList())
-                {
-                    await InstallOrUpdate(e, auto: true);
-                }
-
-                if (ToolManager.IsDenoInstalledByApp)
-                {
-                    await UpdateDenoIfNewer();
-                }
-
-                Settings.LastYtDlpUpdateCheck = DateTimeOffset.Now;
-            }
+            await InstallOrUpdate(engine, auto: false);
         }
-        finally
+        else if (Settings.AutoUpdateYtDlp
+                 && (Settings.LastYtDlpUpdateCheck is null || DateTimeOffset.Now - Settings.LastYtDlpUpdateCheck > TimeSpan.FromHours(24)))
         {
-            _initializing = false;
+            foreach (var e in Settings.Engines.Where(ToolManager.IsInstalledByApp).ToList())
+            {
+                await InstallOrUpdate(e, auto: true);
+            }
+
+            if (ToolManager.IsDenoInstalledByApp)
+            {
+                await UpdateDenoIfNewer();
+            }
+
+            Settings.LastYtDlpUpdateCheck = DateTimeOffset.Now;
         }
 
         await RefreshAsync();
@@ -224,7 +207,14 @@ public partial class SettingsViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private Task InstallSelected() => SelectedEngine is { } row ? InstallOrUpdate(row.Engine, auto: false) : Task.CompletedTask;
+    private async Task InstallSelected()
+    {
+        if (SelectedEngine is { } row)
+        {
+            await InstallOrUpdate(row.Engine, auto: false);
+            await RefreshAsync();
+        }
+    }
 
     private async Task InstallOrUpdate(Engine engine, bool auto)
     {
@@ -288,6 +278,7 @@ public partial class SettingsViewModel : ObservableObject
             return $"{engine.Name} rolled back {from} → {row.PreviousVersion}. The daily update check will skip {from}; " +
                    "press Roll back again to undo.";
         });
+        await RefreshAsync();
     }
 
     [RelayCommand]
@@ -303,6 +294,7 @@ public partial class SettingsViewModel : ObservableObject
             await ToolManager.InstallAsync(engine, progress, ct);
             return $"{engine.Name} re-downloaded.";
         });
+        await RefreshAsync();
     }
 
     [RelayCommand]
@@ -324,6 +316,8 @@ public partial class SettingsViewModel : ObservableObject
         {
             await InstallOrUpdate(SelectedEngine.Engine, auto: false);
         }
+
+        await RefreshAsync(); // the setup checklist checks the default downloader
     }
 
     [RelayCommand]
@@ -449,6 +443,7 @@ public partial class SettingsViewModel : ObservableObject
             await ToolManager.DownloadFfmpegAsync(progress, ct);
             return "ffmpeg installed to " + AppPaths.BinDir;
         });
+        await RefreshAsync();
     }
 
     [RelayCommand]
@@ -499,11 +494,6 @@ public partial class SettingsViewModel : ObservableObject
                 }
 
                 break;
-        }
-
-        if (!_initializing)
-        {
-            await RefreshAsync();
         }
     }
 }

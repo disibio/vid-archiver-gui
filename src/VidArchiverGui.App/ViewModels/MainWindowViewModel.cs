@@ -25,9 +25,8 @@ public partial class MainWindowViewModel : ObservableObject
         Downloads = new DownloadsViewModel(host);
         Rules = new RulesViewModel(host);
         Presets = new PresetsViewModel(host);
-        Setup = new SetupViewModel(host);
+        Settings = new SettingsViewModel(host);
         Setup.DetailsRequested += () => CurrentTab = MainTab.Settings;
-        Settings = new SettingsViewModel(host, Setup);
         host.StatusChanged += message => Dispatcher.UIThread.Post(() => Status = message);
         Downloads.RestoreUnfinished();
 
@@ -40,7 +39,7 @@ public partial class MainWindowViewModel : ObservableObject
     public RulesViewModel Rules { get; }
     public PresetsViewModel Presets { get; }
     public SettingsViewModel Settings { get; }
-    public SetupViewModel Setup { get; }
+    public SetupViewModel Setup => Settings.Setup;
     public AboutViewModel About { get; } = new();
 
     [ObservableProperty] private string _status = "Ready";
