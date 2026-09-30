@@ -46,7 +46,6 @@ public partial class DownloadItemViewModel : ObservableObject
                 return;
             }
 
-            _owner.KeepCookieChoice(_cookieId);
             OnPropertyChanged(nameof(SelectedCookie));
             UpdateDetails();
         }

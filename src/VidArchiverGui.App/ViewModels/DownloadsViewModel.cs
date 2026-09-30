@@ -68,9 +68,9 @@ public partial class DownloadsViewModel : ObservableObject
 
     /// <summary>
     /// Adds <paramref name="id"/> to <see cref="CookieChoices"/> if it's missing: a browser that isn't installed here,
-    /// picked by a rule or a download from the last session, is shown as such rather than as "No cookies".
+    /// picked by a rule, is shown as such rather than as "No cookies".
     /// </summary>
-    internal void KeepCookieChoice(string? id)
+    private void KeepCookieChoice(string? id)
     {
         if (id is not null && CookieChoices.All(c => c.Id != id))
         {
@@ -222,6 +222,7 @@ public partial class DownloadsViewModel : ObservableObject
 
         if (route.CookieId is not null)
         {
+            KeepCookieChoice(route.CookieId);
             item.CookieId = route.CookieId;
         }
     }
@@ -386,6 +387,8 @@ public partial class DownloadsViewModel : ObservableObject
             Items.Add(item);
             _restored.Add(item);
         }
+
+        RefreshCookieChoices(); // a restored download may use a browser that's no longer installed
 
         // The saved list stays until the next close replaces it, so a crash in between doesn't lose it.
         if (_restored.Count > 0)
