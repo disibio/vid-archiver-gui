@@ -17,6 +17,7 @@
       </StackPanel>
       <SelectableTextBlock TextWrapping="Wrap"
                  Text="A cross-platform front-end for yt-dlp that files every download into the right folder using your own rules." />
+      <HyperlinkButton Content="{x:Static vm:AboutViewModel.ProjectUrl}" NavigateUri="{x:Static vm:AboutViewModel.ProjectUrl}" />
       <SelectableTextBlock Text="{Binding BuildSummary}" Classes="hint" />
       <SelectableTextBlock Text="{Binding Copyright}" Classes="hint" />
       <StackPanel Orientation="Horizontal" Spacing="4">

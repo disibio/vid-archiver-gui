@@ -20,6 +20,8 @@ public partial class AboutViewModel : ObservableObject
     public const string AiNotice =
         "Vid Archiver GUI is written with Claude Opus 5.5.";
 
+    public const string ProjectUrl = "https://github.com/disibio/vid-archiver-gui";
+
     public const string InspiredByUrl = "https://github.com/oleksis/youtube-dl-gui";
 
     public IReadOnlyList<Credit> Bundled { get; } =
