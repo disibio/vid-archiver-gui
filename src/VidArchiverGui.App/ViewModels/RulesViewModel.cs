@@ -149,7 +149,7 @@ public partial class RulesViewModel : ObservableObject
     [RelayCommand]
     private async Task Export()
     {
-        if (await _host.Dialogs.SaveJsonFileAsync("Export folder rules", "folder-rules.json") is not { } path)
+        if (await _host.Dialogs.SaveJsonFileAsync("Export folder rules", $"folder-rules-{DateTime.Now:yyyy-MM-dd}.json") is not { } path)
         {
             return;
         }
