@@ -158,7 +158,10 @@ public sealed class PresetsSnapshot(AppSettings settings)
         }
 
         settings.DefaultPresetId = _defaultPresetId;
-        foreach (var (rule, presetId) in _rulePresets)
+
+        // Only rules left pointing at nothing (the import cleared them, or they picked an imported preset that's now
+        // gone); a rule changed since to one of the restored presets keeps that choice.
+        foreach (var (rule, presetId) in _rulePresets.Where(r => settings.FindPreset(r.Rule.PresetId) is null))
         {
             rule.PresetId = presetId;
         }

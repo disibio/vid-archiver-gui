@@ -16,6 +16,9 @@ public partial class RulesViewModel : ObservableObject
         _host = host;
         _selectedRule = host.Settings.Rules.FirstOrDefault();
         RefreshChoices();
+
+        // Undoing an import puts the old list back, which would drop rules added or moved since.
+        host.Settings.Rules.CollectionChanged += (_, _) => LastChange.Clear();
     }
 
     public static MatchField[] Fields { get; } = Enum.GetValues<MatchField>();
@@ -109,6 +112,9 @@ public partial class RulesViewModel : ObservableObject
 
         var deleted = SelectedRule;
         var index = Rules.IndexOf(deleted);
+        Rules.RemoveAt(index);
+        SelectedRule = Rules.Count == 0 ? null : Rules[Math.Min(index, Rules.Count - 1)];
+
         // Put it back at its old position, which matters: the first match wins.
         LastChange.Offer($"Deleted \"{deleted.Name}\".", () =>
         {
@@ -116,11 +122,9 @@ public partial class RulesViewModel : ObservableObject
             SelectedRule = deleted;
             _host.SetStatus($"Restored rule \"{deleted.Name}\".");
         });
-        Rules.RemoveAt(index);
-        SelectedRule = Rules.Count == 0 ? null : Rules[Math.Min(index, Rules.Count - 1)];
     }
 
-    /// <summary>Shown with an Undo button after a delete or import.</summary>
+    /// <summary>Shown with an Undo button after a delete or import, until the list changes again.</summary>
     public UndoSlot LastChange { get; } = new();
 
     [RelayCommand]
@@ -162,9 +166,18 @@ public partial class RulesViewModel : ObservableObject
         }
 
         var count = imported.Rules.Count;
-        var replace = Rules.Count == 0 || await _host.Dialogs.ConfirmAsync("Import folder rules",
-            $"The file has {count} rule(s). Replace your {Rules.Count} current rule(s) and the fallback folder, or add the new rules below yours?",
-            "Replace", "Add below mine");
+        var replace = true; // nothing to ask about with no rules yet
+        if (Rules.Count > 0)
+        {
+            if (await _host.Dialogs.AskAsync("Import folder rules",
+                    $"The file has {count} rule(s). Replace your {Rules.Count} current rule(s) and the fallback folder, or add the new rules below yours?",
+                    "Replace", "Add below mine") is not { } answer)
+            {
+                return;
+            }
+
+            replace = answer;
+        }
 
         var before = new RulesSnapshot(Settings);
         if (replace)

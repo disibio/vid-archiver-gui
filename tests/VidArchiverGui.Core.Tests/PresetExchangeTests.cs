@@ -101,6 +101,25 @@ public class PresetExchangeTests
         Assert.Equal(presets[1].Id, rule.PresetId);
     }
 
+    [Fact]
+    public void Snapshot_keeps_a_rule_preset_chosen_after_the_import()
+    {
+        var settings = Settings();
+        var (audio, video) = (settings.Presets[0], settings.Presets[1]);
+        var changed = new RoutingRule { PresetId = video.Id };
+        var cleared = new RoutingRule { PresetId = video.Id };
+        settings.Rules = [changed, cleared];
+        var snapshot = new PresetsSnapshot(settings);
+
+        // Replacing with only "Audio" drops "Video", which clears both rules; the user then points one at "Audio".
+        PresetExchange.Replace(settings, new ImportedPresets([new Preset { Name = "Audio" }], null, []));
+        changed.PresetId = audio.Id;
+        snapshot.Restore();
+
+        Assert.Equal(audio.Id, changed.PresetId);
+        Assert.Equal(video.Id, cleared.PresetId);
+    }
+
     [Theory]
     [InlineData("""{ "Format": "vid-archiver-gui/folder-rules", "Version": 1 }""")]
     [InlineData("""{ "Format": "vid-archiver-gui/presets", "Version": 1, "Presets": [] }""")]

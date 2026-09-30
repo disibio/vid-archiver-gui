@@ -20,8 +20,11 @@ public interface IDialogs
     Task OpenFolderAsync(string path);
     Task CopyTextAsync(string text);
 
-    /// <summary>Asks a yes/no question; true if the user picked <paramref name="yes"/>.</summary>
+    /// <summary>Asks a yes/no question; true if the user picked <paramref name="yes"/>. Esc or closing picks <paramref name="no"/>.</summary>
     Task<bool> ConfirmAsync(string title, string message, string yes, string no);
+
+    /// <summary>Like <see cref="ConfirmAsync"/>, with a Cancel button as well; null if cancelled (or closed).</summary>
+    Task<bool?> AskAsync(string title, string message, string yes, string no);
 
     /// <summary>Whether the app's window is the one in front.</summary>
     bool IsWindowActive { get; }
@@ -41,11 +44,24 @@ public sealed class WindowDialogs(Window window) : IDialogs
     /// <summary>Removes anything the notifier left behind (the Windows tray icon).</summary>
     public void CleanUp() => _notifier.RemoveWindowsIcon();
 
-    public async Task<bool> ConfirmAsync(string title, string message, string yes, string no)
+    public async Task<bool> ConfirmAsync(string title, string message, string yes, string no) =>
+        await ShowButtonsAsync(title, message, [yes, no], defaultIndex: 1) == 0;
+
+    public async Task<bool?> AskAsync(string title, string message, string yes, string no) =>
+        await ShowButtonsAsync(title, message, [yes, no, "Cancel"], defaultIndex: 1) switch
+        {
+            0 => true,
+            1 => false,
+            _ => null,
+        };
+
+    /// <summary>
+    /// A small dialog with <paramref name="buttons"/>; returns the index of the one clicked. The last button is also
+    /// what Esc and closing the window pick.
+    /// </summary>
+    private async Task<int> ShowButtonsAsync(string title, string message, string[] buttons, int defaultIndex)
     {
-        var yesButton = new Button { Content = yes };
-        var noButton = new Button { Content = no, IsDefault = true, IsCancel = true };
-        noButton.Classes.Add("accent");
+        var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right };
         var dialog = new Window
         {
             Title = title,
@@ -59,22 +75,24 @@ public sealed class WindowDialogs(Window window) : IDialogs
                 Margin = new Thickness(20),
                 Spacing = 16,
                 MaxWidth = 460,
-                Children =
-                {
-                    new TextBlock { Text = message, TextWrapping = TextWrapping.Wrap },
-                    new StackPanel
-                    {
-                        Orientation = Orientation.Horizontal,
-                        Spacing = 8,
-                        HorizontalAlignment = HorizontalAlignment.Right,
-                        Children = { yesButton, noButton },
-                    },
-                },
+                Children = { new TextBlock { Text = message, TextWrapping = TextWrapping.Wrap }, row },
             },
         };
-        yesButton.Click += (_, _) => dialog.Close(true);
-        noButton.Click += (_, _) => dialog.Close(false);
-        return await dialog.ShowDialog<bool>(window);
+
+        for (var i = 0; i < buttons.Length; i++)
+        {
+            var index = i;
+            var button = new Button { Content = buttons[i], IsDefault = i == defaultIndex, IsCancel = i == buttons.Length - 1 };
+            if (i == defaultIndex)
+            {
+                button.Classes.Add("accent");
+            }
+
+            button.Click += (_, _) => dialog.Close(index);
+            row.Children.Add(button);
+        }
+
+        return await dialog.ShowDialog<int?>(window) ?? buttons.Length - 1;
     }
 
     public async Task<string?> PickFolderAsync(string title, string? startPath = null)

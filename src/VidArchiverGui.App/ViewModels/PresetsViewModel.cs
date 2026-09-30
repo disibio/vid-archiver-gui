@@ -16,6 +16,9 @@ public partial class PresetsViewModel : ObservableObject
     {
         _host = host;
         SelectedPreset = host.Settings.DefaultPreset;
+
+        // Undoing an import puts the old presets back, which would drop presets added since.
+        host.Settings.Presets.CollectionChanged += (_, _) => LastChange.Clear();
     }
 
     public ObservableCollection<Preset> Presets => _host.Settings.Presets;
@@ -65,6 +68,9 @@ public partial class PresetsViewModel : ObservableObject
 
     private void OnPresetPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
+        // ...and would undo this edit too.
+        LastChange.Clear();
+
         if (e.PropertyName == nameof(Preset.Arguments))
         {
             UpdatePreview();
@@ -133,6 +139,11 @@ public partial class PresetsViewModel : ObservableObject
         var index = Presets.IndexOf(deleted);
         var wasDefault = _host.Settings.DefaultPresetId == deleted.Id;
         var rules = _host.Settings.Rules.Where(r => r.PresetId == deleted.Id).ToList();
+        Presets.Remove(deleted);
+        _host.Settings.RemoveDanglingReferences();
+        SelectedPreset = Presets[Math.Min(index, Presets.Count - 1)];
+        OnPropertyChanged(nameof(DefaultPresetText));
+
         // Put it back where it was, as the default and on its rules if it was before.
         LastChange.Offer($"Deleted \"{deleted.Name}\"" + (rules.Count > 0 ? $" (used by {rules.Count} folder rule{(rules.Count == 1 ? "" : "s")})." : "."), () =>
         {
@@ -151,14 +162,9 @@ public partial class PresetsViewModel : ObservableObject
             OnPropertyChanged(nameof(DefaultPresetText));
             _host.SetStatus($"Restored preset \"{deleted.Name}\".");
         });
-
-        Presets.Remove(deleted);
-        _host.Settings.RemoveDanglingReferences();
-        SelectedPreset = Presets[Math.Min(index, Presets.Count - 1)];
-        OnPropertyChanged(nameof(DefaultPresetText));
     }
 
-    /// <summary>Shown with an Undo button after a delete or import.</summary>
+    /// <summary>Shown with an Undo button after a delete or import, until the presets change again.</summary>
     public UndoSlot LastChange { get; } = new();
 
     [RelayCommand]
@@ -200,9 +206,12 @@ public partial class PresetsViewModel : ObservableObject
         }
 
         var count = imported.Presets.Count;
-        var replace = await _host.Dialogs.ConfirmAsync("Import presets",
-            $"The file has {count} preset(s). Replace your {Presets.Count} current preset(s) and the default, or add the new presets below yours?",
-            "Replace", "Add below mine");
+        if (await _host.Dialogs.AskAsync("Import presets",
+                $"The file has {count} preset(s). Replace your {Presets.Count} current preset(s) and the default, or add the new presets below yours?",
+                "Replace", "Add below mine") is not { } replace)
+        {
+            return;
+        }
 
         var before = new PresetsSnapshot(_host.Settings);
         var added = replace ? PresetExchange.Replace(_host.Settings, imported) : PresetExchange.Append(_host.Settings, imported);

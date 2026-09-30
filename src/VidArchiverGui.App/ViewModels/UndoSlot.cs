@@ -3,7 +3,10 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace VidArchiverGui.App.ViewModels;
 
-/// <summary>The last delete or import, shown with an Undo button until it's undone or replaced by the next one.</summary>
+/// <summary>
+/// The last delete or import, shown with an Undo button until it's undone, replaced by the next one, or withdrawn by
+/// <see cref="Clear"/> once the list has changed since.
+/// </summary>
 public partial class UndoSlot : ObservableObject
 {
     private Action? _undo;
@@ -21,12 +24,18 @@ public partial class UndoSlot : ObservableObject
         Text = text;
     }
 
+    /// <summary>Withdraws the offer, e.g. because a later edit would be lost or broken by undoing.</summary>
+    public void Clear()
+    {
+        _undo = null;
+        Text = null;
+    }
+
     [RelayCommand]
     private void Undo()
     {
         var undo = _undo;
-        _undo = null;
-        Text = null;
+        Clear();
         undo?.Invoke();
     }
 }
