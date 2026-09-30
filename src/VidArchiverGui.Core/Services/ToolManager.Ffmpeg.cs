@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 namespace VidArchiverGui.Core.Services;
 
 /// <summary>ffmpeg: merges separate video and audio, and embeds thumbnails, subtitles and metadata.</summary>
-public sealed partial class ToolManager
+public static partial class ToolManager
 {
     private const string FfmpegReleaseBase = "https://github.com/yt-dlp/FFmpeg-Builds/releases/download/latest/";
 
@@ -12,12 +12,15 @@ public sealed partial class ToolManager
 
     private static string ManagedFfmpegPath => Path.Combine(AppPaths.BinDir, AppPaths.ExeName("ffmpeg"));
 
-    /// <summary>Returns a value suitable for --ffmpeg-location (a folder or executable), or null to let the downloader search PATH.</summary>
-    public string? ResolveFfmpeg()
+    /// <summary>
+    /// Returns a value suitable for --ffmpeg-location (a folder or executable), or null to let the downloader search PATH.
+    /// <paramref name="customPath"/> is the one chosen in Settings (<see cref="Models.AppSettings.FfmpegPath"/>), if any.
+    /// </summary>
+    public static string? ResolveFfmpeg(string? customPath)
     {
-        if (!string.IsNullOrWhiteSpace(settings.FfmpegPath))
+        if (!string.IsNullOrWhiteSpace(customPath))
         {
-            return File.Exists(settings.FfmpegPath) || Directory.Exists(settings.FfmpegPath) ? settings.FfmpegPath : null;
+            return File.Exists(customPath) || Directory.Exists(customPath) ? customPath : null;
         }
 
         if (File.Exists(ManagedFfmpegPath))
@@ -25,12 +28,12 @@ public sealed partial class ToolManager
             return ManagedFfmpegPath;
         }
 
-        return FindOnPath("ffmpeg");
+        return ProcessHelper.FindOnPath("ffmpeg");
     }
 
-    public async Task<string?> GetFfmpegVersionAsync(CancellationToken ct = default)
+    public static async Task<string?> GetFfmpegVersionAsync(string? customPath, CancellationToken ct = default)
     {
-        var location = ResolveFfmpeg();
+        var location = ResolveFfmpeg(customPath);
         if (location is null)
         {
             return null;
@@ -44,7 +47,7 @@ public sealed partial class ToolManager
     /// Windows builds are .zip; Linux builds are .tar.xz, which .NET can't unpack itself, so we use the system's tar
     /// (present on practically every distro). macOS has no official static builds: Homebrew is the way there.
     /// </summary>
-    public static bool CanDownloadFfmpeg => OperatingSystem.IsWindows() || (OperatingSystem.IsLinux() && FindOnPath("tar") is not null);
+    public static bool CanDownloadFfmpeg => OperatingSystem.IsWindows() || (OperatingSystem.IsLinux() && ProcessHelper.FindOnPath("tar") is not null);
 
     public static string FfmpegInstallHint =>
         OperatingSystem.IsMacOS() ? "Install ffmpeg with Homebrew: brew install ffmpeg"
@@ -56,7 +59,7 @@ public sealed partial class ToolManager
     {
         if (OperatingSystem.IsMacOS())
         {
-            return FindOnPath("brew") is not null ? "brew install ffmpeg" : null;
+            return ProcessHelper.FindOnPath("brew") is not null ? "brew install ffmpeg" : null;
         }
 
         if (!OperatingSystem.IsLinux())
@@ -64,22 +67,22 @@ public sealed partial class ToolManager
             return null;
         }
 
-        if (FindOnPath("apt-get") is not null)
+        if (ProcessHelper.FindOnPath("apt-get") is not null)
         {
             return "sudo apt install ffmpeg";
         }
 
-        if (FindOnPath("dnf") is not null)
+        if (ProcessHelper.FindOnPath("dnf") is not null)
         {
             return "sudo dnf install ffmpeg";
         }
 
-        if (FindOnPath("pacman") is not null)
+        if (ProcessHelper.FindOnPath("pacman") is not null)
         {
             return "sudo pacman -S ffmpeg";
         }
 
-        if (FindOnPath("zypper") is not null)
+        if (ProcessHelper.FindOnPath("zypper") is not null)
         {
             return "sudo zypper install ffmpeg";
         }
@@ -112,7 +115,7 @@ public sealed partial class ToolManager
             else
             {
                 Directory.CreateDirectory(extractDir);
-                var tar = await ProcessHelper.RunAsync(FindOnPath("tar")!, ["-xJf", archivePath, "-C", extractDir], ct);
+                var tar = await ProcessHelper.RunAsync(ProcessHelper.FindOnPath("tar")!, ["-xJf", archivePath, "-C", extractDir], ct);
                 if (tar.ExitCode != 0)
                 {
                     throw new InvalidDataException("Could not unpack ffmpeg (tar): " + tar.StdErr.Trim());

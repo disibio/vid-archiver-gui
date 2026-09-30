@@ -44,7 +44,7 @@ public sealed class SystemNotifier(Window window)
 
     private static bool Run(string program, IEnumerable<string> args)
     {
-        if (ToolManager.FindOnPath(program) is not { } exe)
+        if (ProcessHelper.FindOnPath(program) is not { } exe)
         {
             return false;
         }

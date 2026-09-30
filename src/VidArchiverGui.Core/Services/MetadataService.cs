@@ -3,10 +3,10 @@ using VidArchiverGui.Core.Models;
 namespace VidArchiverGui.Core.Services;
 
 /// <summary>Reads just enough information about a URL (site, channel, playlist...) to route it.</summary>
-public sealed class MetadataService
+public static class MetadataService
 {
     /// <param name="cookieArgs">Cookie options chosen in the app; when present they replace any cookie options in the preset.</param>
-    public async Task<MediaInfo> FetchAsync(string url, IReadOnlyList<string> presetArgs, ResolvedEngine engine,
+    public static async Task<MediaInfo> FetchAsync(string url, IReadOnlyList<string> presetArgs, ResolvedEngine engine,
         IReadOnlyList<string>? cookieArgs = null, CancellationToken ct = default)
     {
         // --flat-playlist + a single item keeps channel/playlist lookups fast. youtube-dl supports all of these too.

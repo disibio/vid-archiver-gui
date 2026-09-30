@@ -57,6 +57,20 @@ public static class ProcessHelper
         return dirs.Distinct().ToList();
     }
 
+    /// <summary>The first <paramref name="name"/> executable in <see cref="SearchPath"/>, or null.</summary>
+    public static string? FindOnPath(string name)
+    {
+        foreach (var dir in SearchPath())
+        {
+            var candidate = Path.Combine(dir, AppPaths.ExeName(name));
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
+        }
+        return null;
+    }
+
     /// <summary>Runs a process to completion, killing its whole tree if cancelled.</summary>
     public static async Task<ProcessResult> RunAsync(string exe, IEnumerable<string> args, CancellationToken ct = default)
     {

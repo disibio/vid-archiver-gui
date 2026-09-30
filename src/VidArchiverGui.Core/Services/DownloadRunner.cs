@@ -12,7 +12,7 @@ public sealed record DownloadRequest(string Url, IReadOnlyList<string> PresetArg
     public bool Gentle { get; init; }
 }
 
-public sealed class DownloadRunner(ToolManager tools)
+public static class DownloadRunner
 {
     private const string YoutubeDlDefaultTemplate = "%(title)s-%(id)s.%(ext)s";
 
@@ -93,11 +93,13 @@ public sealed class DownloadRunner(ToolManager tools)
     }
 
     /// <summary>Runs one download. Events are raised on a background thread. Returns the downloader's exit code.</summary>
-    public async Task<int> RunAsync(DownloadRequest request, ResolvedEngine engine, Action<OutputEvent> onEvent, CancellationToken ct)
+    /// <param name="ffmpegLocation">See <see cref="ToolManager.ResolveFfmpeg"/>.</param>
+    public static async Task<int> RunAsync(DownloadRequest request, ResolvedEngine engine, string? ffmpegLocation,
+        Action<OutputEvent> onEvent, CancellationToken ct)
     {
         Directory.CreateDirectory(request.Destination);
 
-        var args = BuildArguments(request with { Flavor = engine.Flavor }, tools.ResolveFfmpeg(), engine.ExtraArgs);
+        var args = BuildArguments(request with { Flavor = engine.Flavor }, ffmpegLocation, engine.ExtraArgs);
         onEvent(new OutputEvent.Text($"> {Path.GetFileName(engine.Path)} " + string.Join(' ', args.Select(Quote))));
 
         using var process = new Process { StartInfo = ProcessHelper.CreateStartInfo(engine.Path, args) };

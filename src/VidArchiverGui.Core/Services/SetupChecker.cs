@@ -84,7 +84,7 @@ public sealed record YtDlpProbe(bool? HasFfmpeg, string? JsRuntimes, bool? HasEj
 }
 
 /// <summary>Works out what's needed for downloads to work on this machine, and how to fix what's missing.</summary>
-public sealed class SetupChecker(AppSettings settings, ToolManager tools)
+public sealed class SetupChecker(AppSettings settings)
 {
     private const string DownloaderWhy = "Does the actual downloading.";
     private const string FfmpegWhy = "Merges separate video and audio (e.g. MKV output) and embeds thumbnails, subtitles and metadata.";
@@ -152,7 +152,7 @@ public sealed class SetupChecker(AppSettings settings, ToolManager tools)
         }
 
         // 2. ffmpeg.
-        var ffmpeg = tools.ResolveFfmpeg();
+        var ffmpeg = ToolManager.ResolveFfmpeg(settings.FfmpegPath);
         Done(SetupSection.Ffmpeg, probe?.HasFfmpeg ?? ffmpeg is not null
             ? new SetupItem("ffmpeg", SetupStatus.Ok, ffmpeg ?? "found by the downloader", FfmpegWhy)
             : FfmpegMissing());
@@ -198,7 +198,7 @@ public sealed class SetupChecker(AppSettings settings, ToolManager tools)
     public async Task<YtDlpProbe?> ProbeAsync(ResolvedEngine engine, CancellationToken ct = default)
     {
         List<string> args = ["-v"];
-        if (tools.ResolveFfmpeg() is { } ffmpeg)
+        if (ToolManager.ResolveFfmpeg(settings.FfmpegPath) is { } ffmpeg)
         {
             args.AddRange(["--ffmpeg-location", ffmpeg]);
         }

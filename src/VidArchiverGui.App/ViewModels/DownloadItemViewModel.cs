@@ -263,7 +263,7 @@ public partial class DownloadItemViewModel : ObservableObject
     /// Reads the video's info with this item's downloader, falling back to others if extraction is broken. Returns
     /// false, with <see cref="Error"/> set, if no downloader could read it.
     /// </summary>
-    internal async Task<bool> ReadInfoAsync(MetadataService metadata, AppSettings settings, CancellationToken ct)
+    internal async Task<bool> ReadInfoAsync(AppSettings settings, CancellationToken ct)
     {
         var presetArgs = ArgumentParser.Split(Preset.Arguments);
         var result = await Resilience.RunAsync(settings, Engine,
@@ -272,7 +272,7 @@ public partial class DownloadItemViewModel : ObservableObject
                 try
                 {
                     var cookieArgs = Cookies.Args(settings, CookieId, engine.Flavor);
-                    Info = await metadata.FetchAsync(Url, presetArgs, engine, cookieArgs, attemptCt);
+                    Info = await MetadataService.FetchAsync(Url, presetArgs, engine, cookieArgs, attemptCt);
                     return null;
                 }
                 catch (YtDlpException e)
@@ -297,7 +297,7 @@ public partial class DownloadItemViewModel : ObservableObject
 
     // ---------- download ----------
 
-    internal async Task DownloadAsync(DownloadRunner runner, AppSettings settings)
+    internal async Task DownloadAsync(AppSettings settings)
     {
         var token = BeginOperation();
         State = DownloadState.Downloading;
@@ -314,6 +314,7 @@ public partial class DownloadItemViewModel : ObservableObject
         {
             var primary = Engine;
             var presetArgs = ArgumentParser.Split(Preset.Arguments);
+            var ffmpeg = ToolManager.ResolveFfmpeg(settings.FfmpegPath);
             var result = await Resilience.RunAsync(settings, primary,
                 async (engine, ct) =>
                 {
@@ -323,7 +324,7 @@ public partial class DownloadItemViewModel : ObservableObject
                         Gentle = settings.GentleDownloads,
                     };
                     _lastError = null;
-                    var exitCode = await runner.RunAsync(request, engine, OnOutput, ct);
+                    var exitCode = await DownloadRunner.RunAsync(request, engine, ffmpeg, OnOutput, ct);
                     // Let any output events still queued on the UI thread land first.
                     await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
                     return exitCode == 0 ? null : _lastError ?? $"{engine.Engine.Name} exited with code {exitCode}";

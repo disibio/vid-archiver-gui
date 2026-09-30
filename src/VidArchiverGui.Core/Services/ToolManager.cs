@@ -15,15 +15,16 @@ public sealed record ResolvedEngine(Engine Engine, string Path)
 
 /// <summary>
 /// Locates, installs and updates the downloaders (yt-dlp, its channels, youtube-dl, custom forks), deno
-/// (ToolManager.Deno.cs) and ffmpeg (ToolManager.Ffmpeg.cs). Members are static unless they depend on the settings.
+/// (ToolManager.Deno.cs) and ffmpeg (ToolManager.Ffmpeg.cs).
 /// </summary>
-public sealed partial class ToolManager(AppSettings settings)
+public static partial class ToolManager
 {
     /// <summary>How long a quick query like "--version" may take before it's treated as not answering.</summary>
     public static readonly TimeSpan QueryTimeout = TimeSpan.FromSeconds(60);
 
-    // Installs and rollbacks of one tool write the same files, and can be started from several places at once: the
-    // Settings tab, the setup checklist, and downloads that fall back to another downloader.
+    // Installs and rollbacks write into the app's bin folder and can be started from several places at once: the
+    // Settings tab, the setup checklist, and downloads that fall back to another downloader. One at a time, for all
+    // downloaders (deno and ffmpeg have their own gates).
     private static readonly SemaphoreSlim InstallGate = new(1);
 
     private static readonly ConcurrentDictionary<(string Path, long Size, DateTime Modified), Task<string?>> VersionCache = new();
@@ -47,7 +48,7 @@ public sealed partial class ToolManager(AppSettings settings)
             return managed;
         }
         // Only stable yt-dlp falls back to a copy on PATH.
-        return engine.Id == Engine.StableId ? FindOnPath("yt-dlp") : null;
+        return engine.Id == Engine.StableId ? ProcessHelper.FindOnPath("yt-dlp") : null;
     }
 
     public static bool IsInstalledByApp(Engine engine) => engine.IsManaged && File.Exists(ManagedPath(engine));
@@ -64,8 +65,6 @@ public sealed partial class ToolManager(AppSettings settings)
             : throw new YtDlpException(engine.IsManaged
                 ? $"{engine.Name} is not installed. Install it on the Settings tab."
                 : $"{engine.Name}: executable not found at {engine.ExecutablePath}");
-
-    public ResolvedEngine ResolveFor(Preset preset) => Resolve(settings.EngineFor(preset));
 
     public static async Task InstallAsync(Engine engine, IProgress<TransferProgress>? progress = null, CancellationToken ct = default)
     {
@@ -199,19 +198,6 @@ public sealed partial class ToolManager(AppSettings settings)
     }
 
     // ---------- helpers ----------
-
-    public static string? FindOnPath(string name)
-    {
-        foreach (var dir in ProcessHelper.SearchPath())
-        {
-            var candidate = Path.Combine(dir, AppPaths.ExeName(name));
-            if (File.Exists(candidate))
-            {
-                return candidate;
-            }
-        }
-        return null;
-    }
 
     /// <summary>Runs a quick query; null if it can't start, fails, or doesn't finish within <see cref="QueryTimeout"/>.</summary>
     internal static async Task<ProcessResult?> TryRunAsync(string exe, IEnumerable<string> args, CancellationToken ct)

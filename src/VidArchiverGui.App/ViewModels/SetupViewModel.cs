@@ -64,7 +64,7 @@ public partial class SetupItemViewModel(SetupItem item, SetupViewModel owner, Se
 /// <param name="refresh">Refreshes the tool status and re-runs this check; called after a fix installed something.</param>
 public partial class SetupViewModel(AppHost host, Func<Task> refresh) : ObservableObject
 {
-    private readonly SetupChecker _checker = new(host.Settings, host.Tools);
+    private readonly SetupChecker _checker = new(host.Settings);
     private readonly SemaphoreSlim _gate = new(1);
 
     public ObservableCollection<SetupItemViewModel> Items { get; } = [];

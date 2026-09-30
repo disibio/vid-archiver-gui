@@ -267,7 +267,7 @@ public partial class RulesViewModel : ObservableObject
         try
         {
             var preset = Settings.DefaultPreset;
-            var info = await _host.Metadata.FetchAsync(TestUrl.Trim(), ArgumentParser.Split(preset.Arguments), _host.Tools.ResolveFor(preset));
+            var info = await MetadataService.FetchAsync(TestUrl.Trim(), ArgumentParser.Split(preset.Arguments), ToolManager.Resolve(Settings.EngineFor(preset)));
             var route = RoutingEngine.Resolve(info, Rules, Settings.FallbackDestination);
             string F(string name) => info.Fields.TryGetValue(name, out var v) ? v : "—";
             TestResult =

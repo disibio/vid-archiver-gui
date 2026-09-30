@@ -200,10 +200,10 @@ public partial class SettingsViewModel : ObservableObject
                 : null;
         }));
 
-        var ff = _host.Tools.ResolveFfmpeg();
+        var ff = ToolManager.ResolveFfmpeg(Settings.FfmpegPath);
         FfmpegStatus = ff is null
             ? "Not found — merging video+audio and embedding thumbnails/subtitles need ffmpeg."
-            : $"{await _host.Tools.GetFfmpegVersionAsync() ?? "version unknown"}  —  {ff}";
+            : $"{await ToolManager.GetFfmpegVersionAsync(Settings.FfmpegPath) ?? "version unknown"}  —  {ff}";
     }
 
     [RelayCommand]

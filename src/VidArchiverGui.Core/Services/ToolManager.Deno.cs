@@ -8,7 +8,7 @@ namespace VidArchiverGui.Core.Services;
 /// deno, the JavaScript runtime yt-dlp needs to solve YouTube's JavaScript challenges. yt-dlp supports node/bun/quickjs
 /// too, but only deno is enabled by default, so deno is what we look for.
 /// </summary>
-public sealed partial class ToolManager
+public static partial class ToolManager
 {
     private const string DenoRepo = "denoland/deno";
 
@@ -18,16 +18,16 @@ public sealed partial class ToolManager
 
     public static bool IsDenoInstalledByApp => File.Exists(ManagedDenoPath);
 
-    public static string? ResolveDeno() => FindOnPath("deno") ?? (IsDenoInstalledByApp ? ManagedDenoPath : null);
+    public static string? ResolveDeno() => ProcessHelper.FindOnPath("deno") ?? (IsDenoInstalledByApp ? ManagedDenoPath : null);
 
-    public static bool HasOtherJsRuntime => FindOnPath("node") is not null || FindOnPath("bun") is not null;
+    public static bool HasOtherJsRuntime => ProcessHelper.FindOnPath("node") is not null || ProcessHelper.FindOnPath("bun") is not null;
 
     /// <summary>
     /// yt-dlp finds deno on PATH by itself. Only the app-installed copy (used when deno isn't on PATH) needs pointing
     /// out; doing it only then keeps older forks without --js-runtimes working.
     /// </summary>
     private static IReadOnlyList<string> JsRuntimeArgs(EngineFlavor flavor) =>
-        flavor == EngineFlavor.YtDlp && FindOnPath("deno") is null && IsDenoInstalledByApp
+        flavor == EngineFlavor.YtDlp && ProcessHelper.FindOnPath("deno") is null && IsDenoInstalledByApp
             ? ["--js-runtimes", "deno:" + ManagedDenoPath]
             : [];
 

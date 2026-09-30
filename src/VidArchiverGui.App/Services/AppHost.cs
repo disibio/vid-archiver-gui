@@ -3,7 +3,7 @@ using VidArchiverGui.Core.Services;
 
 namespace VidArchiverGui.App.Services;
 
-/// <summary>Shared services and settings handed to every view model.</summary>
+/// <summary>The settings, dialogs and status bar, handed to every view model.</summary>
 public sealed class AppHost
 {
     private readonly SettingsStore _store;
@@ -16,16 +16,10 @@ public sealed class AppHost
         Settings = settings;
         _store = store;
         Dialogs = dialogs;
-        Tools = new ToolManager(settings);
-        Metadata = new MetadataService();
-        Runner = new DownloadRunner(Tools);
     }
 
     public AppSettings Settings { get; }
     public IDialogs Dialogs { get; }
-    public ToolManager Tools { get; }
-    public MetadataService Metadata { get; }
-    public DownloadRunner Runner { get; }
 
     public event Action<string>? StatusChanged;
 
