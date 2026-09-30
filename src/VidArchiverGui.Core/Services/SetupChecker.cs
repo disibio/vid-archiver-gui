@@ -11,6 +11,16 @@ public enum SetupStatus
     Checking,
 }
 
+/// <summary>The checklist's groups of rows, in display order.</summary>
+public enum SetupSection
+{
+    Downloader,
+    Ffmpeg,
+    Deno,
+    Drives,
+    Archive,
+}
+
 public enum SetupFix
 {
     None,
@@ -81,20 +91,19 @@ public sealed class SetupChecker(AppSettings settings, ToolManager tools)
     private const string DenoWhy = "yt-dlp uses it to solve some sites' JavaScript challenges: without it formats can be missing and some downloads fail.";
 
     /// <summary>The checklist's sections in display order, with the row name shown while each is still being checked.</summary>
-    public IReadOnlyList<(string Section, string Name)> Plan()
+    public IReadOnlyList<(SetupSection Section, string Name)> Plan()
     {
-        List<(string, string)> plan = [(DownloaderSection, settings.DefaultEngine.Name), (FfmpegSection, "ffmpeg")];
+        List<(SetupSection, string)> plan = [(SetupSection.Downloader, settings.DefaultEngine.Name), (SetupSection.Ffmpeg, "ffmpeg")];
         if (settings.DefaultEngine.Flavor == EngineFlavor.YtDlp)
         {
-            plan.Add((DenoSection, DenoName));
+            plan.Add((SetupSection.Deno, DenoName));
         }
 
-        plan.Add((DrivesSection, DrivesName));
-        plan.Add((ArchiveSection, "Archive folders"));
+        plan.Add((SetupSection.Drives, DrivesName));
+        plan.Add((SetupSection.Archive, "Archive folders"));
         return plan;
     }
 
-    public const string DownloaderSection = "downloader", FfmpegSection = "ffmpeg", DenoSection = "deno", DrivesSection = "drives", ArchiveSection = "archive";
     private const string DenoName = "deno (JavaScript runtime)", DrivesName = "Destination drives";
 
     /// <summary>
@@ -102,10 +111,10 @@ public sealed class SetupChecker(AppSettings settings, ToolManager tools)
     /// waiting on); <paramref name="done"/> delivers each section's rows as soon as they're known.
     /// </summary>
     public async Task<IReadOnlyList<SetupItem>> CheckAsync(
-        Action<string, string>? activity = null, Action<string, IReadOnlyList<SetupItem>>? done = null, CancellationToken ct = default)
+        Action<SetupSection, string>? activity = null, Action<SetupSection, IReadOnlyList<SetupItem>>? done = null, CancellationToken ct = default)
     {
         var items = new List<SetupItem>();
-        void Done(string section, params SetupItem[] rows)
+        void Done(SetupSection section, params SetupItem[] rows)
         {
             items.AddRange(rows);
             done?.Invoke(section, rows);
@@ -118,15 +127,15 @@ public sealed class SetupChecker(AppSettings settings, ToolManager tools)
         // 1. The downloader itself.
         if (path is null)
         {
-            Done(DownloaderSection, new SetupItem(engine.Name, SetupStatus.Missing,
+            Done(SetupSection.Downloader, new SetupItem(engine.Name, SetupStatus.Missing,
                 engine.IsManaged ? "Not installed yet." : $"Executable not found: {engine.ExecutablePath}. Fix it under Downloaders below.",
                 DownloaderWhy) { Fix = engine.IsManaged ? SetupFix.InstallDownloader : SetupFix.None });
         }
         else
         {
-            activity?.Invoke(DownloaderSection, $"Running \"{exeName} --version\"…");
+            activity?.Invoke(SetupSection.Downloader, $"Running \"{exeName} --version\"…");
             var version = await ToolManager.GetVersionAsync(path, ct);
-            Done(DownloaderSection, version is not null
+            Done(SetupSection.Downloader, version is not null
                 ? new SetupItem(engine.Name, SetupStatus.Ok, $"{version}  —  {path}", DownloaderWhy)
                 : new SetupItem(engine.Name, SetupStatus.Warning,
                     $"Found at {path}, but \"{exeName} --version\" failed or didn't answer within {ToolManager.QueryTimeout.TotalSeconds:0} s.", DownloaderWhy));
@@ -137,14 +146,14 @@ public sealed class SetupChecker(AppSettings settings, ToolManager tools)
         if (path is not null && engine.Flavor == EngineFlavor.YtDlp)
         {
             var asking = $"Asking yt-dlp which helper tools it can find (\"{exeName} -v\")…";
-            activity?.Invoke(FfmpegSection, asking);
-            activity?.Invoke(DenoSection, asking);
+            activity?.Invoke(SetupSection.Ffmpeg, asking);
+            activity?.Invoke(SetupSection.Deno, asking);
             probe = await ProbeAsync(ToolManager.Resolve(engine), ct);
         }
 
         // 2. ffmpeg.
         var ffmpeg = tools.ResolveFfmpeg();
-        Done(FfmpegSection, probe?.HasFfmpeg ?? ffmpeg is not null
+        Done(SetupSection.Ffmpeg, probe?.HasFfmpeg ?? ffmpeg is not null
             ? new SetupItem("ffmpeg", SetupStatus.Ok, ffmpeg ?? "found by the downloader", FfmpegWhy)
             : FfmpegMissing());
 
@@ -172,16 +181,16 @@ public sealed class SetupChecker(AppSettings settings, ToolManager tools)
                     DenoWhy) { Fix = SetupFix.CopyCommand, Command = "pip install -U \"yt-dlp[default]\"" });
             }
 
-            Done(DenoSection, [.. rows]);
+            Done(SetupSection.Deno, [.. rows]);
         }
 
         // 4. Destination drives (e.g. an external E: drive that isn't plugged in).
-        activity?.Invoke(DrivesSection, "Looking for the destination drives…");
-        Done(DrivesSection, CheckDestinationDrives());
+        activity?.Invoke(SetupSection.Drives, "Looking for the destination drives…");
+        Done(SetupSection.Drives, CheckDestinationDrives());
 
         // 5. Folders for --download-archive files.
-        activity?.Invoke(ArchiveSection, "Looking for the archive folders…");
-        Done(ArchiveSection, [.. CheckArchiveFolders()]);
+        activity?.Invoke(SetupSection.Archive, "Looking for the archive folders…");
+        Done(SetupSection.Archive, [.. CheckArchiveFolders()]);
 
         return items;
     }
@@ -261,7 +270,7 @@ public sealed class SetupChecker(AppSettings settings, ToolManager tools)
         var missing = new List<SetupItem>();
         foreach (var preset in settings.Presets)
         {
-            if (ArchiveFolderOf(preset) is not { } folder)
+            if (DownloadArchive.FolderOf(preset) is not { } folder)
             {
                 continue;
             }
@@ -274,7 +283,7 @@ public sealed class SetupChecker(AppSettings settings, ToolManager tools)
                 missing.Add(new SetupItem($"Archive folder ({preset.Name})", SetupStatus.Warning,
                     canCreate ? $"{folder} doesn't exist." : $"{folder} is on {root}, which isn't available. Plug the drive in, or choose another folder.",
                     why)
-                    { Fix = SetupFix.MissingFolder, Folder = folder, CanCreateFolder = canCreate, IsAppFolder = IsUnder(folder, SettingsStore.AppVideosFolder) });
+                    { Fix = SetupFix.MissingFolder, Folder = folder, CanCreateFolder = canCreate, IsAppFolder = AppPaths.IsUnder(folder, SettingsStore.AppVideosFolder) });
             }
         }
 
@@ -284,57 +293,5 @@ public sealed class SetupChecker(AppSettings settings, ToolManager tools)
         }
 
         return any ? [new SetupItem("Archive folders", SetupStatus.Ok, "Every preset's archive folder exists.", why)] : [];
-    }
-
-    private const string ArchiveOption = "--download-archive";
-
-    public static bool IsUnder(string path, string folder)
-    {
-        path = Path.TrimEndingDirectorySeparator(Path.GetFullPath(path));
-        folder = Path.TrimEndingDirectorySeparator(Path.GetFullPath(folder));
-        return path.Equals(folder, StringComparison.OrdinalIgnoreCase)
-            || path.StartsWith(folder + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
-    }
-
-    /// <summary>The folder a preset's --download-archive file goes in, or null if it doesn't use one.</summary>
-    public static string? ArchiveFolderOf(Preset preset) =>
-        ArgumentParser.GetOptionValue(ArgumentParser.Split(preset.Arguments), ArchiveOption) is { Length: > 0 } file
-            ? Path.GetDirectoryName(Path.GetFullPath(PathTemplate.ExpandHome(file)))
-            : null;
-
-    /// <summary>
-    /// Points every preset whose archive file is in <paramref name="oldFolder"/> at the same file name in
-    /// <paramref name="newFolder"/>. Returns the presets that changed.
-    /// </summary>
-    public static IReadOnlyList<Preset> MoveArchiveFolder(IEnumerable<Preset> presets, string oldFolder, string newFolder)
-    {
-        var changed = new List<Preset>();
-        foreach (var preset in presets)
-        {
-            if (!string.Equals(ArchiveFolderOf(preset), oldFolder, StringComparison.OrdinalIgnoreCase)
-                || ArgumentParser.GetOptionValue(ArgumentParser.Split(preset.Arguments), ArchiveOption) is not { } file)
-            {
-                continue;
-            }
-
-            var text = preset.Arguments;
-            var at = text.IndexOf(file, Math.Max(0, text.LastIndexOf(ArchiveOption, StringComparison.Ordinal)), StringComparison.Ordinal);
-            if (at < 0)
-            {
-                continue;
-            }
-
-            var replacement = Path.Combine(newFolder, Path.GetFileName(file));
-            var quoted = at > 0 && text[at - 1] is '"' or '\'';
-            if (!quoted && replacement.Any(char.IsWhiteSpace))
-            {
-                replacement = $"\"{replacement}\"";
-            }
-
-            preset.Arguments = text[..at] + replacement + text[(at + file.Length)..];
-            changed.Add(preset);
-        }
-
-        return changed;
     }
 }

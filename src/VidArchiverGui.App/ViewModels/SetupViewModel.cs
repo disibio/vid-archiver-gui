@@ -7,10 +7,10 @@ using VidArchiverGui.Core.Services;
 
 namespace VidArchiverGui.App.ViewModels;
 
-public partial class SetupItemViewModel(SetupItem item, SetupViewModel owner, string section) : ObservableObject
+public partial class SetupItemViewModel(SetupItem item, SetupViewModel owner, SetupSection section) : ObservableObject
 {
     public SetupItem Item => item;
-    public string Section => section;
+    public SetupSection Section => section;
     public string Name => item.Name;
     public string Why => item.Why;
     public string? Command => item.Command;
@@ -283,7 +283,7 @@ public partial class SetupViewModel(AppHost host) : ObservableObject
             return;
         }
 
-        var changed = SetupChecker.MoveArchiveFolder(host.Settings.Presets, oldFolder, newFolder);
+        var changed = DownloadArchive.MoveFolder(host.Settings.Presets, oldFolder, newFolder);
         if (changed.Count == 0)
         {
             Message = $"{item.Name}: couldn't update the preset's --download-archive path. Edit it on the Presets tab.";

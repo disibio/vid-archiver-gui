@@ -69,9 +69,9 @@ public class SetupTests
 
         var preset = new Preset { Arguments = arguments };
         var other = new Preset { Arguments = "--download-archive \"E:\\Elsewhere\\archive.txt\"" };
-        var oldFolder = SetupChecker.ArchiveFolderOf(preset)!;
+        var oldFolder = DownloadArchive.FolderOf(preset)!;
 
-        var changed = SetupChecker.MoveArchiveFolder([preset, other], oldFolder, newFolder);
+        var changed = DownloadArchive.MoveFolder([preset, other], oldFolder, newFolder);
 
         Assert.Equal([preset], changed);
         Assert.Equal(expected, preset.Arguments);
@@ -82,10 +82,10 @@ public class SetupTests
     public void Only_the_apps_own_archive_folder_is_created_automatically()
     {
         var app = SettingsStore.AppVideosFolder;
-        Assert.True(SetupChecker.IsUnder(app, app));
-        Assert.True(SetupChecker.IsUnder(Path.Combine(app, "sub"), app + Path.DirectorySeparatorChar));
-        Assert.False(SetupChecker.IsUnder(app + " (old)", app));
-        Assert.False(SetupChecker.IsUnder(Path.GetTempPath(), app));
+        Assert.True(AppPaths.IsUnder(app, app));
+        Assert.True(AppPaths.IsUnder(Path.Combine(app, "sub"), app + Path.DirectorySeparatorChar));
+        Assert.False(AppPaths.IsUnder(app + " (old)", app));
+        Assert.False(AppPaths.IsUnder(Path.GetTempPath(), app));
 
         var item = new SetupItem("Archive folder", SetupStatus.Warning, "", "") { Fix = SetupFix.MissingFolder, CanCreateFolder = true };
         Assert.False(item.CanAutoFix);

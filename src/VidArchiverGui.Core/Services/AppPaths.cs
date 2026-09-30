@@ -44,6 +44,15 @@ public static class AppPaths
         }
     }
 
+    /// <summary>Whether <paramref name="path"/> is <paramref name="folder"/> or inside it.</summary>
+    public static bool IsUnder(string path, string folder)
+    {
+        path = Path.TrimEndingDirectorySeparator(Path.GetFullPath(path));
+        folder = Path.TrimEndingDirectorySeparator(Path.GetFullPath(folder));
+        return path.Equals(folder, StringComparison.OrdinalIgnoreCase)
+            || path.StartsWith(folder + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
+    }
+
     public static string ExeName(string name) => OperatingSystem.IsWindows() ? name + ".exe" : name;
 
     private static string ResolveDataDir()
