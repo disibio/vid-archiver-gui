@@ -15,9 +15,16 @@ public static class Cookies
     /// <summary>Browsers yt-dlp can read cookies from, in the order they are offered.</summary>
     private static readonly (string Key, string Name)[] Browsers =
     [
-        ("firefox", "Firefox"), ("chrome", "Chrome"), ("edge", "Edge"), ("brave", "Brave"), ("chromium", "Chromium"),
+        ("firefox", "Firefox"), ("waterfox", "Waterfox"), ("librewolf", "LibreWolf"), ("floorp", "Floorp"), ("zen", "Zen"),
+        ("chrome", "Chrome"), ("edge", "Edge"), ("brave", "Brave"), ("chromium", "Chromium"),
         ("vivaldi", "Vivaldi"), ("opera", "Opera"), ("whale", "Whale"), ("safari", "Safari"),
     ];
+
+    /// <summary>
+    /// Firefox-based browsers yt-dlp doesn't know by name. It reads them as Firefox when given their profile folder,
+    /// picking the most recently used profile in it.
+    /// </summary>
+    private static readonly HashSet<string> FirefoxBased = ["waterfox", "librewolf", "floorp", "zen"];
 
     public static string BrowserId(string key) => BrowserPrefix + key;
 
@@ -39,6 +46,10 @@ public static class Cookies
             return browser switch
             {
                 "firefox" => [Path.Combine(roaming, "Mozilla", "Firefox", "Profiles")],
+                "waterfox" => [Path.Combine(roaming, "Waterfox", "Profiles")],
+                "librewolf" => [Path.Combine(roaming, "librewolf", "Profiles")],
+                "floorp" => [Path.Combine(roaming, "Floorp", "Profiles")],
+                "zen" => [Path.Combine(roaming, "zen", "Profiles")],
                 "chrome" => [Path.Combine(local, "Google", "Chrome", "User Data")],
                 "edge" => [Path.Combine(local, "Microsoft", "Edge", "User Data")],
                 "brave" => [Path.Combine(local, "BraveSoftware", "Brave-Browser", "User Data")],
@@ -55,6 +66,10 @@ public static class Cookies
             return browser switch
             {
                 "firefox" => [Path.Combine(support, "Firefox", "Profiles")],
+                "waterfox" => [Path.Combine(support, "Waterfox", "Profiles")],
+                "librewolf" => [Path.Combine(support, "librewolf", "Profiles")],
+                "floorp" => [Path.Combine(support, "Floorp", "Profiles")],
+                "zen" => [Path.Combine(support, "zen", "Profiles")],
                 "chrome" => [Path.Combine(support, "Google", "Chrome")],
                 "edge" => [Path.Combine(support, "Microsoft Edge")],
                 "brave" => [Path.Combine(support, "BraveSoftware", "Brave-Browser")],
@@ -71,6 +86,11 @@ public static class Cookies
         {
             "firefox" => [Path.Combine(home, ".mozilla", "firefox"), Path.Combine(home, "snap", "firefox", "common", ".mozilla", "firefox"),
                           Path.Combine(home, ".var", "app", "org.mozilla.firefox", ".mozilla", "firefox")],
+            // Their own installs, then their Flathub builds.
+            "waterfox" => [Path.Combine(home, ".waterfox"), Path.Combine(home, ".var", "app", "net.waterfox.waterfox", ".waterfox")],
+            "librewolf" => [Path.Combine(home, ".librewolf"), Path.Combine(home, ".var", "app", "io.gitlab.librewolf-community", ".librewolf")],
+            "floorp" => [Path.Combine(home, ".floorp"), Path.Combine(home, ".var", "app", "one.ablaze.floorp", ".floorp")],
+            "zen" => [Path.Combine(home, ".zen"), Path.Combine(home, ".var", "app", "app.zen_browser.zen", ".zen")],
             "chrome" => [Path.Combine(config, "google-chrome")],
             "edge" => [Path.Combine(config, "microsoft-edge")],
             "brave" => [Path.Combine(config, "BraveSoftware", "Brave-Browser")],
@@ -82,11 +102,17 @@ public static class Cookies
         };
     }
 
-    /// <summary>"No cookies", then detected browsers, then the user's own sources.</summary>
-    public static List<Choice> Choices(AppSettings settings, IReadOnlyList<Choice> browsers)
+    /// <summary>
+    /// "No cookies", then detected browsers, then the user's own sources. Browsers in <paramref name="inUse"/> that
+    /// weren't found (e.g. picked by rules imported from another computer) come last, so a drop-down can still show
+    /// them rather than replacing them with another choice.
+    /// </summary>
+    public static List<Choice> Choices(AppSettings settings, IReadOnlyList<Choice> browsers, IEnumerable<string?>? inUse = null)
     {
         List<Choice> choices = [new(NoneId, "No cookies"), .. browsers];
         choices.AddRange(settings.CookieSources.Select(c => new Choice(c.Id, c.Name)));
+        choices.AddRange((inUse ?? []).Where(IsBrowser).Distinct().Where(id => browsers.All(b => b.Id != id))
+            .Select(id => new Choice(id, DisplayName(settings, id) + " (not found on this computer)")));
         return choices;
     }
 
@@ -99,11 +125,12 @@ public static class Cookies
 
         if (IsBrowser(id))
         {
-            var key = id[BrowserPrefix.Length..];
-            return Browsers.FirstOrDefault(b => b.Key == key).Name ?? key;
+            return BrowserName(id[BrowserPrefix.Length..]);
         }
         return settings.CookieSources.FirstOrDefault(c => c.Id == id)?.Name ?? "Missing cookie source";
     }
+
+    private static string BrowserName(string key) => Browsers.FirstOrDefault(b => b.Key == key).Name ?? key;
 
     public static bool IsNone(string? id) => id is null or NoneId;
 
@@ -122,7 +149,7 @@ public static class Cookies
         string spec;
         if (IsBrowser(id))
         {
-            spec = id[BrowserPrefix.Length..];
+            spec = BrowserSpec(id[BrowserPrefix.Length..], Directory.Exists);
         }
         else
         {
@@ -152,5 +179,21 @@ public static class Cookies
         }
 
         return ["--cookies-from-browser", spec];
+    }
+
+    /// <summary>
+    /// What --cookies-from-browser gets for a detected browser: its name, or for a <see cref="FirefoxBased"/> one
+    /// "firefox:" and the profile folder that <paramref name="dirExists"/> finds.
+    /// </summary>
+    internal static string BrowserSpec(string key, Func<string, bool> dirExists)
+    {
+        if (!FirefoxBased.Contains(key))
+        {
+            return key;
+        }
+
+        return ProfileDirs(key).FirstOrDefault(dirExists) is { } dir
+            ? "firefox:" + dir
+            : throw new DownloaderException($"{BrowserName(key)} wasn't found on this computer. Pick other cookies in the Cookies list.");
     }
 }

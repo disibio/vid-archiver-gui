@@ -78,14 +78,31 @@ public partial class RulesViewModel : ObservableObject
     /// </summary>
     public void RefreshChoices()
     {
-        PresetChoices = [new Choice(null, "(keep the preset chosen when adding)"), .. _host.Settings.Presets.Select(p => new Choice(p.Id, p.Name))];
-        CookieChoices = [new Choice(null, "(keep the cookies chosen when adding)"), .. Cookies.Choices(_host.Settings, Cookies.DetectBrowsers())];
+        BuildChoices();
         SelectRuleChoices();
+    }
+
+    private void BuildChoices()
+    {
+        PresetChoices = [new Choice(null, "(keep the preset chosen when adding)"), .. _host.Settings.Presets.Select(p => new Choice(p.Id, p.Name))];
+        CookieChoices =
+        [
+            new Choice(null, "(keep the cookies chosen when adding)"),
+            .. Cookies.Choices(_host.Settings, Cookies.DetectBrowsers(), Rules.Select(r => r.CookieId)),
+        ];
     }
 
     /// <summary>Shows the selected rule's preset and cookies in the drop-downs.</summary>
     private void SelectRuleChoices()
     {
+        // Picking an entry writes it to the rule, so a choice the lists don't have (e.g. from rules imported since
+        // they were built) would be replaced by the first entry. Rebuild them to include it.
+        if (SelectedRule is { } rule
+            && (PresetChoices.All(c => c.Id != rule.PresetId) || CookieChoices.All(c => c.Id != rule.CookieId)))
+        {
+            BuildChoices();
+        }
+
         SelectedPresetChoice = PresetChoices.FirstOrDefault(c => c.Id == SelectedRule?.PresetId) ?? PresetChoices[0];
         SelectedCookieChoice = CookieChoices.FirstOrDefault(c => c.Id == SelectedRule?.CookieId) ?? CookieChoices[0];
     }

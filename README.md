@@ -134,9 +134,12 @@ Some videos need you to be logged in: members-only videos, age-restricted ones, 
 you're not a bot. Pick cookies from the **Cookies** list on the Downloads tab (for new links) or on a single video,
 then start it again.
 
-- The list has **No cookies** (the default), every browser found on your computer (Firefox, Chrome, Edge, Brave,
-  Chromium, Vivaldi, Opera, Whale, Safari), and any cookies.txt files or browser profiles you add in
-  **Settings > Cookies**.
+- The list has **No cookies** (the default), every browser found on your computer (Firefox, Waterfox, LibreWolf,
+  Floorp, Zen, Chrome, Edge, Brave, Chromium, Vivaldi, Opera, Whale, Safari), and any cookies.txt files or browser
+  profiles you add in **Settings > Cookies**. For another Firefox-based browser, add a browser profile with the value
+  `firefox:` followed by the path of its profiles folder.
+- If a folder rule uses a browser that isn't on this computer (for example, rules imported from another one), the
+  list shows it as "not found on this computer" until you pick something else.
 - A folder rule can pick cookies too, so a members-only channel can always use Firefox, for example.
 - Whatever you pick replaces any cookie options in the preset. If you pick **No cookies**, the preset's own options
   still apply.

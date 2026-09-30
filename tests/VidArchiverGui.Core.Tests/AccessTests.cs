@@ -55,6 +55,38 @@ public class AccessTests
         Assert.Contains("youtube-dl", Assert.Throws<DownloaderException>(() => Cookies.Args(s, Cookies.BrowserId("chrome"), DownloaderFlavor.YoutubeDl)).Message);
     }
 
+    [Theory]
+    [InlineData("waterfox", "Waterfox")]
+    [InlineData("librewolf", "LibreWolf")]
+    [InlineData("floorp", "Floorp")]
+    [InlineData("zen", "Zen")]
+    public void Firefox_based_browsers_are_read_as_firefox_from_their_profile_folder(string key, string name)
+    {
+        var folders = Cookies.ProfileDirs(key).ToList();
+        Assert.NotEmpty(folders); // known on every OS the tests run on
+
+        var last = folders[^1];
+        Assert.Equal("firefox:" + last, Cookies.BrowserSpec(key, dir => dir == last));
+        Assert.StartsWith(name + " wasn't found", Assert.Throws<DownloaderException>(() => Cookies.BrowserSpec(key, _ => false)).Message);
+        Assert.Equal("chrome", Cookies.BrowserSpec("chrome", _ => false)); // yt-dlp finds these itself
+    }
+
+    [Fact]
+    public void Browsers_in_use_but_not_found_stay_in_the_choices()
+    {
+        var s = new AppSettings();
+        var source = new CookieSource { Name = "work" };
+        s.CookieSources.Add(source);
+        Choice firefox = new(Cookies.BrowserId("firefox"), "Firefox");
+
+        var choices = Cookies.Choices(s, [firefox],
+            [Cookies.BrowserId("waterfox"), Cookies.BrowserId("waterfox"), firefox.Id, source.Id, Cookies.NoneId, null]);
+
+        Assert.Equal(
+            ["No cookies", "Firefox", "work", "Waterfox (not found on this computer)"],
+            choices.Select(c => c.Name));
+    }
+
     [Fact]
     public void App_cookie_choice_replaces_preset_cookie_options()
     {

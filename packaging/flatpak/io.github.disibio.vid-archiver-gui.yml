@@ -35,6 +35,11 @@ finish-args:
   - --filesystem=~/.mozilla/firefox:ro
   - --filesystem=~/.config/mozilla/firefox:ro
   - --filesystem=~/snap/firefox/common/.mozilla/firefox:ro
+  # Firefox-based browsers, read as Firefox from their profile folder.
+  - --filesystem=~/.waterfox:ro
+  - --filesystem=~/.librewolf:ro
+  - --filesystem=~/.floorp:ro
+  - --filesystem=~/.zen:ro
   - --filesystem=~/.config/google-chrome:ro
   - --filesystem=~/.config/chromium:ro
   - --filesystem=~/snap/chromium/common/chromium:ro

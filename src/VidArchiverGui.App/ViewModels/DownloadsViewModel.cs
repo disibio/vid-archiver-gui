@@ -64,9 +64,24 @@ public partial class DownloadsViewModel : ObservableObject
         CookieChoices.FirstOrDefault(c => c.Id == (id ?? Cookies.NoneId)) ?? CookieChoices.FirstOrDefault();
 
     /// <summary>Called when the tab is shown, since browsers may have been installed or cookie sources edited.</summary>
-    public void RefreshCookieChoices()
+    public void RefreshCookieChoices() => UpdateCookieChoices(null);
+
+    /// <summary>
+    /// Adds <paramref name="id"/> to <see cref="CookieChoices"/> if it's missing: a browser that isn't installed here,
+    /// picked by a rule or a download from the last session, is shown as such rather than as "No cookies".
+    /// </summary>
+    internal void KeepCookieChoice(string? id)
     {
-        var choices = Cookies.Choices(_host.Settings, Cookies.DetectBrowsers());
+        if (id is not null && CookieChoices.All(c => c.Id != id))
+        {
+            UpdateCookieChoices(id);
+        }
+    }
+
+    private void UpdateCookieChoices(string? alsoKeep)
+    {
+        var inUse = Items.Select(i => i.CookieId).Append(_host.Settings.LastCookieId).Append(alsoKeep);
+        var choices = Cookies.Choices(_host.Settings, Cookies.DetectBrowsers(), inUse);
         if (choices.SequenceEqual(CookieChoices))
         {
             return;
