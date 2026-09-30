@@ -61,16 +61,17 @@ public partial class SetupItemViewModel(SetupItem item, SetupViewModel owner, Se
 }
 
 /// <summary>The setup checklist: what downloads need on this machine, with one-click fixes where possible.</summary>
+/// <param name="busy">The Settings tab's installs and updates share it, so only one tool job runs at a time.</param>
 /// <param name="refresh">Refreshes the tool status and re-runs this check; called after a fix installed something.</param>
-public partial class SetupViewModel(AppHost host, Func<Task> refresh) : ObservableObject
+public partial class SetupViewModel(AppHost host, BusyStatusViewModel busy, Func<Task> refresh) : ObservableObject
 {
     private readonly SetupChecker _checker = new(host.Settings);
     private readonly SemaphoreSlim _gate = new(1);
 
     public ObservableCollection<SetupItemViewModel> Items { get; } = [];
 
-    /// <summary>What the current fix is doing (e.g. download progress), with a Cancel button.</summary>
-    public BusyStatusViewModel Busy { get; } = new();
+    /// <summary>What the current fix, install or update is doing (e.g. download progress), with a Cancel button.</summary>
+    public BusyStatusViewModel Busy => busy;
     [ObservableProperty] private string _message = "";
 
     [ObservableProperty]

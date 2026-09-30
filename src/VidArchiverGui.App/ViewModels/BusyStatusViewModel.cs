@@ -44,11 +44,16 @@ public partial class BusyStatusViewModel : ObservableObject
     /// <summary>
     /// Runs <paramref name="job"/> while showing <paramref name="what"/> and its progress, with the Cancel button
     /// cancelling the token it's given. <paramref name="onText"/> also gets every change of the status text.
-    /// Callers check <see cref="IsActive"/> first: one job runs at a time.
+    /// One job runs at a time: callers check <see cref="IsActive"/> first, and starting a second one throws.
     /// </summary>
     public async Task<JobResult> RunAsync(string what, Func<IProgress<TransferProgress>, CancellationToken, Task<string>> job,
         Action<string>? onText = null)
     {
+        if (IsActive)
+        {
+            throw new InvalidOperationException($"Can't start \"{what}\" while \"{_what}\" is running.");
+        }
+
         var ct = Start(what, onText);
         try
         {

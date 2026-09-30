@@ -36,7 +36,7 @@ public partial class SettingsViewModel : ObservableObject
     public SettingsViewModel(AppHost host)
     {
         _host = host;
-        Setup = new SetupViewModel(host, RefreshAsync);
+        Setup = new SetupViewModel(host, Busy, RefreshAsync);
     }
 
     public SetupViewModel Setup { get; }
@@ -71,7 +71,7 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private string _ffmpegStatus = "Checking…";
     [ObservableProperty] private string _toolOutput = "";
 
-    /// <summary>What the current install/update is doing, with a Cancel button.</summary>
+    /// <summary>What the current install, update or checklist fix is doing, with a Cancel button (shared with <see cref="Setup"/>).</summary>
     public BusyStatusViewModel Busy { get; } = new();
 
     public bool HasSelection => SelectedDownloader is not null;

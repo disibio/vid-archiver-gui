@@ -8,7 +8,7 @@
     <StackPanel Spacing="6" MaxWidth="1000" HorizontalAlignment="Left" Margin="0,0,16,16">
 
       <DockPanel Margin="0,12,0,2">
-        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6" IsEnabled="{Binding Setup.Busy.IsIdle}">
+        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6" IsEnabled="{Binding Busy.IsIdle}">
           <Button Content="Install everything missing" Command="{Binding Setup.FixAllCommand}" Classes="accent"
                   IsVisible="{Binding Setup.CanAutoFix}" />
           <Button Content="Re-check" Command="{Binding RefreshCommand}" />
@@ -17,13 +17,6 @@
       </DockPanel>
       <TextBlock Classes="hint" Text="What downloads need on this computer. Anything missing can usually be installed with one click." />
       <!-- Installs, updates and checklist fixes: shown at the top so Cancel is easy to find. -->
-      <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding Setup.Busy.IsActive}">
-        <StackPanel VerticalAlignment="Center" Spacing="2">
-          <TextBlock Text="{Binding Setup.Busy.Text}" FontSize="12" TextWrapping="Wrap" />
-          <ProgressBar Value="{Binding Setup.Busy.Percent}" IsIndeterminate="{Binding Setup.Busy.IsIndeterminate}" />
-        </StackPanel>
-        <Button Grid.Column="1" Content="Cancel" Command="{Binding Setup.Busy.CancelCommand}" VerticalAlignment="Center" Margin="8,0,0,0" />
-      </Grid>
       <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding Busy.IsActive}">
         <StackPanel VerticalAlignment="Center" Spacing="2">
           <TextBlock Text="{Binding Busy.Text}" FontSize="12" TextWrapping="Wrap" />
@@ -51,7 +44,7 @@
                                        FontFamily="Cascadia Mono, Consolas, Menlo, DejaVu Sans Mono, monospace" />
                 </StackPanel>
                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Top" Margin="8,0,0,0"
-                            IsEnabled="{Binding $parent[ItemsControl].((vm:SettingsViewModel)DataContext).Setup.Busy.IsIdle}">
+                            IsEnabled="{Binding $parent[ItemsControl].((vm:SettingsViewModel)DataContext).Busy.IsIdle}">
                   <Button Content="{Binding ActionText}" Command="{Binding FixCommand}" IsVisible="{Binding HasAction}" />
                   <Button Content="Choose folder…" Command="{Binding ChooseFolderCommand}" IsVisible="{Binding CanChooseFolder}" />
                 </StackPanel>
