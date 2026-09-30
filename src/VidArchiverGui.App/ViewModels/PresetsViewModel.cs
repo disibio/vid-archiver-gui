@@ -139,7 +139,8 @@ public partial class PresetsViewModel : ObservableObject
         SelectedPreset = Presets[Math.Min(index, Presets.Count - 1)];
         OnPropertyChanged(nameof(DefaultPresetText));
 
-        // Put it back where it was, as the default and on its rules if it was before.
+        // Put it back where it was, as the default and on its rules if it was before (unless a rule has been given
+        // another preset since).
         LastChange.Offer($"Deleted \"{deleted.Name}\"" + (rules.Count > 0 ? $" (used by {rules.Count} folder rule{(rules.Count == 1 ? "" : "s")})." : "."), () =>
         {
             Presets.Insert(Math.Min(index, Presets.Count), deleted);
@@ -148,7 +149,7 @@ public partial class PresetsViewModel : ObservableObject
                 _host.Settings.DefaultPresetId = deleted.Id;
             }
 
-            foreach (var rule in rules.Where(_host.Settings.Rules.Contains))
+            foreach (var rule in rules.Where(r => r.PresetId is null && _host.Settings.Rules.Contains(r)))
             {
                 rule.PresetId = deleted.Id;
             }
@@ -218,7 +219,9 @@ public partial class PresetsViewModel : ObservableObject
             SelectedPreset = _host.Settings.DefaultPreset;
             OnPropertyChanged(nameof(DefaultPresetText));
             _host.SetStatus("Undid the import.");
-        }, restoresAll: true);
+        }, editsLost: "Undoing puts your presets and the default back as they were before the import, so edits to them " +
+           "since will be lost. Folder rules go back to the presets they had then, and a rule added since that uses an " +
+           "imported preset loses it.");
         _host.SetStatus(imported.Warnings.Count == 0
             ? $"Imported {count} preset(s) from {path}"
             : $"Imported {count} preset(s). " + string.Join(" ", imported.Warnings));

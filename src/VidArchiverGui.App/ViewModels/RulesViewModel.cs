@@ -229,7 +229,8 @@ public partial class RulesViewModel : ObservableObject
             before.Restore();
             SelectedRule = Rules.FirstOrDefault();
             _host.SetStatus("Undid the import.");
-        }, restoresAll: true);
+        }, editsLost: "Undoing puts your list of folder rules and the fallback folder back as they were before the " +
+           "import: rules added since are removed, rules deleted since come back, and a new fallback folder is lost.");
         _host.SetStatus(imported.Warnings.Count == 0
             ? $"Imported {count} rule(s) from {path}"
             : $"Imported {count} rule(s). " + string.Join(" ", imported.Warnings));

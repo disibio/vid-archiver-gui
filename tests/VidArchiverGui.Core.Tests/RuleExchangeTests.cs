@@ -85,6 +85,22 @@ public class RuleExchangeTests
     }
 
     [Fact]
+    public void Snapshot_clears_a_restored_rules_preset_and_cookies_removed_since()
+    {
+        var settings = Settings("Audio", "Work");
+        var music = settings.Rules[0];
+        var before = new RulesSnapshot(settings);
+        RuleExchange.Replace(settings, new ImportedRules([new RoutingRule { Name = "New" }], null, []));
+        settings.Presets.Clear();
+        settings.CookieSources.Clear();
+
+        before.Restore();
+
+        Assert.Same(music, settings.Rules[0]);
+        Assert.Equal((null, null), (music.PresetId, music.CookieId));
+    }
+
+    [Fact]
     public void Append_keeps_the_rules_and_fallback_and_adds_below()
     {
         var settings = Settings("Audio", "Work");

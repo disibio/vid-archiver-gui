@@ -148,5 +148,8 @@ public sealed class RulesSnapshot(AppSettings settings)
         }
 
         settings.FallbackDestination = _fallbackDestination;
+
+        // A preset or cookie source a restored rule used may have been removed since.
+        settings.RemoveDanglingReferences();
     }
 }

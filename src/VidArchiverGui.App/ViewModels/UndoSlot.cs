@@ -12,6 +12,7 @@ public partial class UndoSlot(AppHost host) : ObservableObject
 
     // The presets and rules just after an import, to tell at Undo time whether they've been edited since.
     private string? _stateAfter;
+    private string? _editsLost;
 
     /// <summary>What can be undone; null when there's nothing to undo.</summary>
     [ObservableProperty]
@@ -21,13 +22,14 @@ public partial class UndoSlot(AppHost host) : ObservableObject
     public bool IsAvailable => Text is not null;
 
     /// <summary>
-    /// Offers <paramref name="undo"/>. With <paramref name="restoresAll"/> (it puts back all presets and rules as they
-    /// were), Undo first asks whether to go ahead if they've been edited since, as those edits would be lost.
+    /// Offers <paramref name="undo"/>. With <paramref name="editsLost"/> (for an undo that puts a whole list back as it
+    /// was), Undo first asks whether to go ahead if presets or rules have been edited since, saying what would be lost.
     /// </summary>
-    public void Offer(string text, Action undo, bool restoresAll = false)
+    public void Offer(string text, Action undo, string? editsLost = null)
     {
         _undo = undo;
-        _stateAfter = restoresAll ? State() : null;
+        _editsLost = editsLost;
+        _stateAfter = editsLost is null ? null : State();
         Text = text;
     }
 
@@ -38,8 +40,7 @@ public partial class UndoSlot(AppHost host) : ObservableObject
     {
         if (_stateAfter is not null && State() != _stateAfter
             && !await host.Dialogs.ConfirmAsync("Undo import",
-                "You've changed your presets or folder rules since the import. Undoing puts everything back as it was " +
-                "before the import, so those changes will be lost.", "Undo anyway", "Keep my changes"))
+                $"You've changed your presets or folder rules since the import. {_editsLost}", "Undo anyway", "Keep my changes"))
         {
             return;
         }
@@ -47,6 +48,7 @@ public partial class UndoSlot(AppHost host) : ObservableObject
         var undo = _undo;
         _undo = null;
         _stateAfter = null;
+        _editsLost = null;
         Text = null;
         undo?.Invoke();
     }
