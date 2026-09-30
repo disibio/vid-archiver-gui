@@ -3,9 +3,9 @@ using VidArchiverGui.Core.Models;
 
 namespace VidArchiverGui.Core.Services;
 
-/// <param name="CookieArgs">Cookie options chosen in the app; when present they replace any cookie options in the preset.</param>
 public sealed record DownloadRequest(string Url, IReadOnlyList<string> PresetArgs, string Destination, EngineFlavor Flavor = EngineFlavor.YtDlp)
 {
+    /// <summary>Cookie options chosen in the app; when present they replace any cookie options in the preset.</summary>
     public IReadOnlyList<string> CookieArgs { get; init; } = [];
 
     /// <summary>Adds <see cref="DownloadRunner.GentleArgs"/>.</summary>
