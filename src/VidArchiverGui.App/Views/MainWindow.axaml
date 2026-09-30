@@ -29,7 +29,7 @@
         </StackPanel>
         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" Margin="12,0,0,0" VerticalAlignment="Center">
           <Button Content="Fix now" Classes="accent" Command="{Binding Setup.FixAllCommand}"
-                  IsVisible="{Binding Setup.CanAutoFix}" IsEnabled="{Binding Setup.Busy.IsIdle}" />
+                  IsVisible="{Binding Setup.CanAutoFix}" IsEnabled="{Binding !Setup.Busy.IsActive}" />
           <Button Content="Details" Command="{Binding Setup.ShowDetailsCommand}" />
           <Button Content="✕" Command="{Binding Setup.DismissBannerCommand}" ToolTip.Tip="Hide until next start" />
         </StackPanel>

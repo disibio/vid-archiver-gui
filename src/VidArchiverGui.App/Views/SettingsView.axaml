@@ -8,7 +8,7 @@
     <StackPanel Spacing="6" MaxWidth="1000" HorizontalAlignment="Left" Margin="0,0,16,16">
 
       <DockPanel Margin="0,12,0,2">
-        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6" IsEnabled="{Binding Busy.IsIdle}">
+        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6" IsEnabled="{Binding !Busy.IsActive}">
           <Button Content="Install everything missing" Command="{Binding Setup.FixAllCommand}" Classes="accent"
                   IsVisible="{Binding Setup.CanAutoFix}" />
           <Button Content="Re-check" Command="{Binding RefreshCommand}" />
@@ -44,7 +44,7 @@
                                        FontFamily="Cascadia Mono, Consolas, Menlo, DejaVu Sans Mono, monospace" />
                 </StackPanel>
                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Top" Margin="8,0,0,0"
-                            IsEnabled="{Binding $parent[ItemsControl].((vm:SettingsViewModel)DataContext).Busy.IsIdle}">
+                            IsEnabled="{Binding !$parent[ItemsControl].((vm:SettingsViewModel)DataContext).Busy.IsActive}">
                   <Button Content="{Binding ActionText}" Command="{Binding FixCommand}" IsVisible="{Binding HasAction}" />
                   <Button Content="Choose folder…" Command="{Binding ChooseFolderCommand}" IsVisible="{Binding CanChooseFolder}" />
                 </StackPanel>
@@ -86,7 +86,7 @@
           </DataTemplate>
         </ListBox.ItemTemplate>
       </ListBox>
-      <StackPanel Orientation="Horizontal" Spacing="6" IsEnabled="{Binding Busy.IsIdle}">
+      <StackPanel Orientation="Horizontal" Spacing="6" IsEnabled="{Binding !Busy.IsActive}">
         <Button Content="{Binding InstallButtonText}" Command="{Binding InstallSelectedCommand}" IsEnabled="{Binding HasSelection}" />
         <Button Content="Re-download" Command="{Binding ReinstallSelectedCommand}" IsEnabled="{Binding HasSelection}" />
         <Button Content="{Binding SelectedDownloader.RollbackText, FallbackValue=''}" Command="{Binding RollbackSelectedCommand}"
@@ -104,7 +104,7 @@
       </CheckBox>
 
       <TextBlock Text="Add a custom downloader (fork)" Margin="0,10,0,0" FontWeight="SemiBold" />
-      <Grid ColumnDefinitions="200,*,Auto,190,Auto" IsEnabled="{Binding Busy.IsIdle}">
+      <Grid ColumnDefinitions="200,*,Auto,190,Auto" IsEnabled="{Binding !Busy.IsActive}">
         <TextBox Text="{Binding NewDownloaderName}" PlaceholderText="Name" />
         <TextBox Grid.Column="1" Text="{Binding NewDownloaderPath}" PlaceholderText="Path to executable" Margin="4,0,0,0" />
         <Button Grid.Column="2" Content="Browse…" Command="{Binding BrowseNewDownloaderCommand}" Margin="4,0,0,0" />
@@ -149,7 +149,7 @@
 
       <TextBlock Text="ffmpeg" Classes="h2" />
       <SelectableTextBlock Text="{Binding FfmpegStatus}" TextWrapping="Wrap" />
-      <StackPanel Orientation="Horizontal" Spacing="6" IsEnabled="{Binding Busy.IsIdle}">
+      <StackPanel Orientation="Horizontal" Spacing="6" IsEnabled="{Binding !Busy.IsActive}">
         <Button Content="Download ffmpeg" Command="{Binding DownloadFfmpegCommand}" IsVisible="{Binding CanDownloadFfmpeg}" />
         <TextBlock Text="{Binding FfmpegHint}" Classes="hint" VerticalAlignment="Center" IsVisible="{Binding !CanDownloadFfmpeg}" />
       </StackPanel>

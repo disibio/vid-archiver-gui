@@ -32,10 +32,7 @@ public partial class BusyStatusViewModel : ObservableObject
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(CancelCommand))]
-    [NotifyPropertyChangedFor(nameof(IsIdle))]
     private bool _isActive;
-
-    public bool IsIdle => !IsActive;
 
     [ObservableProperty] private string _text = "";
     [ObservableProperty] private double _percent;
