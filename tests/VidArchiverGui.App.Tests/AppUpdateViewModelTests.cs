@@ -53,14 +53,41 @@ public sealed class AppUpdateViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task Doesnt_ask_again_within_a_day()
+    public async Task Doesnt_ask_again_within_a_day_but_still_shows_what_it_found()
+    {
+        _t.Settings.LastAppUpdateCheck = DateTimeOffset.Now.AddHours(-1);
+        _t.Settings.LatestAppVersion = "v1.2.0";
+        var vm = Create();
+
+        await vm.CheckIfDueAsync();
+
+        Assert.Equal(0, _asked);
+        Assert.True(vm.ShowBanner);
+        Assert.Equal("1.2.0", vm.AvailableVersion);
+    }
+
+    [Fact]
+    public async Task Asks_again_when_the_last_check_found_no_release()
     {
         _t.Settings.LastAppUpdateCheck = DateTimeOffset.Now.AddHours(-1);
         var vm = Create();
 
         await vm.CheckIfDueAsync();
 
-        Assert.Equal(0, _asked);
+        Assert.Equal(1, _asked);
+        Assert.True(vm.ShowBanner);
+    }
+
+    [Fact]
+    public async Task The_banner_goes_once_the_app_is_updated()
+    {
+        _t.Settings.LastAppUpdateCheck = DateTimeOffset.Now.AddHours(-1);
+        _t.Settings.LatestAppVersion = "v1.2.0";
+        var updated = new AppUpdateViewModel(_t.Host, "1.2.0", false, _ => Task.FromResult<string?>("v1.2.0"));
+
+        await updated.CheckIfDueAsync();
+
+        Assert.False(updated.ShowBanner);
     }
 
     [Fact]
@@ -116,5 +143,17 @@ public sealed class AppUpdateViewModelTests : IDisposable
         Assert.False(vm.ShowBanner);
         Assert.Null(_t.Settings.LastAppUpdateCheck);
         Assert.Empty(_t.Statuses);
+    }
+
+    [Fact]
+    public async Task A_failed_check_still_shows_the_release_found_before()
+    {
+        _t.Settings.LastAppUpdateCheck = DateTimeOffset.Now.AddDays(-2);
+        _t.Settings.LatestAppVersion = "v1.2.0";
+        var vm = new AppUpdateViewModel(_t.Host, "1.1.0", false, _ => throw new HttpRequestException("offline"));
+
+        await vm.CheckIfDueAsync();
+
+        Assert.True(vm.ShowBanner);
     }
 }

@@ -43,29 +43,41 @@ public partial class AppUpdateViewModel : ObservableObject
 
     public string ReleaseUrl => AvailableVersion is null ? "" : AppUpdate.ReleasePage(AvailableVersion);
 
-    /// <summary>Asks GitHub for the latest release if the check is on and hasn't run in the last day. Failures are silent.</summary>
+    /// <summary>
+    /// Asks GitHub for the latest release if the check is on and hasn't run in the last day (failures are silent), then
+    /// shows the banner if the latest release known is newer than this build. So the banner comes back on every start
+    /// until it's acted on, and goes once the app has been updated.
+    /// </summary>
     public async Task CheckIfDueAsync(CancellationToken ct = default)
     {
         var settings = _host.Settings;
-        if (!AppUpdate.IsDue(settings.CheckForAppUpdates, _updatedElsewhere, settings.LastAppUpdateCheck, DateTimeOffset.Now))
+        if (_updatedElsewhere || !settings.CheckForAppUpdates)
         {
             return;
         }
 
-        string? tag;
-        try
+        // Without a known release (e.g. the last check found none), ask again rather than wait a day.
+        var lastCheck = settings.LatestAppVersion is null ? null : settings.LastAppUpdateCheck;
+        if (AppUpdate.IsDue(settings.CheckForAppUpdates, _updatedElsewhere, lastCheck, DateTimeOffset.Now))
         {
-            tag = await _latestTag(ct);
-        }
-        catch (Exception e) when (e is not OperationCanceledException || !ct.IsCancellationRequested)
-        {
-            return; // offline or GitHub unavailable: try again next start
+            try
+            {
+                if (await _latestTag(ct) is { Length: > 0 } tag)
+                {
+                    settings.LatestAppVersion = tag;
+                }
+
+                settings.LastAppUpdateCheck = DateTimeOffset.Now;
+            }
+            catch (Exception e) when (e is not OperationCanceledException || !ct.IsCancellationRequested)
+            {
+                // Offline or GitHub unavailable: ask again next start, and meanwhile go by the last answer.
+            }
         }
 
-        settings.LastAppUpdateCheck = DateTimeOffset.Now;
         if (settings.CheckForAppUpdates) // it may have been turned off while waiting
         {
-            AvailableVersion = AppUpdate.NewerVersion(tag, _currentVersion, settings.SkippedAppVersion);
+            AvailableVersion = AppUpdate.NewerVersion(settings.LatestAppVersion, _currentVersion, settings.SkippedAppVersion);
         }
     }
 

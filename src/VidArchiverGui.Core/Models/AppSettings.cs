@@ -58,6 +58,9 @@ public partial class AppSettings : ObservableObject
     [ObservableProperty] private bool _checkForAppUpdates = true;
     [ObservableProperty] private DateTimeOffset? _lastAppUpdateCheck;
 
+    /// <summary>The newest release that check found (its tag), so the notice is shown again on every start until acted on.</summary>
+    [ObservableProperty] private string? _latestAppVersion;
+
     /// <summary>An app version the user chose "Skip this version" for; newer ones are still offered.</summary>
     [ObservableProperty] private string? _skippedAppVersion;
 
