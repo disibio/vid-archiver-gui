@@ -77,6 +77,19 @@
   </requires>
 
   <releases>
+    <release version="1.1.0" date="2026-09-30">
+      <url type="details">https://github.com/disibio/vid-archiver-gui/releases/tag/v1.1.0</url>
+      <description>
+        <ul>
+          <li>Export and import folder rules and presets as a file, to back them up or move them to another computer. An import can be undone.</li>
+          <li>Settings are saved automatically, so the Save buttons are gone. If they can't be saved, the status bar says so until they can.</li>
+          <li>Cookies can now come from Waterfox, LibreWolf, Floorp and Zen.</li>
+          <li>A folder rule that uses a browser this computer doesn't have keeps it, and the Cookies list shows it as not found.</li>
+          <li>Only one install or update runs at a time, whether it's started from Settings or the setup check.</li>
+          <li>The About tab links to the project page and to reporting a problem.</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.0.1" date="2026-09-29">
       <url type="details">https://github.com/disibio/vid-archiver-gui/releases/tag/v1.0.1</url>
       <description>
