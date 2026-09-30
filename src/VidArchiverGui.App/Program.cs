@@ -1,5 +1,5 @@
 using Avalonia;
-using VidArchiverGui.Core.Services;
+using VidArchiverGui.App.Services;
 
 namespace VidArchiverGui.App;
 
@@ -15,12 +15,7 @@ internal static class Program
         catch (Exception e)
         {
             // Startup failures (e.g. an unreadable settings file) happen before any window exists to report them.
-            try
-            {
-                Directory.CreateDirectory(AppPaths.DataDir);
-                File.AppendAllText(Path.Combine(AppPaths.DataDir, "crash.log"), $"[{DateTime.Now:O}] {e}{Environment.NewLine}{Environment.NewLine}");
-            }
-            catch (Exception) { }
+            CrashLog.Write(e);
             throw;
         }
     }

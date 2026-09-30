@@ -4,6 +4,16 @@ using VidArchiverGui.App.Services;
 
 namespace VidArchiverGui.App.ViewModels;
 
+/// <summary>The main window's tabs, in the order MainWindow.axaml lists them.</summary>
+public enum MainTab
+{
+    Downloads,
+    Rules,
+    Presets,
+    Settings,
+    About,
+}
+
 public partial class MainWindowViewModel : ObservableObject
 {
     private readonly AppHost _host;
@@ -15,8 +25,8 @@ public partial class MainWindowViewModel : ObservableObject
         Rules = new RulesViewModel(host);
         Presets = new PresetsViewModel(host);
         Setup = new SetupViewModel(host);
-        Setup.DetailsRequested += () => SelectedTab = SettingsTabIndex;
-        Tools = new SettingsViewModel(host, Setup);
+        Setup.DetailsRequested += () => CurrentTab = MainTab.Settings;
+        Settings = new SettingsViewModel(host, Setup);
         host.StatusChanged += message => Dispatcher.UIThread.Post(() => Status = message);
         Downloads.RestoreUnfinished();
     }
@@ -24,29 +34,37 @@ public partial class MainWindowViewModel : ObservableObject
     public DownloadsViewModel Downloads { get; }
     public RulesViewModel Rules { get; }
     public PresetsViewModel Presets { get; }
-    public SettingsViewModel Tools { get; }
+    public SettingsViewModel Settings { get; }
     public SetupViewModel Setup { get; }
-
-    private const int SettingsTabIndex = 3;
     public AboutViewModel About { get; } = new();
 
     [ObservableProperty] private string _status = "Ready";
 
-    [ObservableProperty] private int _selectedTab;
+    /// <summary>The TabControl's SelectedIndex; see <see cref="CurrentTab"/>.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CurrentTab))]
+    private int _selectedTab;
+
+    public MainTab CurrentTab
+    {
+        get => (MainTab)SelectedTab;
+        set => SelectedTab = (int)value;
+    }
 
     partial void OnSelectedTabChanged(int value)
     {
-        if (value == 0)
+        // Refresh what may have changed on other tabs meanwhile.
+        switch ((MainTab)value)
         {
-            Downloads.RefreshCookieChoices();
-        }
-        if (value == 1)
-        {
-            Rules.RefreshPresetChoices();
-        }
-        if (value == 2)
-        {
-            Presets.RefreshEngineChoices();
+            case MainTab.Downloads:
+                Downloads.RefreshCookieChoices();
+                break;
+            case MainTab.Rules:
+                Rules.RefreshPresetChoices();
+                break;
+            case MainTab.Presets:
+                Presets.RefreshEngineChoices();
+                break;
         }
     }
 
@@ -54,7 +72,7 @@ public partial class MainWindowViewModel : ObservableObject
     {
         try
         {
-            await Tools.InitializeAsync();
+            await Settings.InitializeAsync();
         }
         finally
         {
