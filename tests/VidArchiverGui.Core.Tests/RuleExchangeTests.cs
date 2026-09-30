@@ -100,4 +100,26 @@ public class RuleExchangeTests
     [InlineData("""{ "Format": "vid-archiver-gui/folder-rules", "Version": 99 }""")]
     public void Rejects_files_that_are_not_rule_exports(string json) =>
         Assert.Throws<FormatException>(() => RuleExchange.Import(json, new AppSettings()));
+
+    private const string Header = """ "Format": "vid-archiver-gui/folder-rules", "Version": 1 """;
+
+    [Fact]
+    public void Nulls_from_a_hand_edited_file_become_empty_values()
+    {
+        var imported = RuleExchange.Import(
+            $$"""{ {{Header}}, "Rules": [{ "Name": null, "Destination": null, "Conditions": null }, { "Conditions": [{ "Value": null }] }] }""",
+            new AppSettings());
+
+        Assert.Equal("", imported.Rules[0].Name);
+        Assert.Equal("", imported.Rules[0].Destination);
+        Assert.Empty(imported.Rules[0].Conditions);
+        Assert.Equal("", imported.Rules[1].Conditions.Single().Value);
+        Assert.Empty(RuleExchange.Import($$"""{ {{Header}}, "Rules": null }""", new AppSettings()).Rules);
+    }
+
+    [Theory]
+    [InlineData("""[null]""")]
+    [InlineData("""[{ "Conditions": [null] }]""")]
+    public void Rejects_empty_rules_and_conditions(string rules) =>
+        Assert.Throws<FormatException>(() => RuleExchange.Import($$"""{ {{Header}}, "Rules": {{rules}} }""", new AppSettings()));
 }

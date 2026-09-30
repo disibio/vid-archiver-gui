@@ -123,6 +123,18 @@ public class PresetExchangeTests
     [Theory]
     [InlineData("""{ "Format": "vid-archiver-gui/folder-rules", "Version": 1 }""")]
     [InlineData("""{ "Format": "vid-archiver-gui/presets", "Version": 1, "Presets": [] }""")]
+    [InlineData("""{ "Format": "vid-archiver-gui/presets", "Version": 1, "Presets": null }""")]
+    [InlineData("""{ "Format": "vid-archiver-gui/presets", "Version": 1, "Presets": [null] }""")]
     public void Rejects_rule_exports_and_empty_files(string json) =>
         Assert.Throws<FormatException>(() => PresetExchange.Import(json, new AppSettings()));
+
+    [Fact]
+    public void Nulls_from_a_hand_edited_file_become_empty_values()
+    {
+        var imported = PresetExchange.Import(
+            """{ "Format": "vid-archiver-gui/presets", "Version": 1, "Presets": [{ "Name": null, "Arguments": null }] }""", Settings());
+
+        Assert.Equal("", imported.Presets[0].Name);
+        Assert.Equal("", imported.Presets[0].Arguments);
+    }
 }

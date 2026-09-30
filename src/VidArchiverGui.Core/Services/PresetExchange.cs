@@ -15,6 +15,7 @@ public static class PresetExchange
     private const string Format = "vid-archiver-gui/presets";
     private const int Version = 1;
 
+    // Read from a file that may have been edited by hand, so any of these can be null despite their types.
     private sealed class PresetFile : ExchangeFile
     {
         public string? DefaultPreset { get; set; }
@@ -51,22 +52,27 @@ public static class PresetExchange
     public static ImportedPresets Import(string json, AppSettings settings)
     {
         var file = ExchangeFile.Read<PresetFile>(json, Format, Version, "a presets export");
-        if (file.Presets.Count == 0)
+        if (file.Presets is not { Count: > 0 })
         {
             throw new FormatException("This file has no presets in it.");
         }
 
         var warnings = new List<string>();
         var presets = new List<Preset>();
-        foreach (var p in file.Presets)
+        foreach (var (p, i) in file.Presets.Select((p, i) => (p, i)))
         {
-            var preset = new Preset { Name = p.Name, Arguments = p.Arguments };
+            if (p is null)
+            {
+                throw new FormatException($"This file is damaged: preset {i + 1} is empty.");
+            }
+
+            var preset = new Preset { Name = p.Name ?? "", Arguments = p.Arguments ?? "" };
             if (p.Downloader is not null)
             {
                 preset.DownloaderId = settings.Downloaders.FirstOrDefault(e => string.Equals(e.Name, p.Downloader, StringComparison.OrdinalIgnoreCase))?.Id;
                 if (preset.DownloaderId is null)
                 {
-                    warnings.Add($"\"{p.Name}\": no downloader named \"{p.Downloader}\", so it uses the default downloader.");
+                    warnings.Add($"\"{preset.Name}\": no downloader named \"{p.Downloader}\", so it uses the default downloader.");
                 }
             }
 

@@ -16,6 +16,7 @@ public static class RuleExchange
     private const string Format = "vid-archiver-gui/folder-rules";
     private const int Version = 1;
 
+    // Read from a file that may have been edited by hand, so any of these can be null despite their types.
     private sealed class RuleFile : ExchangeFile
     {
         public string? FallbackDestination { get; set; }
@@ -65,23 +66,32 @@ public static class RuleExchange
         var file = ExchangeFile.Read<RuleFile>(json, Format, Version, "a folder rules export");
         var warnings = new List<string>();
         var rules = new List<RoutingRule>();
-        foreach (var r in file.Rules)
+        foreach (var (r, i) in (file.Rules ?? []).Select((r, i) => (r, i)))
         {
+            if (r is null || r.Conditions?.Any(c => c is null) == true)
+            {
+                throw new FormatException($"This file is damaged: rule {i + 1} or one of its conditions is empty.");
+            }
+
             var rule = new RoutingRule
             {
-                Name = r.Name,
+                Name = r.Name ?? "",
                 Enabled = r.Enabled,
                 MatchMode = r.MatchMode,
-                Destination = r.Destination,
-                Conditions = new(r.Conditions),
+                Destination = r.Destination ?? "",
+                Conditions = new(r.Conditions ?? []),
             };
+            foreach (var condition in rule.Conditions)
+            {
+                condition.Value ??= "";
+            }
 
             if (r.Preset is not null)
             {
                 rule.PresetId = settings.Presets.FirstOrDefault(p => string.Equals(p.Name, r.Preset, StringComparison.OrdinalIgnoreCase))?.Id;
                 if (rule.PresetId is null)
                 {
-                    warnings.Add($"\"{r.Name}\": no preset named \"{r.Preset}\", so it keeps the preset chosen when adding.");
+                    warnings.Add($"\"{rule.Name}\": no preset named \"{r.Preset}\", so it keeps the preset chosen when adding.");
                 }
             }
 
@@ -92,7 +102,7 @@ public static class RuleExchange
                     : settings.CookieSources.FirstOrDefault(c => string.Equals(c.Name, r.Cookies, StringComparison.OrdinalIgnoreCase))?.Id;
                 if (rule.CookieId is null)
                 {
-                    warnings.Add($"\"{r.Name}\": no cookie source named \"{r.Cookies}\", so it keeps the cookies chosen when adding.");
+                    warnings.Add($"\"{rule.Name}\": no cookie source named \"{r.Cookies}\", so it keeps the cookies chosen when adding.");
                 }
             }
 
