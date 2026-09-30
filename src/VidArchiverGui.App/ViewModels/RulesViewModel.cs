@@ -192,21 +192,34 @@ public partial class RulesViewModel : ObservableObject
         }
 
         var count = imported.Rules.Count;
-        var replace = true; // nothing to ask about with no rules yet
-        if (Rules.Count > 0)
+        var hadRules = Rules.Count > 0;
+        bool? replace;
+        if (hadRules)
         {
-            if (await _host.Dialogs.AskAsync("Import folder rules",
-                    $"The file has {count} rule(s). Replace your {Rules.Count} current rule(s) and the fallback folder, or add the new rules below yours?",
-                    "Replace", "Add below mine") is not { } answer)
-            {
-                return;
-            }
+            replace = await _host.Dialogs.AskAsync("Import folder rules",
+                $"The file has {count} rule(s). Replace your {Rules.Count} current rule(s) and the fallback folder, or add the new rules below yours?",
+                "Replace", "Add below mine");
+        }
+        else if (imported.FallbackDestination is { } fallback && fallback != Settings.FallbackDestination)
+        {
+            // No rules to replace, but the fallback folder is the user's own: take the file's only if they say so.
+            replace = await _host.Dialogs.AskAsync("Import folder rules",
+                $"The file also has a fallback folder, for links no rule matches:{Environment.NewLine}{fallback}{Environment.NewLine}{Environment.NewLine}" +
+                $"Use it instead of yours?{Environment.NewLine}{Settings.FallbackDestination}",
+                "Use the file's", "Keep mine");
+        }
+        else
+        {
+            replace = false;
+        }
 
-            replace = answer;
+        if (replace is null)
+        {
+            return;
         }
 
         var before = new RulesSnapshot(Settings);
-        if (replace)
+        if (replace.Value)
         {
             RuleExchange.Replace(Settings, imported);
         }
@@ -216,7 +229,13 @@ public partial class RulesViewModel : ObservableObject
         }
 
         SelectedRule = imported.Rules.FirstOrDefault() ?? Rules.FirstOrDefault();
-        LastChange.Offer(replace ? $"Replaced your rules with {count} imported rule(s)." : $"Added {count} imported rule(s).", () =>
+        var done = (hadRules, replace.Value) switch
+        {
+            (true, true) => $"Replaced your rules with {count} imported rule(s).",
+            (false, true) => $"Added {count} imported rule(s) and the file's fallback folder.",
+            _ => $"Added {count} imported rule(s).",
+        };
+        LastChange.Offer(done, () =>
         {
             before.Restore();
             SelectedRule = Rules.FirstOrDefault();
