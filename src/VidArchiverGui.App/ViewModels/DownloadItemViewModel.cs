@@ -251,8 +251,9 @@ public partial class DownloadItemViewModel : ObservableObject
     /// Reads the video's info with this item's downloader, falling back to others if extraction is broken. Returns
     /// false, with <see cref="Error"/> set, if no downloader could read it.
     /// </summary>
-    internal async Task<bool> ReadInfoAsync(AppSettings settings, CancellationToken ct)
+    internal async Task<bool> ReadInfoAsync(CancellationToken ct)
     {
+        var settings = _owner.Settings;
         var presetArgs = ArgumentParser.Split(Preset.Arguments);
         var result = await Resilience.RunAsync(settings, Downloader,
             async (downloader, attemptCt) =>
@@ -285,8 +286,9 @@ public partial class DownloadItemViewModel : ObservableObject
 
     // ---------- download ----------
 
-    internal async Task DownloadAsync(AppSettings settings)
+    internal async Task DownloadAsync()
     {
+        var settings = _owner.Settings;
         var token = BeginOperation();
         State = DownloadState.Downloading;
         Error = null;

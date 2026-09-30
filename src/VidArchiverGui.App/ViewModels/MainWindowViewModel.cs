@@ -25,7 +25,7 @@ public partial class MainWindowViewModel : ObservableObject
         Downloads = new DownloadsViewModel(host);
         Rules = new RulesViewModel(host);
         Presets = new PresetsViewModel(host);
-        Settings = new SettingsViewModel(host);
+        SettingsTab = new SettingsViewModel(host);
         Setup.DetailsRequested += () => CurrentTab = MainTab.Settings;
         host.StatusChanged += message => Dispatcher.UIThread.Post(() => Status = message);
         Downloads.RestoreUnfinished();
@@ -38,8 +38,9 @@ public partial class MainWindowViewModel : ObservableObject
     public DownloadsViewModel Downloads { get; }
     public RulesViewModel Rules { get; }
     public PresetsViewModel Presets { get; }
-    public SettingsViewModel Settings { get; }
-    public SetupViewModel Setup => Settings.Setup;
+    /// <summary>The Settings tab (named so it isn't mistaken for <see cref="Core.Models.AppSettings"/>).</summary>
+    public SettingsViewModel SettingsTab { get; }
+    public SetupViewModel Setup => SettingsTab.Setup;
     public AboutViewModel About { get; } = new();
 
     [ObservableProperty] private string _status = "Ready";
@@ -76,7 +77,7 @@ public partial class MainWindowViewModel : ObservableObject
     {
         try
         {
-            await Settings.InitializeAsync();
+            await SettingsTab.InitializeAsync();
         }
         finally
         {

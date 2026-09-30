@@ -143,7 +143,7 @@ public partial class DownloadsViewModel : ObservableObject
             bool gotInfo;
             try
             {
-                gotInfo = await item.ReadInfoAsync(_host.Settings, token);
+                gotInfo = await item.ReadInfoAsync(token);
             }
             finally
             {
@@ -257,7 +257,7 @@ public partial class DownloadsViewModel : ObservableObject
 
     private async Task DownloadAsync(DownloadItemViewModel item)
     {
-        await item.DownloadAsync(_host.Settings);
+        await item.DownloadAsync();
         if (item.State == DownloadState.Completed)
         {
             _host.SetStatus($"Finished: {item.Title}");

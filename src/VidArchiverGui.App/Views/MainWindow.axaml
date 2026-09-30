@@ -47,7 +47,7 @@
         <v:PresetsView DataContext="{Binding Presets}" />
       </TabItem>
       <TabItem Header="Settings">
-        <v:SettingsView DataContext="{Binding Settings}" />
+        <v:SettingsView DataContext="{Binding SettingsTab}" />
       </TabItem>
       <TabItem Header="About">
         <v:AboutView DataContext="{Binding About}" />

@@ -50,7 +50,7 @@ public partial class App
     /// <summary>Waits (up to 2 minutes) until first-run setup is done and no checklist row is still checking.</summary>
     private static async Task WaitForSetupCheckAsync(MainWindowViewModel vm)
     {
-        for (var i = 0; i < 240 && (vm.Setup.Items.Count == 0 || vm.Setup.Items.Any(r => r.IsChecking) || vm.Settings.Busy.IsActive); i++)
+        for (var i = 0; i < 240 && (vm.Setup.Items.Count == 0 || vm.Setup.Items.Any(r => r.IsChecking) || vm.Setup.Busy.IsActive); i++)
         {
             await Task.Delay(500);
         }
