@@ -1,5 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
+using Avalonia.Threading;
 using VidArchiverGui.App.ViewModels;
 
 namespace VidArchiverGui.App.Views;
@@ -12,6 +14,15 @@ public partial class DownloadsView : UserControl
         // A height remembered from a bigger window is capped here rather than overwritten, so it comes back when
         // the window is big again.
         SizeChanged += (_, _) => LogBox.MaxHeight = MaxLogHeight;
+        Loaded += FocusUrlBoxOnce;
+    }
+
+    /// <summary>At launch, so a link can be pasted straight away (not on later visits to the tab).</summary>
+    private void FocusUrlBoxOnce(object? sender, RoutedEventArgs e)
+    {
+        Loaded -= FocusUrlBoxOnce;
+        // Not yet: the box can't take focus until the window has finished its first layout.
+        Dispatcher.UIThread.Post(() => UrlBox.Focus(), DispatcherPriority.Loaded);
     }
 
     /// <summary>Leaves the download list at least ~200 px.</summary>
