@@ -5,7 +5,7 @@
              x:Class="VidArchiverGui.App.Views.SettingsView"
              x:DataType="vm:SettingsViewModel">
   <ScrollViewer>
-    <StackPanel Spacing="6" MaxWidth="1000" HorizontalAlignment="Left" Margin="0,0,16,16">
+    <StackPanel Spacing="6" MaxWidth="1200" Margin="0,0,16,16">
 
       <DockPanel Margin="0,12,0,2">
         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6" IsEnabled="{Binding !Busy.IsActive}">

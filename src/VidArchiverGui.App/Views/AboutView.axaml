@@ -10,7 +10,7 @@
   </UserControl.Styles>
 
   <ScrollViewer>
-    <StackPanel Spacing="6" MaxWidth="900" HorizontalAlignment="Left" Margin="0,0,16,16">
+    <StackPanel Spacing="6" MaxWidth="1100" Margin="0,0,16,16">
       <StackPanel Orientation="Horizontal" Spacing="10">
         <SelectableTextBlock Text="{Binding AppName}" FontSize="26" FontWeight="SemiBold" />
         <SelectableTextBlock Text="{Binding Version, StringFormat='v{0}'}" VerticalAlignment="Bottom" Margin="0,0,0,4" Classes="hint" FontSize="14" />
