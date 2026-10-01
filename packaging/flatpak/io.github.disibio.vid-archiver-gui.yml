@@ -101,7 +101,7 @@ modules:
     buildsystem: simple
     build-commands:
       - dotnet publish src/VidArchiverGui.App -c Release -r $RUNTIME --self-contained --source ./nuget-sources
-        -p:PublishSingleFile=false -o /app/lib/vidarchivergui
+        -p:PublishSingleFile=false -p:PublishReadyToRun=false -o /app/lib/vidarchivergui
       - mkdir -p /app/bin
       - ln -s ../lib/vidarchivergui/VidArchiverGui /app/bin/vidarchivergui
       - install -Dm644 io.github.disibio.vid-archiver-gui.desktop -t /app/share/applications
