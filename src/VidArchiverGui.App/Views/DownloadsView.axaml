@@ -12,7 +12,7 @@
   <Grid RowDefinitions="Auto,Auto,*,Auto">
     <!-- URL input -->
     <Grid ColumnDefinitions="*,Auto">
-      <TextBox x:Name="UrlBox" Text="{Binding UrlInput}" AcceptsReturn="True" TextWrapping="NoWrap" MinHeight="76"
+      <TextBox x:Name="UrlBox" Text="{Binding UrlInput}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="76"
                PlaceholderText="Paste one or more URLs (one per line), then click Add or press Ctrl+Enter. You can also drag links onto the window." />
       <StackPanel Grid.Column="1" Margin="10,0,0,0" Spacing="6" Width="250">
         <ComboBox ItemsSource="{Binding Presets}" SelectedItem="{Binding SelectedPreset}" HorizontalAlignment="Stretch">
@@ -80,7 +80,15 @@
 
             <TextBlock Grid.Row="2" Grid.ColumnSpan="2" Text="{Binding Details}" Classes="hint" Margin="0,2,0,4" />
 
-            <Grid Grid.Row="3" Grid.ColumnSpan="2" ColumnDefinitions="Auto,*,Auto,Auto,220,170" IsEnabled="{Binding CanEdit}">
+            <Grid Grid.Row="3" Grid.ColumnSpan="2" IsEnabled="{Binding CanEdit}">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="3*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="2*" MaxWidth="220" />
+                <ColumnDefinition Width="1.5*" MaxWidth="170" />
+              </Grid.ColumnDefinitions>
               <TextBlock Text="Save to" VerticalAlignment="Center" Margin="0,0,8,0" FontSize="12" />
               <TextBox Grid.Column="1" Text="{Binding Destination}" FontSize="12" MinHeight="28" Padding="6,3" />
               <Button Grid.Column="2" Classes="small" Content="Browse…" Command="{Binding BrowseCommand}" Margin="4,0,0,0" />
@@ -107,7 +115,8 @@
 
             <Grid Grid.Row="4" Grid.ColumnSpan="2" ColumnDefinitions="*,Auto" Margin="0,6,0,0" IsVisible="{Binding ShowProgress}">
               <ProgressBar Value="{Binding Progress}" IsIndeterminate="{Binding IsIndeterminate}" Minimum="0" Maximum="100" MinHeight="6" VerticalAlignment="Center" />
-              <TextBlock Grid.Column="1" Text="{Binding ProgressText}" FontSize="12" Margin="10,0,0,0" MinWidth="330" />
+              <TextBlock Grid.Column="1" Text="{Binding ProgressText}" FontSize="12" Margin="10,0,0,0" MinWidth="330" MaxWidth="480"
+                         TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding ProgressText}" />
             </Grid>
 
             <TextBlock Grid.Row="5" Grid.ColumnSpan="2" Text="{Binding Error}" Classes="error" FontSize="12" Margin="0,4,0,0"

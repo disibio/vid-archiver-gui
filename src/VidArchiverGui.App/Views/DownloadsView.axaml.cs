@@ -25,8 +25,10 @@ public partial class DownloadsView : UserControl
         Dispatcher.UIThread.Post(() => UrlBox.Focus(), DispatcherPriority.Loaded);
     }
 
-    /// <summary>Leaves the download list at least ~200 px.</summary>
-    private double MaxLogHeight => Math.Max(80, Bounds.Height - 420);
+    private const double MinLogHeight = 60;
+
+    /// <summary>Leaves the download list room for about two downloads, so on a small screen the log gives way first.</summary>
+    private double MaxLogHeight => Math.Max(MinLogHeight, Bounds.Height - 500);
 
     /// <summary>Dragging the grip above the log up makes the log taller.</summary>
     private void OnLogResize(object? sender, VectorEventArgs e)
@@ -34,7 +36,7 @@ public partial class DownloadsView : UserControl
         if (DataContext is DownloadsViewModel vm)
         {
             // Start from the height actually shown, which may be capped below the remembered one.
-            vm.Settings.LogHeight = Math.Clamp(Math.Min(vm.Settings.LogHeight, MaxLogHeight) - e.Vector.Y, 80, MaxLogHeight);
+            vm.Settings.LogHeight = Math.Clamp(Math.Min(vm.Settings.LogHeight, MaxLogHeight) - e.Vector.Y, MinLogHeight, MaxLogHeight);
         }
     }
 }

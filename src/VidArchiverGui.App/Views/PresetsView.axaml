@@ -34,8 +34,12 @@
       </ListBox>
     </DockPanel>
 
-    <Grid Grid.Column="1" Margin="16,0,0,0" RowDefinitions="Auto,Auto,Auto,*,Auto,Auto" ColumnDefinitions="*,280"
+    <Grid Grid.Column="1" Margin="16,0,0,0" RowDefinitions="Auto,Auto,Auto,*,Auto,Auto"
           IsVisible="{Binding SelectedPreset, Converter={x:Static ObjectConverters.IsNotNull}}">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="3*" />
+        <ColumnDefinition Width="2*" MaxWidth="280" />
+      </Grid.ColumnDefinitions>
       <TextBlock Text="Name" />
       <TextBlock Grid.Column="1" Text="Downloader" Margin="10,0,0,0" />
       <TextBox Grid.Row="1" Text="{Binding SelectedPreset.Name}" Margin="0,4,0,10" />
@@ -44,13 +48,13 @@
                 ToolTip.Tip="Options differ between downloaders (e.g. youtube-dl has no --embed-chapters), so a preset is usually written for one of them.">
         <ComboBox.ItemTemplate>
           <DataTemplate x:DataType="m:Choice">
-            <TextBlock Text="{Binding Name}" />
+            <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Name}" />
           </DataTemplate>
         </ComboBox.ItemTemplate>
       </ComboBox>
 
-      <TextBlock Grid.Row="2" Text="yt-dlp arguments (paste your command; new lines are fine, # starts a comment)" />
-      <TextBlock Grid.Row="2" Grid.Column="1" Text="How yt-dlp will see them" Margin="10,0,0,0" />
+      <TextBlock Grid.Row="2" Text="yt-dlp arguments (paste your command; new lines are fine, # starts a comment)" TextWrapping="Wrap" />
+      <TextBlock Grid.Row="2" Grid.Column="1" Text="How yt-dlp will see them" Margin="10,0,0,0" TextWrapping="Wrap" />
       <TextBox Grid.Row="3" Text="{Binding SelectedPreset.Arguments}" Classes="mono" AcceptsReturn="True" TextWrapping="Wrap" Margin="0,4,0,0" />
       <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding ParsedPreview}" Classes="mono" IsReadOnly="True" TextWrapping="NoWrap" Margin="10,4,0,0" />
 
