@@ -115,7 +115,8 @@
 
             <Grid Grid.Row="4" Grid.ColumnSpan="2" ColumnDefinitions="*,Auto" Margin="0,6,0,0" IsVisible="{Binding ShowProgress}">
               <ProgressBar Value="{Binding Progress}" IsIndeterminate="{Binding IsIndeterminate}" Minimum="0" Maximum="100" MinHeight="6" VerticalAlignment="Center" />
-              <TextBlock Grid.Column="1" Text="{Binding ProgressText}" FontSize="12" Margin="10,0,0,0" MinWidth="330" MaxWidth="480"
+              <TextBlock Grid.Column="1" Text="{Binding ProgressText}" FontSize="12" Margin="10,0,0,0" MinWidth="330"
+                         MaxWidth="{Binding $parent[Grid].Bounds.Width, Converter={x:Static vm:FractionConverter.Instance}, ConverterParameter=0.45}"
                          TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding ProgressText}" />
             </Grid>
 
