@@ -18,6 +18,9 @@ public sealed class SettingsStore(string path)
 
     public string FilePath { get; } = path;
 
+    /// <summary>Where <see cref="Load"/> kept a settings file it couldn't read, before starting with the defaults.</summary>
+    public string? CorruptCopy { get; private set; }
+
     public AppSettings Load()
     {
         AppSettings? settings = null;
@@ -32,7 +35,8 @@ public sealed class SettingsStore(string path)
             catch (JsonException)
             {
                 // Keep the unreadable file for the user to inspect rather than silently overwriting it.
-                File.Copy(FilePath, FilePath + ".corrupt-" + DateTime.Now.ToString("yyyyMMdd-HHmmss"), overwrite: true);
+                CorruptCopy = FilePath + ".corrupt-" + DateTime.Now.ToString("yyyyMMdd-HHmmss");
+                File.Copy(FilePath, CorruptCopy, overwrite: true);
             }
         }
 

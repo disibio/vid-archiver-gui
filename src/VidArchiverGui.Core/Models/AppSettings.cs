@@ -79,6 +79,11 @@ public partial class AppSettings : ObservableObject
     /// <summary>Height of the log panel's text, as last dragged by the user.</summary>
     [ObservableProperty] private double _logHeight = 180;
 
+    /// <summary>The window's size when it was last closed (not maximized); null until then.</summary>
+    [ObservableProperty] private double? _windowWidth;
+    [ObservableProperty] private double? _windowHeight;
+    [ObservableProperty] private bool _windowMaximized;
+
     public Preset? FindPreset(string? id) => id is null ? null : Presets.FirstOrDefault(p => p.Id == id);
 
     [JsonIgnore]

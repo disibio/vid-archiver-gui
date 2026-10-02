@@ -41,6 +41,17 @@ public sealed class SettingsTests : IDisposable
     }
 
     [Fact]
+    public void An_unreadable_settings_file_is_kept_and_the_defaults_are_used()
+    {
+        var path = Path.Combine(_dir, "settings.json");
+        File.WriteAllText(path, "{ not json");
+        var store = new SettingsStore(path);
+
+        Assert.Equal(2, store.Load().MaxConcurrentDownloads);
+        Assert.Equal("{ not json", File.ReadAllText(store.CorruptCopy!));
+    }
+
+    [Fact]
     public void Settings_are_only_written_when_they_changed()
     {
         var store = new SettingsStore(Path.Combine(_dir, "settings.json"));

@@ -347,7 +347,7 @@ public partial class DownloadsViewModel : ObservableObject
     [RelayCommand]
     private void ClearFinished()
     {
-        foreach (var item in Items.Where(i => i.IsFinished).ToList())
+        foreach (var item in Items.Where(i => i.IsFinished || i.State == DownloadState.Cancelled).ToList())
         {
             Items.Remove(item);
         }
@@ -383,6 +383,7 @@ public partial class DownloadsViewModel : ObservableObject
                 DownloaderId = i.DownloaderOverride?.Id,
                 Destination = i.DestinationEdited && !string.IsNullOrWhiteSpace(i.Destination) ? i.Destination : null,
                 Paused = i.State == DownloadState.Paused || i.PauseRequested,
+                Error = i.State == DownloadState.Failed ? i.Error ?? "" : null,
             })
             .ToList();
     }
@@ -401,8 +402,6 @@ public partial class DownloadsViewModel : ObservableObject
                 DownloaderOverride = _host.Settings.FindDownloader(saved.DownloaderId),
                 Restored = true,
                 PauseRequested = saved.Paused,
-                ProgressText = "Waiting for the startup checks…",
-                IsIndeterminate = true,
             };
             if (saved.Destination is { } folder)
             {
@@ -410,7 +409,17 @@ public partial class DownloadsViewModel : ObservableObject
             }
 
             Items.Add(item);
-            _restored.Add(item);
+            if (saved.Error is { } error)
+            {
+                item.State = DownloadState.Failed; // Start reads its info again
+                item.Error = error;
+            }
+            else
+            {
+                item.ProgressText = "Waiting for the startup checks…";
+                item.IsIndeterminate = true;
+                _restored.Add(item);
+            }
         }
 
         RefreshCookieChoices(); // a restored download may use a browser that's no longer installed

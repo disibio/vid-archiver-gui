@@ -37,6 +37,7 @@ public partial class App : Application
             };
 
             var window = new MainWindow();
+            window.KeepPlacement(settings);
             var dialogs = new WindowDialogs(window);
             var host = new AppHost(settings, store, dialogs);
 
@@ -50,7 +51,17 @@ public partial class App : Application
 
             var vm = new MainWindowViewModel(host);
             window.DataContext = vm;
-            window.Opened += async (_, _) => await vm.InitializeAsync();
+            window.Opened += async (_, _) =>
+            {
+                if (store.CorruptCopy is { } copy && await dialogs.ConfirmAsync("Settings couldn't be read",
+                        $"Your settings file couldn't be read, so the app has started with the default settings. The old file was kept as {copy}.",
+                        "Show file", "OK"))
+                {
+                    await dialogs.ShowFileAsync(copy);
+                }
+
+                await vm.InitializeAsync();
+            };
             ConfirmQuitWhileDownloading(window, vm, dialogs);
             AcceptDroppedLinks(window, vm);
             desktop.MainWindow = window;

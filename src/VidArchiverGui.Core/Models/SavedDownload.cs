@@ -19,4 +19,7 @@ public sealed record SavedDownload
 
     /// <summary>It was paused, so it stays paused rather than becoming ready (or starting) when it's put back.</summary>
     public bool Paused { get; init; }
+
+    /// <summary>Why it failed, so it's put back as failed rather than looked up again on every start.</summary>
+    public string? Error { get; init; }
 }

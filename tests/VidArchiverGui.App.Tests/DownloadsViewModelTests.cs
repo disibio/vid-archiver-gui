@@ -169,6 +169,41 @@ public sealed class DownloadsViewModelTests : DownloadListTests
     });
 
     [Fact]
+    public Task A_failed_download_is_put_back_as_failed_without_reading_its_info() => Headless.Run(async () =>
+    {
+        var item = await AddAsync("https://fake.test/video/broken?fail");
+        item.StartCommand.Execute(null);
+        await WaitUntilStopped(item);
+        _vm.SaveUnfinished();
+
+        var next = new DownloadsViewModel(_t.Host);
+        next.RestoreUnfinished();
+        next.ResumeRestored();
+        var restored = Assert.Single(next.Items);
+        Assert.Equal(DownloadState.Failed, restored.State);
+        Assert.Equal(item.Error, restored.Error);
+        Assert.Null(restored.Info);
+
+        restored.StartCommand.Execute(null); // reads its info, then tries again
+        await Headless.WaitUntil(() => restored.Info is not null, "its info is read");
+    });
+
+    [Fact]
+    public Task Clear_finished_also_clears_cancelled_downloads_but_not_failed_ones() => Headless.Run(async () =>
+    {
+        var done = await AddAsync("https://fake.test/video/done");
+        var cancelled = await AddAsync("https://fake.test/video/cancelled");
+        var failed = await AddAsync("https://fake.test/video/failed");
+        done.State = DownloadState.Completed;
+        cancelled.State = DownloadState.Cancelled;
+        failed.State = DownloadState.Failed;
+
+        _vm.ClearFinishedCommand.Execute(null);
+
+        Assert.Equal([failed], _vm.Items);
+    });
+
+    [Fact]
     public Task Pause_all_also_pauses_downloads_whose_info_is_still_being_read() => Headless.Run(async () =>
     {
         _t.Settings.AutoStartDownloads = true;

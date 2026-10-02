@@ -43,7 +43,8 @@
         <Button Content="_Pause all" Command="{Binding PauseAllCommand}"
                 ToolTip.Tip="Stop everything that's downloading or waiting, keeping what's downloaded so far. Start all or Resume carries on." />
         <Button Content="_Cancel all" Command="{Binding CancelAllCommand}" />
-        <Button Content="C_lear finished" Command="{Binding ClearFinishedCommand}" />
+        <Button Content="C_lear finished" Command="{Binding ClearFinishedCommand}"
+                ToolTip.Tip="Remove downloads that are done, already archived or cancelled from the list." />
         <Button Content="_Re-apply rules" Command="{Binding ReapplyRulesCommand}"
                 ToolTip.Tip="Route waiting items again using the current folder rules (folders you picked by hand are kept)." />
       </StackPanel>
