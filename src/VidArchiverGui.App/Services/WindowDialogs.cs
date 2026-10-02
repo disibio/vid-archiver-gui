@@ -154,14 +154,14 @@ public sealed class WindowDialogs(Window window) : IDialogs
 
     public async Task ShowFileAsync(string file)
     {
-        if (!await TrySelectInFileManagerAsync(file))
+        if (!TrySelectInFileManager(file))
         {
             await OpenFolderAsync(Path.GetDirectoryName(file) ?? file);
         }
     }
 
-    /// <summary>Explorer and Finder can select a file; on Linux it's the freedesktop FileManager1 call, which most file managers answer.</summary>
-    private static async Task<bool> TrySelectInFileManagerAsync(string file)
+    /// <summary>Explorer and Finder can select a file; elsewhere the folder is opened instead.</summary>
+    private static bool TrySelectInFileManager(string file)
     {
         try
         {
@@ -172,31 +172,17 @@ public sealed class WindowDialogs(Window window) : IDialogs
                 return explorer is not null;
             }
 
-            var (exe, args) = OperatingSystem.IsMacOS()
-                ? ("open", new[] { "-R", file })
-                : ("dbus-send", ["--session", "--print-reply", "--dest=org.freedesktop.FileManager1", "--type=method_call",
-                    "/org/freedesktop/FileManager1", "org.freedesktop.FileManager1.ShowItems",
-                    "array:string:" + new Uri(file).AbsoluteUri, "string:"]);
-            var psi = new ProcessStartInfo(exe) { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true };
-            foreach (var a in args)
+            if (OperatingSystem.IsMacOS())
             {
-                psi.ArgumentList.Add(a);
+                using var finder = Process.Start(new ProcessStartInfo("open") { UseShellExecute = false, ArgumentList = { "-R", file } });
+                return finder is not null;
             }
-
-            using var process = Process.Start(psi);
-            if (process is null)
-            {
-                return false;
-            }
-
-            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-            await process.WaitForExitAsync(timeout.Token);
-            return process.ExitCode == 0;
         }
-        catch (Exception e) when (e is Win32Exception or InvalidOperationException or OperationCanceledException)
+        catch (Win32Exception)
         {
-            return false; // the tool isn't there, or nothing answered
         }
+
+        return false;
     }
 
     public async Task CopyTextAsync(string text)

@@ -165,10 +165,11 @@ public partial class DownloadsViewModel : ObservableObject
                 return;
             }
 
-            ApplyRoute(item);
-            if (item.RestoredPaused)
+            var restored = item.RestoredFrom;
+            item.RestoredFrom = null;
+            ApplyRoute(item, keepChoices: restored is not null);
+            if (restored is { Paused: true })
             {
-                item.RestoredPaused = false;
                 item.State = DownloadState.Paused;
                 item.ProgressText = "Paused";
                 return;
@@ -198,7 +199,8 @@ public partial class DownloadsViewModel : ObservableObject
         }
     }
 
-    private void ApplyRoute(DownloadItemViewModel item)
+    /// <param name="keepChoices">Only set the folder, keeping the preset and cookies (picked last session).</param>
+    private void ApplyRoute(DownloadItemViewModel item, bool keepChoices = false)
     {
         if (item.Info is null)
         {
@@ -212,10 +214,9 @@ public partial class DownloadsViewModel : ObservableObject
             item.RouteDescription = route.Describe();
         }
 
-        if (item.Restored)
+        if (keepChoices)
         {
-            item.Restored = false; // keep last session's preset and cookies; "Re-apply rules" still applies them in full
-            return;
+            return; // "Re-apply rules" still applies them in full
         }
 
         if (_host.Settings.FindPreset(route.PresetId) is { } preset)
@@ -397,8 +398,7 @@ public partial class DownloadsViewModel : ObservableObject
             {
                 CookieId = saved.CookieId,
                 DownloaderOverride = _host.Settings.FindDownloader(saved.DownloaderId),
-                Restored = true,
-                RestoredPaused = saved.Paused,
+                RestoredFrom = saved,
                 ProgressText = "Waiting for the startup checks…",
                 IsIndeterminate = true,
             };

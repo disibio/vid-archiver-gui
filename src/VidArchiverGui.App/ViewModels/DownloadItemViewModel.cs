@@ -115,11 +115,11 @@ public partial class DownloadItemViewModel : ObservableObject
     /// <summary>True once the user picks a folder by hand, so re-applying rules won't overwrite it.</summary>
     public bool DestinationEdited { get; set; }
 
-    /// <summary>Put back from the last session: its preset and cookies were already chosen, so rules don't change them.</summary>
-    internal bool Restored { get; set; }
-
-    /// <summary>Put back from the last session paused: once its info is read it goes back to paused.</summary>
-    internal bool RestoredPaused { get; set; }
+    /// <summary>
+    /// What last session saved, if it was put back from there and its info hasn't been read yet. Its preset and cookies
+    /// were already chosen, so rules don't change them, and if it was paused it goes back to paused.
+    /// </summary>
+    internal SavedDownload? RestoredFrom { get; set; }
 
     /// <summary>The file the last download produced (for a playlist, its last one), if known.</summary>
     internal string? LastFile { get; private set; }
