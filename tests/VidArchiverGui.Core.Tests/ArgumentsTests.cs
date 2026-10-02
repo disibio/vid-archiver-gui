@@ -68,6 +68,19 @@ public class ArgumentsTests
     }
 
     [Fact]
+    public void Finished_files_are_listed_by_yt_dlp_only()
+    {
+        var request = new DownloadRequest("u", [], Dest) { FileListPath = "/tmp/100%/files.txt" };
+        var args = DownloadRunner.BuildArguments(request, null);
+        var i = args.IndexOf("--print-to-file");
+        Assert.Equal(["after_move:filepath", "/tmp/100%%/files.txt"], args[(i + 1)..(i + 3)]);
+        Assert.True(i < args.IndexOf("--"));
+
+        Assert.DoesNotContain("--print-to-file", DownloadRunner.BuildArguments(request with { Flavor = DownloaderFlavor.YoutubeDl }, null));
+        Assert.DoesNotContain("--print-to-file", DownloadRunner.BuildArguments(request with { FileListPath = null }, null));
+    }
+
+    [Fact]
     public void Extra_downloader_args_are_passed_before_the_url()
     {
         var args = DownloadRunner.BuildArguments(new DownloadRequest("https://x", ["-f", "b"], "/d"), null, ["--js-runtimes", "deno:/app/deno"]);

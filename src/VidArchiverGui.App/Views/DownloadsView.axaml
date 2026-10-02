@@ -72,7 +72,8 @@
               <Button Classes="small" Content="Start" Command="{Binding StartCommand}" IsVisible="{Binding CanStart}" />
               <Button Classes="small" Content="Cancel" Command="{Binding CancelCommand}" IsVisible="{Binding CanCancel}" />
               <Button Classes="small" Content="Copy URL" Command="{Binding CopyUrlCommand}" />
-              <Button Classes="small" Content="Open folder" Command="{Binding OpenFolderCommand}" />
+              <Button Classes="small" Content="Open folder" Command="{Binding OpenFolderCommand}"
+                      ToolTip.Tip="Open the folder, with the downloaded file selected once there is one" />
               <Button Classes="small" Content="✕" Command="{Binding RemoveCommand}" ToolTip.Tip="Remove from list (right-click for more)" />
             </StackPanel>
 

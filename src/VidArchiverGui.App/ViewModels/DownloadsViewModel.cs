@@ -420,7 +420,10 @@ public partial class DownloadsViewModel : ObservableObject
         }
     }
 
-    internal Task OpenFolderAsync(DownloadItemViewModel item) => _host.Dialogs.OpenFolderAsync(item.Destination);
+    /// <summary>Opens the item's folder, with the file it downloaded selected if that's still there.</summary>
+    internal Task OpenFolderAsync(DownloadItemViewModel item) => item.LastFile is { } file && File.Exists(file)
+        ? _host.Dialogs.ShowFileAsync(file)
+        : _host.Dialogs.OpenFolderAsync(item.Destination);
 
     internal async Task CopyAsync(string text, string what)
     {

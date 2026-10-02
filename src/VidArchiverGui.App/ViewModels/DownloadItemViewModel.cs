@@ -108,6 +108,9 @@ public partial class DownloadItemViewModel : ObservableObject
     /// <summary>Put back from the last session: its preset and cookies were already chosen, so rules don't change them.</summary>
     internal bool Restored { get; set; }
 
+    /// <summary>The file the last download produced (for a playlist, its last one), if known.</summary>
+    internal string? LastFile { get; private set; }
+
     public bool CanStart => State is DownloadState.Ready or DownloadState.Failed or DownloadState.Cancelled;
     public bool CanCancel => State is DownloadState.Resolving or DownloadState.Queued or DownloadState.Downloading;
     public bool CanEdit => State is DownloadState.Ready or DownloadState.Queued or DownloadState.Failed or DownloadState.Cancelled;
@@ -299,6 +302,7 @@ public partial class DownloadItemViewModel : ObservableObject
         _destinationCount = 0;
         _lastError = null;
         _itemPrefix = "";
+        LastFile = null;
 
         try
         {
@@ -314,10 +318,11 @@ public partial class DownloadItemViewModel : ObservableObject
                         Gentle = settings.GentleDownloads,
                     };
                     _lastError = null;
-                    var exitCode = await DownloadRunner.RunAsync(request, downloader, ffmpeg, OnOutput, ct);
+                    var run = await DownloadRunner.RunAsync(request, downloader, ffmpeg, OnOutput, ct);
+                    LastFile = run.Files.LastOrDefault() ?? LastFile;
                     // Let any output events still queued on the UI thread land first.
                     await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
-                    return exitCode == 0 ? null : _lastError ?? $"{downloader.Downloader.Name} exited with code {exitCode}";
+                    return run.ExitCode == 0 ? null : _lastError ?? $"{downloader.Downloader.Name} exited with code {run.ExitCode}";
                 },
                 message => Dispatcher.UIThread.Post(() =>
                 {

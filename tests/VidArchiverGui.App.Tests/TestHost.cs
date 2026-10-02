@@ -33,7 +33,20 @@ public sealed class FakeDialogs : IDialogs
     public Task<string?> SaveJsonFileAsync(string title, string suggestedName) => Task.FromResult(FileToPick);
     public Task<string?> PickFolderAsync(string title, string? startPath = null) => Task.FromResult<string?>(null);
     public Task<string?> PickFileAsync(string title) => Task.FromResult<string?>(null);
-    public Task OpenFolderAsync(string path) => Task.CompletedTask;
+    public Task OpenFolderAsync(string path)
+    {
+        Opened.Add(path);
+        return Task.CompletedTask;
+    }
+
+    public Task ShowFileAsync(string file)
+    {
+        Opened.Add(file);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>The folders and files opened in the file manager so far.</summary>
+    public List<string> Opened { get; } = [];
     public Task CopyTextAsync(string text) => Task.CompletedTask;
 
     public void Notify(string title, string message)

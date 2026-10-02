@@ -79,6 +79,24 @@ public sealed class DownloadsViewModelTests : IDisposable
     });
 
     [Fact]
+    public Task Open_folder_selects_the_downloaded_file_while_it_exists() => Headless.Run(async () =>
+    {
+        var item = await AddAsync("https://fake.test/playlist/2");
+        await item.OpenFolderCommand.ExecuteAsync(null);
+        Assert.Equal(_folder, _t.Dialogs.Opened[^1]); // nothing downloaded yet
+
+        item.StartCommand.Execute(null);
+        await Headless.WaitUntil(() => item.State == DownloadState.Completed, "it downloads");
+        await item.OpenFolderCommand.ExecuteAsync(null);
+        var last = Path.Combine(_folder, "Fake video 2.mkv");
+        Assert.Equal(last, _t.Dialogs.Opened[^1]);
+
+        File.Delete(last);
+        await item.OpenFolderCommand.ExecuteAsync(null);
+        Assert.Equal(_folder, _t.Dialogs.Opened[^1]);
+    });
+
+    [Fact]
     public Task Starting_a_download_whose_info_failed_reads_it_again_and_then_downloads() => Headless.Run(async () =>
     {
         DownloadItemViewModel item;

@@ -10,7 +10,13 @@ public sealed record DownloadRequest(string Url, IReadOnlyList<string> PresetArg
 
     /// <summary>Adds <see cref="DownloadRunner.GentleArgs"/>.</summary>
     public bool Gentle { get; init; }
+
+    /// <summary>yt-dlp only: a file that the path of every finished file is added to, one per line.</summary>
+    public string? FileListPath { get; init; }
 }
+
+/// <param name="Files">The finished files, as far as they're known; the last one is the newest.</param>
+public sealed record DownloadResult(int ExitCode, IReadOnlyList<string> Files);
 
 public static class DownloadRunner
 {
@@ -71,6 +77,11 @@ public static class DownloadRunner
         if (request.Flavor == DownloaderFlavor.YtDlp)
         {
             args.AddRange(["--progress-template", YtDlpOutputParser.ProgressTemplate]);
+            if (request.FileListPath is { } list)
+            {
+                // The file name is itself a template, so a literal % must be doubled.
+                args.AddRange(["--print-to-file", "after_move:filepath", list.Replace("%", "%%")]);
+            }
         }
 
         args.AddRange(["--", request.Url]);
@@ -92,14 +103,52 @@ public static class DownloadRunner
         return -1;
     }
 
-    /// <summary>Runs one download. Events are raised on a background thread. Returns the downloader's exit code.</summary>
+    /// <summary>
+    /// Runs one download. Events are raised on a background thread. yt-dlp reports the finished files itself; for
+    /// youtube-dl they're the last file named in its output.
+    /// </summary>
     /// <param name="ffmpegLocation">See <see cref="ToolManager.ResolveFfmpeg"/>.</param>
-    public static async Task<int> RunAsync(DownloadRequest request, ResolvedDownloader downloader, string? ffmpegLocation,
+    public static async Task<DownloadResult> RunAsync(DownloadRequest request, ResolvedDownloader downloader, string? ffmpegLocation,
         Action<OutputEvent> onEvent, CancellationToken ct)
     {
         Directory.CreateDirectory(request.Destination);
 
-        var args = BuildArguments(request with { Flavor = downloader.Flavor }, ffmpegLocation, downloader.ExtraArgs);
+        var fileList = downloader.Flavor == DownloaderFlavor.YtDlp ? Path.Combine(Path.GetTempPath(), $"vidarchivergui-files-{Guid.NewGuid():N}.txt") : null;
+        try
+        {
+            string? lastNamed = null;
+            var exitCode = await RunProcessAsync(request with { Flavor = downloader.Flavor, FileListPath = fileList }, downloader, ffmpegLocation, e =>
+            {
+                if (e is OutputEvent.Destination d)
+                {
+                    lastNamed = d.Path;
+                }
+                else if (fileList is not null && e is OutputEvent.Text t && t.Line.EndsWith(fileList, StringComparison.Ordinal))
+                {
+                    return; // yt-dlp saying it writes the list, which is ours, not the user's
+                }
+
+                onEvent(e);
+            }, ct);
+
+            IReadOnlyList<string> files = fileList is not null
+                ? (File.Exists(fileList) ? File.ReadAllLines(fileList).Where(l => l.Length > 0).ToList() : [])
+                : lastNamed is not null ? [lastNamed] : [];
+            return new DownloadResult(exitCode, files);
+        }
+        finally
+        {
+            if (fileList is not null)
+            {
+                File.Delete(fileList);
+            }
+        }
+    }
+
+    private static async Task<int> RunProcessAsync(DownloadRequest request, ResolvedDownloader downloader, string? ffmpegLocation,
+        Action<OutputEvent> onEvent, CancellationToken ct)
+    {
+        var args = BuildArguments(request, ffmpegLocation, downloader.ExtraArgs);
         onEvent(new OutputEvent.Text($"> {Path.GetFileName(downloader.Path)} " + string.Join(' ', args.Select(Quote))));
 
         using var process = new Process { StartInfo = ProcessHelper.CreateStartInfo(downloader.Path, args) };

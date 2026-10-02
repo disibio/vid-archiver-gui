@@ -1,3 +1,5 @@
+using System.ComponentModel;
+using System.Diagnostics;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input.Platform;
@@ -18,6 +20,9 @@ public interface IDialogs
     /// <summary>Asks where to save a JSON file; null if cancelled.</summary>
     Task<string?> SaveJsonFileAsync(string title, string suggestedName);
     Task OpenFolderAsync(string path);
+
+    /// <summary>Opens the folder <paramref name="file"/> is in, with it selected where the file manager allows.</summary>
+    Task ShowFileAsync(string file);
     Task CopyTextAsync(string text);
 
     /// <summary>Asks a yes/no question; true if the user picked <paramref name="yes"/>. Esc or closing picks <paramref name="no"/>.</summary>
@@ -144,6 +149,53 @@ public sealed class WindowDialogs(Window window) : IDialogs
         if (NearestExistingDirectory(path) is { } dir)
         {
             await window.Launcher.LaunchDirectoryInfoAsync(new DirectoryInfo(dir));
+        }
+    }
+
+    public async Task ShowFileAsync(string file)
+    {
+        if (!await TrySelectInFileManagerAsync(file))
+        {
+            await OpenFolderAsync(Path.GetDirectoryName(file) ?? file);
+        }
+    }
+
+    /// <summary>Explorer and Finder can select a file; on Linux it's the freedesktop FileManager1 call, which most file managers answer.</summary>
+    private static async Task<bool> TrySelectInFileManagerAsync(string file)
+    {
+        try
+        {
+            if (OperatingSystem.IsWindows())
+            {
+                // Explorer reads this argument its own way: the path must be quoted after the comma, not the whole thing.
+                using var explorer = Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{file}\"") { UseShellExecute = false });
+                return explorer is not null;
+            }
+
+            var (exe, args) = OperatingSystem.IsMacOS()
+                ? ("open", new[] { "-R", file })
+                : ("dbus-send", ["--session", "--print-reply", "--dest=org.freedesktop.FileManager1", "--type=method_call",
+                    "/org/freedesktop/FileManager1", "org.freedesktop.FileManager1.ShowItems",
+                    "array:string:" + new Uri(file).AbsoluteUri, "string:"]);
+            var psi = new ProcessStartInfo(exe) { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true };
+            foreach (var a in args)
+            {
+                psi.ArgumentList.Add(a);
+            }
+
+            using var process = Process.Start(psi);
+            if (process is null)
+            {
+                return false;
+            }
+
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            await process.WaitForExitAsync(timeout.Token);
+            return process.ExitCode == 0;
+        }
+        catch (Exception e) when (e is Win32Exception or InvalidOperationException or OperationCanceledException)
+        {
+            return false; // the tool isn't there, or nothing answered
         }
     }
 
