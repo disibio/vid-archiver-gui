@@ -62,6 +62,18 @@ public sealed class SettingsTests : IDisposable
     }
 
     [Fact]
+    public void Mkv_presets_repackage_single_file_videos_so_the_thumbnail_can_be_embedded()
+    {
+        foreach (var preset in SettingsStore.CreateDefaults().Presets.Where(p => p.Arguments.Contains("--merge-output-format mkv")))
+        {
+            var args = ArgumentParser.Split(preset.Arguments);
+            Assert.Equal("mkv", args[args.IndexOf("--remux-video") + 1]);
+            Assert.Equal("VideoRemuxer+ffmpeg_i:-fflags +genpts", args[args.IndexOf("--postprocessor-args") + 1]);
+            Assert.DoesNotContain(args, a => a.StartsWith('#'));
+        }
+    }
+
+    [Fact]
     public void Settings_are_only_written_when_they_changed()
     {
         var store = new SettingsStore(Path.Combine(_dir, "settings.json"));

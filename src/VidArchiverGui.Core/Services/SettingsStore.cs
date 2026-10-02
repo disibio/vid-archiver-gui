@@ -101,6 +101,9 @@ public sealed class SettingsStore(string path)
                 --write-auto-sub --sub-lang en --embed-subs
                 --download-archive "{archiveFile}"
                 --merge-output-format mkv
+                # Videos that come as one file (like .ogv or .mpg on archive.org) are repackaged into MKV too, so the
+                # thumbnail can be embedded. Nothing is re-encoded; genpts fills in timestamps old MPEG files lack.
+                --remux-video mkv --postprocessor-args "VideoRemuxer+ffmpeg_i:-fflags +genpts"
                 --mtime
                 """,
         };
@@ -111,6 +114,9 @@ public sealed class SettingsStore(string path)
                 -f "bestvideo+bestaudio/best"
                 --embed-metadata --embed-chapters --embed-thumbnail
                 --merge-output-format mkv
+                # Videos that come as one file (like .ogv or .mpg on archive.org) are repackaged into MKV too, so the
+                # thumbnail can be embedded. Nothing is re-encoded; genpts fills in timestamps old MPEG files lack.
+                --remux-video mkv --postprocessor-args "VideoRemuxer+ffmpeg_i:-fflags +genpts"
                 """,
         };
         // H.264 + AAC in MP4 plays almost everywhere (QuickTime, iPhone, TVs, editors), unlike MKV; no re-encoding.
