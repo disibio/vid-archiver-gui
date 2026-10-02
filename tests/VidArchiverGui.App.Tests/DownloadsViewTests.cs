@@ -1,6 +1,9 @@
 using Avalonia.Controls;
+using Avalonia.Controls.Presenters;
+using Avalonia.Controls.Primitives;
 using Avalonia.Headless;
 using Avalonia.Input;
+using Avalonia.Layout;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using VidArchiverGui.App.ViewModels;
@@ -70,6 +73,24 @@ public sealed class DownloadsViewTests : DownloadListTests
         await AddAsync("https://fake.test/video/Ready to start");
         await Settle();
         Headless.Capture(_window, "list");
+    });
+
+    [Fact]
+    public Task The_logs_last_line_is_above_its_horizontal_scroll_bar() => Headless.Run(async () =>
+    {
+        _t.Settings.ShowLog = true;
+        Show();
+        var item = await AddAsync("https://fake.test/video/" + new string('x', 150));
+        _vm.SelectedItem = item;
+        item.StartCommand.Execute(null);
+        await Headless.WaitUntil(() => item.State == DownloadState.Completed, "it finishes");
+        await Settle();
+
+        var log = _window.GetVisualDescendants().OfType<TextBox>().Single(t => t.Name == "LogBox");
+        var text = log.GetVisualDescendants().OfType<ScrollContentPresenter>().Single();
+        var bar = log.GetVisualDescendants().OfType<ScrollBar>().Single(b => b.Orientation == Orientation.Horizontal);
+        Assert.True(bar.IsVisible);
+        Assert.True(text.Bounds.Bottom <= bar.Bounds.Top, $"text ends at {text.Bounds.Bottom}, the bar starts at {bar.Bounds.Top}");
     });
 
     [Fact]
