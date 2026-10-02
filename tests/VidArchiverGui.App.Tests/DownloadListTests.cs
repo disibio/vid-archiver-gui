@@ -36,7 +36,12 @@ public abstract class DownloadListTests : IDisposable
 
     public void Dispose()
     {
-        _vm.CancelEverything();
+        // On the UI thread, like everything else that changes the list (a shown view is bound to it).
+        Headless.Run(() =>
+        {
+            _vm.CancelEverything();
+            return Task.CompletedTask;
+        }).GetAwaiter().GetResult();
         _t.Dispose();
         try
         {

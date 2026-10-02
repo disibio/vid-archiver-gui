@@ -3,7 +3,8 @@
 //
 // Links: https://fake.test/video/<name> is one video, https://fake.test/playlist/<count> is a playlist of that many.
 // Add ?fail to make the download fail, or set FAKEYTDLP_INFO_FAIL=1 to make reading the info (-J) fail.
-// FAKEYTDLP_STEP_MS sets the pause between progress lines (default 20 ms).
+// FAKEYTDLP_STEP_MS sets the pause between progress lines (default 20 ms). With --write-thumbnail, a 1x1 PNG is
+// written beside each video, or a copy of the image FAKEYTDLP_THUMBNAIL names.
 //
 // Each video is downloaded as two streams (video, then audio) that are merged, like yt-dlp does with separate formats.
 // Streams grow a .part file a chunk at a time, and a later run carries on from it, so stopping and starting resumes.
@@ -101,7 +102,14 @@ for (var i = 0; i < titles.Count; i++)
 
     if (writeThumbnail)
     {
-        File.WriteAllBytes(Path.ChangeExtension(final, ".png"), TinyPng);
+        if (Environment.GetEnvironmentVariable("FAKEYTDLP_THUMBNAIL") is { Length: > 0 } image)
+        {
+            File.Copy(image, Path.ChangeExtension(final, Path.GetExtension(image)), overwrite: true);
+        }
+        else
+        {
+            File.WriteAllBytes(Path.ChangeExtension(final, ".png"), TinyPng);
+        }
     }
 
     foreach (var file in printToFile)

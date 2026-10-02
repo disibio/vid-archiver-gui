@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -102,6 +103,9 @@ public partial class DownloadItemViewModel : ObservableObject
     [ObservableProperty] private string _progressText = "";
     [ObservableProperty] private string? _error;
     [ObservableProperty] private string _logText = "";
+
+    /// <summary>The finished file's thumbnail, from the file itself or the one saved beside it; null if it has none.</summary>
+    [ObservableProperty] private Bitmap? _thumbnail;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(StateText), nameof(CanStart), nameof(StartText), nameof(CanPause), nameof(CanCancel), nameof(CanEdit),
@@ -341,6 +345,7 @@ public partial class DownloadItemViewModel : ObservableObject
         _playlistIndex = 0;
         _playlistCount = 0;
         LastFile = null;
+        Thumbnail = null;
 
         try
         {
@@ -383,6 +388,10 @@ public partial class DownloadItemViewModel : ObservableObject
                 IsIndeterminate = false;
                 Progress = 100;
                 ProgressText = skipped ? "Nothing new — already in archive" : "Finished";
+                if (LastFile is { } file)
+                {
+                    _ = LoadThumbnailAsync(file);
+                }
             }
             else
             {
@@ -404,6 +413,44 @@ public partial class DownloadItemViewModel : ObservableObject
         {
             _pausing = false;
             IsIndeterminate = false;
+        }
+    }
+
+    /// <summary>
+    /// Shows the thumbnail saved beside <paramref name="file"/> (--write-thumbnail), else the one embedded in it
+    /// (--embed-thumbnail), read with ffmpeg. Only local files are read; a missing or unreadable one shows nothing.
+    /// </summary>
+    private async Task LoadThumbnailAsync(string file)
+    {
+        string? extracted = null;
+        try
+        {
+            var image = Thumbnails.FindSidecar(file);
+            if (image is null && ToolManager.ResolveFfmpeg(_owner.Settings.FfmpegPath) is { } ffmpeg)
+            {
+                extracted = Path.Combine(Path.GetTempPath(), $"vidarchivergui-thumbnail-{Guid.NewGuid():N}.png");
+                image = await Thumbnails.ExtractEmbeddedAsync(file, ffmpeg, extracted) ? extracted : null;
+            }
+
+            if (image is not null)
+            {
+                Thumbnail = await Task.Run(() =>
+                {
+                    using var stream = File.OpenRead(image);
+                    return Bitmap.DecodeToWidth(stream, 192);
+                });
+            }
+        }
+        catch (Exception e)
+        {
+            AppendLog("Couldn't show the thumbnail: " + e.Message); // it's only a picture; the download is fine
+        }
+        finally
+        {
+            if (extracted is not null)
+            {
+                File.Delete(extracted);
+            }
         }
     }
 

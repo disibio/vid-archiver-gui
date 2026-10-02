@@ -52,6 +52,27 @@ public sealed class DownloadsViewTests : DownloadListTests
     }
 
     [Fact]
+    public Task Picture_of_the_list() => Headless.Run(async () =>
+    {
+        Show();
+        _t.Settings.DefaultPreset.Arguments = "--write-thumbnail";
+        var done = await AddAsync("https://fake.test/video/Finished with a thumbnail");
+        done.StartCommand.Execute(null);
+        await Headless.WaitUntil(() => done.Thumbnail is not null, "the thumbnail shows");
+        var paused = await AddAsync("https://fake.test/playlist/4");
+        await Slowly(async () =>
+        {
+            paused.StartCommand.Execute(null);
+            await Headless.WaitUntil(() => paused.Progress > 30, "it's into the second item");
+            paused.PauseCommand.Execute(null);
+            await Headless.WaitUntil(() => paused.State == DownloadState.Paused, "it pauses");
+        });
+        await AddAsync("https://fake.test/video/Ready to start");
+        await Settle();
+        Headless.Capture(_window, "list");
+    });
+
+    [Fact]
     public Task Delete_removes_the_focused_download_and_keeps_the_focus_in_the_list() => Headless.Run(async () =>
     {
         Show();

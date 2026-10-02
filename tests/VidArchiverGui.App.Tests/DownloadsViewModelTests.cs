@@ -143,6 +143,26 @@ public sealed class DownloadsViewModelTests : DownloadListTests
     });
 
     [Fact]
+    public Task A_finished_download_shows_the_thumbnail_saved_beside_it() => Headless.Run(async () =>
+    {
+        _t.Settings.DefaultPreset.Arguments = "--write-thumbnail";
+        var item = await AddAsync("https://fake.test/video/pictured");
+        item.StartCommand.Execute(null);
+        await Headless.WaitUntil(() => item.Thumbnail is not null, "the thumbnail shows");
+    });
+
+    [Fact]
+    public Task Without_a_thumbnail_file_there_is_none() => Headless.Run(async () =>
+    {
+        var item = await AddAsync("https://fake.test/video/plain");
+        item.StartCommand.Execute(null);
+        await Headless.WaitUntil(() => item.State == DownloadState.Completed, "it downloads");
+        await Task.Delay(1000); // FakeYtDlp's file has no embedded cover either, if ffmpeg is here to look
+        Assert.Null(item.Thumbnail);
+        Assert.DoesNotContain("thumbnail", item.LogText);
+    });
+
+    [Fact]
     public Task Starting_a_download_whose_info_failed_reads_it_again_and_then_downloads() => Headless.Run(async () =>
     {
         DownloadItemViewModel item;

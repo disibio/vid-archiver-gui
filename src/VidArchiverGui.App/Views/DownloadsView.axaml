@@ -55,8 +55,8 @@
              KeyboardNavigation.TabNavigation="Continue">
       <ListBox.ItemTemplate>
         <DataTemplate x:DataType="vm:DownloadItemViewModel">
-          <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto" Margin="0,4" Background="Transparent">
-            <Grid.ContextMenu>
+          <DockPanel Margin="0,4" Background="Transparent">
+            <DockPanel.ContextMenu>
               <ContextMenu>
                 <MenuItem Header="Copy URL" Command="{Binding CopyUrlCommand}" />
                 <MenuItem Header="Copy title" Command="{Binding CopyTitleCommand}" />
@@ -67,70 +67,77 @@
                 <Separator />
                 <MenuItem Header="Remove" Command="{Binding RemoveCommand}" />
               </ContextMenu>
-            </Grid.ContextMenu>
+            </DockPanel.ContextMenu>
 
-            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
-              <TextBlock Text="{Binding StateText}" VerticalAlignment="Center" Margin="0,0,8,0" FontSize="12" />
-              <Button Classes="small" Content="{Binding StartText}" Command="{Binding StartCommand}" IsVisible="{Binding CanStart}" />
-              <Button Classes="small" Content="Pause" Command="{Binding PauseCommand}" IsVisible="{Binding CanPause}"
-                      ToolTip.Tip="Stop for now, keeping what's downloaded so far. Resume carries on from there." />
-              <Button Classes="small" Content="Cancel" Command="{Binding CancelCommand}" IsVisible="{Binding CanCancel}" />
-              <Button Classes="small" Content="Copy URL" Command="{Binding CopyUrlCommand}" />
-              <Button Classes="small" Content="Open folder" Command="{Binding OpenFolderCommand}"
-                      ToolTip.Tip="Open the folder, with the downloaded file selected once there is one" />
-              <Button Classes="small" Content="✕" Command="{Binding RemoveCommand}" ToolTip.Tip="Remove from list (right-click for more)"
-                      AutomationProperties.Name="Remove from list" />
-            </StackPanel>
+            <Border DockPanel.Dock="Left" Width="96" Margin="0,2,10,0" VerticalAlignment="Top" CornerRadius="4" ClipToBounds="True"
+                    IsVisible="{Binding Thumbnail, Converter={x:Static ObjectConverters.IsNotNull}}">
+              <Image Source="{Binding Thumbnail}" Stretch="Uniform" />
+            </Border>
 
-            <SelectableTextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding Url}" FontSize="12" Opacity="0.8"
-                                 TextTrimming="CharacterEllipsis" Margin="0,1,0,0" />
+            <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto">
+              <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+              <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+                <TextBlock Text="{Binding StateText}" VerticalAlignment="Center" Margin="0,0,8,0" FontSize="12" />
+                <Button Classes="small" Content="{Binding StartText}" Command="{Binding StartCommand}" IsVisible="{Binding CanStart}" />
+                <Button Classes="small" Content="Pause" Command="{Binding PauseCommand}" IsVisible="{Binding CanPause}"
+                        ToolTip.Tip="Stop for now, keeping what's downloaded so far. Resume carries on from there." />
+                <Button Classes="small" Content="Cancel" Command="{Binding CancelCommand}" IsVisible="{Binding CanCancel}" />
+                <Button Classes="small" Content="Copy URL" Command="{Binding CopyUrlCommand}" />
+                <Button Classes="small" Content="Open folder" Command="{Binding OpenFolderCommand}"
+                        ToolTip.Tip="Open the folder, with the downloaded file selected once there is one" />
+                <Button Classes="small" Content="✕" Command="{Binding RemoveCommand}" ToolTip.Tip="Remove from list (right-click for more)"
+                        AutomationProperties.Name="Remove from list" />
+              </StackPanel>
 
-            <TextBlock Grid.Row="2" Grid.ColumnSpan="2" Text="{Binding Details}" Classes="hint" Margin="0,2,0,4" />
+              <SelectableTextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding Url}" FontSize="12" Opacity="0.8"
+                                   TextTrimming="CharacterEllipsis" Margin="0,1,0,0" />
 
-            <Grid Grid.Row="3" Grid.ColumnSpan="2" IsEnabled="{Binding CanEdit}" IsVisible="{Binding !IsFinished}">
-              <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="3*" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="2*" MaxWidth="220" />
-                <ColumnDefinition Width="1.5*" MaxWidth="170" />
-              </Grid.ColumnDefinitions>
-              <TextBlock Text="Save to" VerticalAlignment="Center" Margin="0,0,8,0" FontSize="12" />
-              <TextBox Grid.Column="1" Text="{Binding Destination}" FontSize="12" MinHeight="28" Padding="6,3" />
-              <Button Grid.Column="2" Classes="small" Content="Browse…" Command="{Binding BrowseCommand}" Margin="4,0,0,0" />
-              <Button Grid.Column="3" Classes="small" Content="Remember" Command="{Binding RememberCommand}" Margin="4,0,0,0"
-                      IsEnabled="{Binding CanRemember}"
-                      ToolTip.Tip="Create a folder rule so this channel (or playlist) always goes to this folder." />
-              <ComboBox Grid.Column="4" ItemsSource="{Binding Presets}" SelectedItem="{Binding Preset}" Margin="6,0,0,0"
-                        HorizontalAlignment="Stretch" FontSize="12" MinHeight="28">
-                <ComboBox.ItemTemplate>
-                  <DataTemplate x:DataType="m:Preset">
-                    <TextBlock Text="{Binding Name}" />
-                  </DataTemplate>
-                </ComboBox.ItemTemplate>
-              </ComboBox>
-              <ComboBox Grid.Column="5" ItemsSource="{Binding CookieChoices}" SelectedItem="{Binding SelectedCookie}" Margin="4,0,0,0"
-                        HorizontalAlignment="Stretch" FontSize="12" MinHeight="28" ToolTip.Tip="Cookies for this download">
-                <ComboBox.ItemTemplate>
-                  <DataTemplate x:DataType="m:Choice">
-                    <TextBlock Text="{Binding Name}" />
-                  </DataTemplate>
-                </ComboBox.ItemTemplate>
-              </ComboBox>
+              <TextBlock Grid.Row="2" Grid.ColumnSpan="2" Text="{Binding Details}" Classes="hint" Margin="0,2,0,4" />
+
+              <Grid Grid.Row="3" Grid.ColumnSpan="2" IsEnabled="{Binding CanEdit}" IsVisible="{Binding !IsFinished}">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="Auto" />
+                  <ColumnDefinition Width="3*" />
+                  <ColumnDefinition Width="Auto" />
+                  <ColumnDefinition Width="Auto" />
+                  <ColumnDefinition Width="2*" MaxWidth="220" />
+                  <ColumnDefinition Width="1.5*" MaxWidth="170" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="Save to" VerticalAlignment="Center" Margin="0,0,8,0" FontSize="12" />
+                <TextBox Grid.Column="1" Text="{Binding Destination}" FontSize="12" MinHeight="28" Padding="6,3" />
+                <Button Grid.Column="2" Classes="small" Content="Browse…" Command="{Binding BrowseCommand}" Margin="4,0,0,0" />
+                <Button Grid.Column="3" Classes="small" Content="Remember" Command="{Binding RememberCommand}" Margin="4,0,0,0"
+                        IsEnabled="{Binding CanRemember}"
+                        ToolTip.Tip="Create a folder rule so this channel (or playlist) always goes to this folder." />
+                <ComboBox Grid.Column="4" ItemsSource="{Binding Presets}" SelectedItem="{Binding Preset}" Margin="6,0,0,0"
+                          HorizontalAlignment="Stretch" FontSize="12" MinHeight="28">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="m:Preset">
+                      <TextBlock Text="{Binding Name}" />
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
+                <ComboBox Grid.Column="5" ItemsSource="{Binding CookieChoices}" SelectedItem="{Binding SelectedCookie}" Margin="4,0,0,0"
+                          HorizontalAlignment="Stretch" FontSize="12" MinHeight="28" ToolTip.Tip="Cookies for this download">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="m:Choice">
+                      <TextBlock Text="{Binding Name}" />
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
+              </Grid>
+
+              <Grid Grid.Row="4" Grid.ColumnSpan="2" ColumnDefinitions="*,Auto" Margin="0,6,0,0" IsVisible="{Binding ShowProgress}">
+                <ProgressBar Value="{Binding Progress}" IsIndeterminate="{Binding IsIndeterminate}" Minimum="0" Maximum="100" MinHeight="6" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="1" Text="{Binding ProgressText}" FontSize="12" Margin="10,0,0,0" MinWidth="330"
+                           MaxWidth="{Binding $parent[Grid].Bounds.Width, Converter={x:Static vm:FractionConverter.Instance}, ConverterParameter=0.45}"
+                           TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding ProgressText}" />
+              </Grid>
+
+              <TextBlock Grid.Row="5" Grid.ColumnSpan="2" Text="{Binding Error}" Classes="error" FontSize="12" Margin="0,4,0,0"
+                         IsVisible="{Binding Error, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
             </Grid>
-
-            <Grid Grid.Row="4" Grid.ColumnSpan="2" ColumnDefinitions="*,Auto" Margin="0,6,0,0" IsVisible="{Binding ShowProgress}">
-              <ProgressBar Value="{Binding Progress}" IsIndeterminate="{Binding IsIndeterminate}" Minimum="0" Maximum="100" MinHeight="6" VerticalAlignment="Center" />
-              <TextBlock Grid.Column="1" Text="{Binding ProgressText}" FontSize="12" Margin="10,0,0,0" MinWidth="330"
-                         MaxWidth="{Binding $parent[Grid].Bounds.Width, Converter={x:Static vm:FractionConverter.Instance}, ConverterParameter=0.45}"
-                         TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding ProgressText}" />
-            </Grid>
-
-            <TextBlock Grid.Row="5" Grid.ColumnSpan="2" Text="{Binding Error}" Classes="error" FontSize="12" Margin="0,4,0,0"
-                       IsVisible="{Binding Error, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-          </Grid>
+          </DockPanel>
         </DataTemplate>
       </ListBox.ItemTemplate>
     </ListBox>
