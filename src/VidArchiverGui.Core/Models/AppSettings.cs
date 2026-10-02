@@ -23,13 +23,9 @@ public partial class AppSettings : ObservableObject
     /// <summary>Used when no rule matches. Supports the same tokens as rule destinations.</summary>
     [ObservableProperty] private string _fallbackDestination = "";
 
-    // Downloaders were called engines in the code once; settings.json keeps those names.
-    [JsonPropertyName("Engines")]
     public ObservableCollection<Downloader> Downloaders { get; set; } = [];
 
-    [ObservableProperty]
-    [property: JsonPropertyName("DefaultEngineId")]
-    private string _defaultDownloaderId = Downloader.StableId;
+    [ObservableProperty] private string _defaultDownloaderId = Downloader.StableId;
 
     /// <summary>Custom ffmpeg executable or folder. Empty = app-managed copy, then PATH.</summary>
     [ObservableProperty] private string? _ffmpegPath;

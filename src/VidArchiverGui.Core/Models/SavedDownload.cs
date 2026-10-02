@@ -1,5 +1,3 @@
-using System.Text.Json.Serialization;
-
 namespace VidArchiverGui.Core.Models;
 
 /// <summary>
@@ -11,7 +9,6 @@ public sealed record SavedDownload
     public required string Url { get; init; }
     public string? PresetId { get; init; }
     public string? CookieId { get; init; }
-    [JsonPropertyName("EngineId")] // its name in settings.json from before downloaders were renamed
     public string? DownloaderId { get; init; }
 
     /// <summary>The folder, if the user picked it by hand (a rule's folder is worked out again).</summary>
