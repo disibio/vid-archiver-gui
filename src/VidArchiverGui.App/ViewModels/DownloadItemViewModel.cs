@@ -15,7 +15,6 @@ public partial class DownloadItemViewModel : ObservableObject
     private readonly DownloadsViewModel _owner;
     private readonly List<string> _log = [];
     private CancellationTokenSource? _cts;
-    private bool _pausing;
     private bool _settingRoutedDestination;
 
     // Written from the process output thread, read after the process exits.
@@ -115,18 +114,23 @@ public partial class DownloadItemViewModel : ObservableObject
     /// <summary>True once the user picks a folder by hand, so re-applying rules won't overwrite it.</summary>
     public bool DestinationEdited { get; set; }
 
+    /// <summary>Put back from last session and its info not read yet: its preset and cookies were already chosen, so rules don't change them.</summary>
+    internal bool Restored { get; set; }
+
     /// <summary>
-    /// What last session saved, if it was put back from there and its info hasn't been read yet. Its preset and cookies
-    /// were already chosen, so rules don't change them, and if it was paused it goes back to paused.
+    /// Pause was pressed while it was downloading or reading its info (or it was paused last session), so it becomes
+    /// paused once that stops. Starting it clears this.
     /// </summary>
-    internal SavedDownload? RestoredFrom { get; set; }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanPause))]
+    private bool _pauseRequested;
 
     /// <summary>The file the last download produced (for a playlist, its last one), if known.</summary>
     internal string? LastFile { get; private set; }
 
     public bool CanStart => State is DownloadState.Ready or DownloadState.Failed or DownloadState.Cancelled or DownloadState.Paused;
     public string StartText => State == DownloadState.Paused ? "Resume" : "Start";
-    public bool CanPause => State is DownloadState.Queued or DownloadState.Downloading;
+    public bool CanPause => State is DownloadState.Queued or DownloadState.Downloading or DownloadState.Resolving && !PauseRequested;
     public bool CanCancel => State is DownloadState.Resolving or DownloadState.Queued or DownloadState.Downloading or DownloadState.Paused;
     public bool CanEdit => State is DownloadState.Ready or DownloadState.Queued or DownloadState.Failed or DownloadState.Cancelled or DownloadState.Paused;
     public bool IsFinished => State is DownloadState.Completed or DownloadState.Skipped;
@@ -259,13 +263,13 @@ public partial class DownloadItemViewModel : ObservableObject
             State = DownloadState.Cancelled;
         }
 
-        _pausing = false;
+        PauseRequested = false;
         _cts?.Cancel();
     }
 
     /// <summary>
     /// Stops a running download (yt-dlp leaves its partly downloaded files and carries on from them next time), or
-    /// holds a queued one.
+    /// holds a queued one, or one whose info is still being read.
     /// </summary>
     internal void PauseInternal()
     {
@@ -274,10 +278,13 @@ public partial class DownloadItemViewModel : ObservableObject
             State = DownloadState.Paused;
             ProgressText = "Paused";
         }
-        else if (State == DownloadState.Downloading)
+        else if (State is DownloadState.Downloading or DownloadState.Resolving)
         {
-            _pausing = true;
-            _cts?.Cancel();
+            PauseRequested = true;
+            if (State == DownloadState.Downloading)
+            {
+                _cts?.Cancel();
+            }
         }
     }
 
@@ -401,8 +408,8 @@ public partial class DownloadItemViewModel : ObservableObject
         }
         catch (OperationCanceledException)
         {
-            State = _pausing ? DownloadState.Paused : DownloadState.Cancelled;
-            ProgressText = _pausing ? "Paused" : "Cancelled";
+            State = PauseRequested ? DownloadState.Paused : DownloadState.Cancelled;
+            ProgressText = PauseRequested ? "Paused" : "Cancelled";
         }
         catch (Exception e)
         {
@@ -411,7 +418,7 @@ public partial class DownloadItemViewModel : ObservableObject
         }
         finally
         {
-            _pausing = false;
+            PauseRequested = false;
             IsIndeterminate = false;
         }
     }

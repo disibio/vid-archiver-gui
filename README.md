@@ -66,7 +66,7 @@ If you set a folder by hand, you can click **Remember** to turn it into a rule f
 **Pause** stops a download and keeps what's downloaded so far, and **Resume** carries on from there, even after you
 restart the app. A playlist's bar fills across the whole playlist, not just the current video.
 
-When a download is done, **Open folder** opens its folder with the file selected. If your preset saves or embeds the
+When a download is done, **Open folder** opens its folder with the file selected (with yt-dlp). If your preset saves or embeds the
 thumbnail (`--write-thumbnail` or `--embed-thumbnail`, as the built-in presets do), it's shown next to the download.
 It's read from the downloaded files, not fetched from the site.
 

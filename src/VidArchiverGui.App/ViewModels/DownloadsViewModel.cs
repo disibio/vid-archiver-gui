@@ -165,11 +165,11 @@ public partial class DownloadsViewModel : ObservableObject
                 return;
             }
 
-            var restored = item.RestoredFrom;
-            item.RestoredFrom = null;
-            ApplyRoute(item, keepChoices: restored is not null);
-            if (restored is { Paused: true })
+            ApplyRoute(item, keepChoices: item.Restored);
+            item.Restored = false;
+            if (item.PauseRequested)
             {
+                item.PauseRequested = false;
                 item.State = DownloadState.Paused;
                 item.ProgressText = "Paused";
                 return;
@@ -247,6 +247,7 @@ public partial class DownloadsViewModel : ObservableObject
 
     internal void Enqueue(DownloadItemViewModel item)
     {
+        item.PauseRequested = false;
         if (item.Info is null)
         {
             _ = ResolveAsync(item, startAfter: true); // metadata failed earlier: retry that first
@@ -381,7 +382,7 @@ public partial class DownloadsViewModel : ObservableObject
                 CookieId = i.CookieId,
                 DownloaderId = i.DownloaderOverride?.Id,
                 Destination = i.DestinationEdited && !string.IsNullOrWhiteSpace(i.Destination) ? i.Destination : null,
-                Paused = i.State == DownloadState.Paused,
+                Paused = i.State == DownloadState.Paused || i.PauseRequested,
             })
             .ToList();
     }
@@ -398,7 +399,8 @@ public partial class DownloadsViewModel : ObservableObject
             {
                 CookieId = saved.CookieId,
                 DownloaderOverride = _host.Settings.FindDownloader(saved.DownloaderId),
-                RestoredFrom = saved,
+                Restored = true,
+                PauseRequested = saved.Paused,
                 ProgressText = "Waiting for the startup checks…",
                 IsIndeterminate = true,
             };

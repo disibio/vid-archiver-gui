@@ -143,6 +143,52 @@ public sealed class DownloadsViewModelTests : DownloadListTests
     });
 
     [Fact]
+    public Task Resuming_a_restored_paused_download_whose_info_failed_downloads_it() => Headless.Run(async () =>
+    {
+        _t.Settings.UnfinishedDownloads = [new SavedDownload { Url = "https://fake.test/video/offline", Paused = true }];
+        _vm.RestoreUnfinished();
+        var item = Assert.Single(_vm.Items);
+        Environment.SetEnvironmentVariable("FAKEYTDLP_INFO_FAIL", "1");
+        try
+        {
+            _vm.ResumeRestored();
+            await Headless.WaitUntil(() => item.State != DownloadState.Resolving, "its info is read");
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("FAKEYTDLP_INFO_FAIL", null);
+        }
+
+        Assert.Equal(DownloadState.Failed, item.State);
+        _vm.SaveUnfinished();
+        Assert.True(Assert.Single(_t.Settings.UnfinishedDownloads).Paused); // quitting now still keeps it paused
+
+        item.StartCommand.Execute(null);
+        await Headless.WaitUntil(() => item.State is DownloadState.Completed or DownloadState.Paused, "it downloads");
+        Assert.Equal(DownloadState.Completed, item.State);
+    });
+
+    [Fact]
+    public Task Pause_all_also_pauses_downloads_whose_info_is_still_being_read() => Headless.Run(async () =>
+    {
+        _t.Settings.AutoStartDownloads = true;
+        _t.Settings.UnfinishedDownloads = [new SavedDownload { Url = "https://fake.test/video/waiting" }];
+        _vm.RestoreUnfinished();
+        var item = Assert.Single(_vm.Items);
+        Assert.True(item.CanPause);
+
+        _vm.PauseAllCommand.Execute(null);
+        Assert.False(item.CanPause);
+        _vm.SaveUnfinished();
+        Assert.True(Assert.Single(_t.Settings.UnfinishedDownloads).Paused);
+
+        _vm.ResumeRestored();
+        await Headless.WaitUntil(() => item.State != DownloadState.Resolving, "its info is read");
+        await Task.Delay(500); // long enough for an auto-start to show
+        Assert.Equal(DownloadState.Paused, item.State);
+    });
+
+    [Fact]
     public Task A_finished_download_shows_the_thumbnail_saved_beside_it() => Headless.Run(async () =>
     {
         _t.Settings.DefaultPreset.Arguments = "--write-thumbnail";
