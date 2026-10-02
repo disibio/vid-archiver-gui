@@ -52,6 +52,16 @@ public sealed class SettingsTests : IDisposable
     }
 
     [Fact]
+    public void Data_is_kept_beside_the_app_only_with_portable_txt()
+    {
+        Assert.Null(AppPaths.PortableDataDir(_dir));
+
+        File.WriteAllText(Path.Combine(_dir, "portable.txt"), "");
+        Assert.Equal(Path.Combine(_dir, "data"), AppPaths.PortableDataDir(_dir));
+        Assert.True(Directory.Exists(Path.Combine(_dir, "data")));
+    }
+
+    [Fact]
     public void Settings_are_only_written_when_they_changed()
     {
         var store = new SettingsStore(Path.Combine(_dir, "settings.json"));

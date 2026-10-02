@@ -3,7 +3,8 @@
   Builds the standalone Windows download: publish/windows/Vid-Archiver-GUI-<version>-win-x64.zip.
 
 .DESCRIPTION
-  The zip holds one folder with the single-file VidArchiverGui.exe and the license files next to it.
+  The zip holds one folder with the single-file VidArchiverGui.exe, the license files and portable.txt, so the
+  app keeps its settings in a data folder beside the exe.
   The exe isn't code-signed, so SmartScreen may warn the first time it's run.
 
 .EXAMPLE
@@ -24,6 +25,7 @@ if ($LASTEXITCODE) { throw 'dotnet publish failed' }
 
 # Only the exe and the license files; nothing else (e.g. a stray .pdb) belongs in the download.
 Get-ChildItem $stage | Where-Object Name -notin 'VidArchiverGui.exe', 'LICENSE', 'NOTICE', 'THIRD-PARTY-NOTICES.txt' | Remove-Item -Recurse -Force
+New-Item (Join-Path $stage 'portable.txt') -ItemType File | Out-Null
 # Entries are added one by one with "/" paths: under Windows PowerShell 5.1 both Compress-Archive and
 # ZipFile.CreateFromDirectory write "\" into the zip's paths, which macOS/Linux unzippers misread.
 Add-Type -AssemblyName System.IO.Compression, System.IO.Compression.FileSystem

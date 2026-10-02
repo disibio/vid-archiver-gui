@@ -44,7 +44,9 @@ public partial class SettingsViewModel : ObservableObject
     public string DataFolder => AppPaths.DataDir;
     public string DataFolderHint => AppPaths.IsPackaged
         ? "Settings, rules and presets live in settings.json here. Windows removes this folder when the app is uninstalled."
-        : "Settings, rules and presets live in settings.json here. Put a file named portable.txt next to the app to keep data beside it instead.";
+        : AppPaths.IsUnder(AppPaths.DataDir, AppContext.BaseDirectory)
+            ? "Settings, rules and presets live in settings.json here, beside the app, because portable.txt is next to it."
+            : "Settings, rules and presets live in settings.json here. Put a file named portable.txt next to the app to keep data beside it instead.";
     /// <summary>The Store, Flatpak and AUR builds are updated by those, so they don't offer the app update check.</summary>
     public bool CanCheckForAppUpdates => !AppUpdate.UpdatedElsewhere;
     public bool CanDownloadFfmpeg => ToolManager.CanDownloadFfmpeg;

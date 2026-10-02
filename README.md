@@ -31,7 +31,9 @@ Grab the latest build from [Releases](https://github.com/disibio/vid-archiver-gu
 
 - **Windows:** get it from the [Microsoft Store](https://apps.microsoft.com/detail/9NDN8K16996C?mode=direct). It's signed and updates itself. Or download the
   standalone `.exe` in a `.zip` from Releases. That one isn't code-signed, so SmartScreen may complain the first
-  time. Click **More info**, then **Run anyway**.
+  time. Click **More info**, then **Run anyway**. The zip version is portable: it keeps its settings in a `data`
+  folder next to the `.exe`, so to update it, replace the `.exe` and keep that folder. Unzip it somewhere you can
+  write to (not Program Files), or it keeps its settings in `%APPDATA%` instead.
 - **Linux:** an `.AppImage` for x64 and arm64. Make it executable (`chmod +x Vid-Archiver-GUI-*.AppImage`) and run
   it. If it says FUSE is missing, run it with `--appimage-extract-and-run`. Or use the `.tar.gz`: unpack it and run
   `./install.sh` to add it to your application menu.
@@ -220,8 +222,9 @@ Settings are stored in:
 - macOS: `~/Library/Application Support/VidArchiverGui`
 - Linux: `~/.config/VidArchiverGui`
 
-The Microsoft Store version keeps them in its own package folder (Settings > App data shows where). To make it
-portable, put an empty file called `portable.txt` next to the program and it'll keep its data there instead.
+The Microsoft Store version keeps them in its own package folder (Settings > App data shows where). If there's a
+file called `portable.txt` next to the program, as in the Windows zip, it keeps its data in a `data` folder there
+instead.
 
 ## Building
 

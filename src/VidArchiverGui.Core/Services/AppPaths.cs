@@ -28,7 +28,8 @@ public static class AppPaths
 
     /// <summary>
     /// Per-user data folder (settings, managed yt-dlp/ffmpeg). If a file named "portable.txt" sits next to the
-    /// executable, data is kept beside the executable instead. Store (MSIX) installs use the package's own folder.
+    /// executable, data is kept beside the executable instead (see <see cref="PortableDataDir"/>). Store (MSIX) installs
+    /// use the package's own folder.
     /// </summary>
     public static string DataDir { get; } = ResolveDataDir();
 
@@ -77,11 +78,8 @@ public static class AppPaths
             return state;
         }
 
-        var baseDir = AppContext.BaseDirectory;
-        if (File.Exists(Path.Combine(baseDir, "portable.txt")))
+        if (PortableDataDir(AppContext.BaseDirectory) is { } portable)
         {
-            var portable = Path.Combine(baseDir, "data");
-            Directory.CreateDirectory(portable);
             return portable;
         }
 
@@ -89,6 +87,29 @@ public static class AppPaths
         var dir = Path.Combine(appData, "VidArchiverGui");
         Directory.CreateDirectory(dir);
         return dir;
+    }
+
+    /// <summary>
+    /// The "data" folder beside the app if portable.txt is there (the Windows zip includes it), or null if there's no
+    /// portable.txt or the folder can't be written to, such as under Program Files.
+    /// </summary>
+    internal static string? PortableDataDir(string baseDir)
+    {
+        if (!File.Exists(Path.Combine(baseDir, "portable.txt")))
+        {
+            return null;
+        }
+
+        var dir = Path.Combine(baseDir, "data");
+        try
+        {
+            Directory.CreateDirectory(dir);
+            return dir;
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
     }
 
     private static string? GetPackageFamilyName()
