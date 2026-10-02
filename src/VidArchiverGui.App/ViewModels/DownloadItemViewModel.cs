@@ -229,7 +229,10 @@ public partial class DownloadItemViewModel : ObservableObject
 
     [RelayCommand] private void Cancel() => CancelInternal();
 
-    [RelayCommand] private void Remove() => _owner.Remove(this);
+    [RelayCommand] private Task Remove() => RemoveAsync();
+
+    /// <summary>See <see cref="DownloadsViewModel.RemoveAsync"/>.</summary>
+    internal Task<bool> RemoveAsync() => _owner.RemoveAsync(this);
 
     [RelayCommand] private Task Browse() => _owner.BrowseDestinationAsync(this);
 

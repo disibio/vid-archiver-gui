@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Headless;
 
 namespace VidArchiverGui.App.Tests;
@@ -11,8 +12,21 @@ public static class Headless
 {
     private static readonly HeadlessUnitTestSession Session = HeadlessUnitTestSession.StartNew(typeof(Headless));
 
+    /// <summary>The real app's styles (it opens no window without a desktop lifetime), drawn with Skia so frames can be captured.</summary>
     public static AppBuilder BuildAvaloniaApp() =>
-        AppBuilder.Configure<Application>().UseHeadless(new AvaloniaHeadlessPlatformOptions());
+        AppBuilder.Configure<App>().UseSkia().WithInterFont().UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false });
+
+    /// <summary>Saves what <paramref name="window"/> shows as a PNG, if VIDARCHIVERGUI_TEST_SCREENSHOTS names a folder (for looking at UI changes).</summary>
+    public static void Capture(Window window, string name)
+    {
+        if (Environment.GetEnvironmentVariable("VIDARCHIVERGUI_TEST_SCREENSHOTS") is { Length: > 0 } dir)
+        {
+            Directory.CreateDirectory(dir);
+#pragma warning disable CS0618 // as in App.Snapshots: the default PNG encoding is fine
+            window.CaptureRenderedFrame()?.Save(Path.Combine(dir, name + ".png"));
+#pragma warning restore CS0618
+        }
+    }
 
     public static Task Run(Func<Task> test) => Session.Dispatch(async () =>
     {

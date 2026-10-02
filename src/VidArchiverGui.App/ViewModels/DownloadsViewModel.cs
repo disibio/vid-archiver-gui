@@ -351,10 +351,19 @@ public partial class DownloadsViewModel : ObservableObject
         }
     }
 
-    internal void Remove(DownloadItemViewModel item)
+    /// <summary>Removes the item, after asking if that would stop a download that's running. Returns whether it was removed.</summary>
+    internal async Task<bool> RemoveAsync(DownloadItemViewModel item)
     {
+        if (item.State == DownloadState.Downloading && !await _host.Dialogs.ConfirmAsync("Remove download?",
+                $"\"{item.Title}\" is still downloading. Remove it and stop the download? What's downloaded so far stays in its folder.",
+                "Remove", "Keep downloading"))
+        {
+            return false;
+        }
+
         item.CancelInternal();
         Items.Remove(item);
+        return true;
     }
 
     // ---------- keeping unfinished downloads between sessions ----------

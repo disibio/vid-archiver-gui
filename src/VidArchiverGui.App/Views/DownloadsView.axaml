@@ -30,7 +30,7 @@
             </DataTemplate>
           </ComboBox.ItemTemplate>
         </ComboBox>
-        <Button Content="Add" Command="{Binding AddCommand}" Classes="accent"
+        <Button Content="_Add" Command="{Binding AddCommand}" Classes="accent"
                 HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
       </StackPanel>
     </Grid>
@@ -38,20 +38,21 @@
     <!-- Toolbar -->
     <DockPanel Grid.Row="1" Margin="0,10,0,6">
       <StackPanel Orientation="Horizontal" Spacing="6" DockPanel.Dock="Left">
-        <Button Content="Start all" Command="{Binding StartAllCommand}"
+        <Button Content="_Start all" Command="{Binding StartAllCommand}"
                 ToolTip.Tip="Start everything that's ready or paused, and try failed downloads again. Cancelled ones have their own Start button." />
-        <Button Content="Pause all" Command="{Binding PauseAllCommand}"
+        <Button Content="_Pause all" Command="{Binding PauseAllCommand}"
                 ToolTip.Tip="Stop everything that's downloading or waiting, keeping what's downloaded so far. Start all or Resume carries on." />
-        <Button Content="Cancel all" Command="{Binding CancelAllCommand}" />
-        <Button Content="Clear finished" Command="{Binding ClearFinishedCommand}" />
-        <Button Content="Re-apply rules" Command="{Binding ReapplyRulesCommand}"
+        <Button Content="_Cancel all" Command="{Binding CancelAllCommand}" />
+        <Button Content="C_lear finished" Command="{Binding ClearFinishedCommand}" />
+        <Button Content="_Re-apply rules" Command="{Binding ReapplyRulesCommand}"
                 ToolTip.Tip="Route waiting items again using the current folder rules (folders you picked by hand are kept)." />
       </StackPanel>
       <TextBlock Text="{Binding Summary}" Classes="hint" VerticalAlignment="Center" HorizontalAlignment="Right" />
     </DockPanel>
 
     <!-- Queue -->
-    <ListBox Grid.Row="2" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}">
+    <ListBox x:Name="Queue" Grid.Row="2" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}"
+             KeyboardNavigation.TabNavigation="Continue">
       <ListBox.ItemTemplate>
         <DataTemplate x:DataType="vm:DownloadItemViewModel">
           <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto" Margin="0,4" Background="Transparent">
@@ -78,7 +79,8 @@
               <Button Classes="small" Content="Copy URL" Command="{Binding CopyUrlCommand}" />
               <Button Classes="small" Content="Open folder" Command="{Binding OpenFolderCommand}"
                       ToolTip.Tip="Open the folder, with the downloaded file selected once there is one" />
-              <Button Classes="small" Content="✕" Command="{Binding RemoveCommand}" ToolTip.Tip="Remove from list (right-click for more)" />
+              <Button Classes="small" Content="✕" Command="{Binding RemoveCommand}" ToolTip.Tip="Remove from list (right-click for more)"
+                      AutomationProperties.Name="Remove from list" />
             </StackPanel>
 
             <SelectableTextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding Url}" FontSize="12" Opacity="0.8"
