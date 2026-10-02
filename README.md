@@ -12,7 +12,8 @@
   <a href="https://apps.microsoft.com/detail/9NDN8K16996C?mode=direct"><img src="docs/microsoft-store-badge.svg" width="161" height="44" alt="Download from the Microsoft Store"></a>
 </p>
 
-A desktop front end for [yt-dlp](https://github.com/yt-dlp/yt-dlp) for Windows, macOS and Linux. I built it because I liked [yt-dlg (the oleksis fork)](https://github.com/oleksis/youtube-dl-gui) but kept running into small things that annoyed me. The goal is to be dead simple to use. This was an experiment with Claude Opus 5.5 and it went fairly well. Since I reviewed and edited the code I do not consider this to be "vibe coded" but almost all the code in one way or another was written by Claude. 
+A desktop front end for [yt-dlp](https://github.com/yt-dlp/yt-dlp) for Windows, macOS and Linux. I built it because I liked [yt-dlg (the oleksis fork)](https://github.com/oleksis/youtube-dl-gui) but kept running into small things that annoyed me. The goal is to be dead simple to use.
+This was an experiment with Claude Opus 5.5 and it went fairly well. Since I reviewed and edited the code I do not consider this to be "vibe coded" but almost all the code in one way or another was written by Claude. 
 
 The main thing it adds is folder rules. You tell it where videos from a site, channel or playlist should go, and
 every download gets filed into the right folder automatically.
