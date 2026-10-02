@@ -79,6 +79,29 @@ public sealed class DownloadsViewModelTests : IDisposable
     });
 
     [Fact]
+    public Task A_playlist_bar_shows_the_whole_playlist_and_never_goes_back() => Headless.Run(async () =>
+    {
+        var item = await AddAsync("https://fake.test/playlist/3");
+        var values = new List<double>();
+        item.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(item.Progress) && item.State == DownloadState.Downloading)
+            {
+                values.Add(item.Progress);
+            }
+        };
+
+        item.StartCommand.Execute(null);
+        await Headless.WaitUntil(() => item.State == DownloadState.Completed, "it downloads");
+
+        Assert.Equal(values.Order(), values);
+        Assert.Contains(values, v => v is > 0 and < 100.0 / 3); // part way through the first item
+        Assert.Contains(values, v => v is > 100.0 / 3 and < 200.0 / 3);
+        Assert.Contains(values, v => v is > 200.0 / 3 and < 100);
+        Assert.Equal(100, values[^1], 6);
+    });
+
+    [Fact]
     public Task Open_folder_selects_the_downloaded_file_while_it_exists() => Headless.Run(async () =>
     {
         var item = await AddAsync("https://fake.test/playlist/2");

@@ -22,6 +22,10 @@ public partial class DownloadItemViewModel : ObservableObject
     private string? _lastError;
     private string _itemPrefix = "";
 
+    // The playlist item being downloaded (1-based) and how many there are; 0 for a single video.
+    private int _playlistIndex;
+    private int _playlistCount;
+
     public DownloadItemViewModel(DownloadsViewModel owner, string url, Preset preset)
     {
         _owner = owner;
@@ -302,6 +306,8 @@ public partial class DownloadItemViewModel : ObservableObject
         _destinationCount = 0;
         _lastError = null;
         _itemPrefix = "";
+        _playlistIndex = 0;
+        _playlistCount = 0;
         LastFile = null;
 
         try
@@ -390,19 +396,33 @@ public partial class DownloadItemViewModel : ObservableObject
         switch (e)
         {
             case OutputEvent.Progress { Value: var p }:
-                IsIndeterminate = p.Fraction is null;
-                Progress = (p.Fraction ?? 0) * 100;
+                if (_playlistCount > 0)
+                {
+                    // The bar shows the whole playlist; the text still shows the current file.
+                    IsIndeterminate = false;
+                    Progress = DownloadQueue.PlaylistProgress(_playlistIndex, _playlistCount, p.Fraction ?? 0, Progress / 100) * 100;
+                }
+                else
+                {
+                    IsIndeterminate = p.Fraction is null;
+                    Progress = (p.Fraction ?? 0) * 100;
+                }
+
                 ProgressText = _itemPrefix + (p.Fraction is { } f
                     ? $"{f * 100:0.0}% of {DisplayFormat.Bytes(p.TotalBytes)}  ·  {DisplayFormat.Bytes(p.Speed)}/s  ·  ETA {DisplayFormat.Eta(p.Eta)}"
                     : $"{DisplayFormat.Bytes(p.DownloadedBytes)}  ·  {DisplayFormat.Bytes(p.Speed)}/s");
                 return; // progress lines are too chatty for the log
             case OutputEvent.PlaylistItem pi:
+                _playlistIndex = pi.Index;
+                _playlistCount = pi.Count;
+                IsIndeterminate = false;
+                Progress = DownloadQueue.PlaylistProgress(pi.Index, pi.Count, 0, Progress / 100) * 100;
                 _itemPrefix = $"Item {pi.Index}/{pi.Count}  ·  ";
                 ProgressText = _itemPrefix + "starting…";
                 AppendLog($"[download] Downloading item {pi.Index} of {pi.Count}");
                 return;
             case OutputEvent.PostProcessing pp:
-                IsIndeterminate = true;
+                IsIndeterminate = _playlistCount == 0;
                 ProgressText = _itemPrefix + $"Post-processing ({pp.Step})…";
                 break;
             case OutputEvent.Error err:

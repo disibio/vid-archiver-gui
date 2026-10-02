@@ -51,6 +51,14 @@ public static partial class DownloadQueue
         return free <= 0 ? [] : items.Where(i => state(i) == DownloadState.Queued).Take(free).ToList();
     }
 
+    /// <summary>
+    /// The progress bar (0 to 1) for a playlist: the items before this one plus how far this one is, out of
+    /// <paramref name="count"/>. It never goes back from <paramref name="shown"/>, the value already on the bar, because
+    /// each video's separate video and audio downloads both start again from 0.
+    /// </summary>
+    public static double PlaylistProgress(int index, int count, double itemFraction, double shown) =>
+        count <= 0 ? shown : Math.Max(shown, Math.Clamp((index - 1 + Math.Clamp(itemFraction, 0, 1)) / count, 0, 1));
+
     /// <summary>Whether a download is put back in the list next time: anything not done (cancelling was the user's choice).</summary>
     public static bool KeepForNextSession(DownloadState state) =>
         state is not (DownloadState.Completed or DownloadState.Skipped or DownloadState.Cancelled);

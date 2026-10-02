@@ -5,6 +5,20 @@ namespace VidArchiverGui.Core.Tests;
 
 public class DownloadQueueTests
 {
+    [Theory]
+    [InlineData(1, 4, 0.0, 0.0, 0.0)]
+    [InlineData(1, 4, 0.5, 0.0, 0.125)]
+    [InlineData(3, 4, 0.5, 0.0, 0.625)]
+    [InlineData(4, 4, 1.0, 0.0, 1.0)]
+    [InlineData(2, 4, 0.0, 0.4, 0.4)] // the audio of item 2 starting at 0 doesn't move the bar back
+    [InlineData(2, 4, 2.0, 0.0, 0.5)] // a bad fraction can't push past the item
+    [InlineData(9, 4, 1.0, 0.0, 1.0)]
+    [InlineData(1, 0, 0.5, 0.3, 0.3)]
+    public void Playlist_progress_counts_finished_items_and_never_goes_back(int index, int count, double fraction, double shown, double expected)
+    {
+        Assert.Equal(expected, DownloadQueue.PlaylistProgress(index, count, fraction, shown), 6);
+    }
+
     [Fact]
     public void Extracts_links_and_ignores_other_words()
     {
