@@ -34,7 +34,7 @@ public partial class AppSettings : ObservableObject
     [ObservableProperty] private bool _autoStartDownloads;
 
     /// <summary>Show a system notification when the queue finishes while the window isn't in front.</summary>
-    [ObservableProperty] private bool _notifyWhenDone = true;
+    [ObservableProperty] private bool _notifyWhenDone;
 
     /// <summary>Pause between requests and videos and back off longer on errors (see <see cref="Services.DownloadRunner.GentleArgs"/>).</summary>
     [ObservableProperty] private bool _gentleDownloads;

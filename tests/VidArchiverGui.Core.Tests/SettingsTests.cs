@@ -100,7 +100,7 @@ public sealed class SettingsTests : IDisposable
     {
         var store = new SettingsStore(Path.Combine(_dir, "settings.json"));
         var saved = SettingsStore.CreateDefaults();
-        saved.NotifyWhenDone = false;
+        saved.NotifyWhenDone = true;
         saved.UnfinishedDownloads =
         [
             new SavedDownload { Url = "https://example.com/a", PresetId = saved.Presets[0].Id, Destination = @"D:\Picked" },
@@ -109,7 +109,7 @@ public sealed class SettingsTests : IDisposable
         store.SaveIfChanged(saved);
 
         var loaded = store.Load();
-        Assert.False(loaded.NotifyWhenDone);
+        Assert.True(loaded.NotifyWhenDone);
         Assert.Equal(saved.UnfinishedDownloads, loaded.UnfinishedDownloads);
     }
 
