@@ -16,4 +16,7 @@ public sealed record SavedDownload
 
     /// <summary>The folder, if the user picked it by hand (a rule's folder is worked out again).</summary>
     public string? Destination { get; init; }
+
+    /// <summary>It was paused, so it stays paused rather than becoming ready (or starting) when it's put back.</summary>
+    public bool Paused { get; init; }
 }

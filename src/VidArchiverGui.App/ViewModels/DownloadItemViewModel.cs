@@ -14,6 +14,7 @@ public partial class DownloadItemViewModel : ObservableObject
     private readonly DownloadsViewModel _owner;
     private readonly List<string> _log = [];
     private CancellationTokenSource? _cts;
+    private bool _pausing;
     private bool _settingRoutedDestination;
 
     // Written from the process output thread, read after the process exits.
@@ -103,7 +104,8 @@ public partial class DownloadItemViewModel : ObservableObject
     [ObservableProperty] private string _logText = "";
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(StateText), nameof(CanStart), nameof(CanCancel), nameof(CanEdit), nameof(IsFinished), nameof(ShowProgress), nameof(CanRemember))]
+    [NotifyPropertyChangedFor(nameof(StateText), nameof(CanStart), nameof(StartText), nameof(CanPause), nameof(CanCancel), nameof(CanEdit),
+        nameof(IsFinished), nameof(ShowProgress), nameof(CanRemember))]
     private DownloadState _state = DownloadState.Resolving;
 
     /// <summary>True once the user picks a folder by hand, so re-applying rules won't overwrite it.</summary>
@@ -112,14 +114,19 @@ public partial class DownloadItemViewModel : ObservableObject
     /// <summary>Put back from the last session: its preset and cookies were already chosen, so rules don't change them.</summary>
     internal bool Restored { get; set; }
 
+    /// <summary>Put back from the last session paused: once its info is read it goes back to paused.</summary>
+    internal bool RestoredPaused { get; set; }
+
     /// <summary>The file the last download produced (for a playlist, its last one), if known.</summary>
     internal string? LastFile { get; private set; }
 
-    public bool CanStart => State is DownloadState.Ready or DownloadState.Failed or DownloadState.Cancelled;
-    public bool CanCancel => State is DownloadState.Resolving or DownloadState.Queued or DownloadState.Downloading;
-    public bool CanEdit => State is DownloadState.Ready or DownloadState.Queued or DownloadState.Failed or DownloadState.Cancelled;
+    public bool CanStart => State is DownloadState.Ready or DownloadState.Failed or DownloadState.Cancelled or DownloadState.Paused;
+    public string StartText => State == DownloadState.Paused ? "Resume" : "Start";
+    public bool CanPause => State is DownloadState.Queued or DownloadState.Downloading;
+    public bool CanCancel => State is DownloadState.Resolving or DownloadState.Queued or DownloadState.Downloading or DownloadState.Paused;
+    public bool CanEdit => State is DownloadState.Ready or DownloadState.Queued or DownloadState.Failed or DownloadState.Cancelled or DownloadState.Paused;
     public bool IsFinished => State is DownloadState.Completed or DownloadState.Skipped;
-    public bool ShowProgress => State is DownloadState.Downloading or DownloadState.Completed or DownloadState.Resolving;
+    public bool ShowProgress => State is DownloadState.Downloading or DownloadState.Completed or DownloadState.Resolving or DownloadState.Paused;
     public bool CanRemember => Info is not null && CanEdit;
 
     public string StateText => State switch
@@ -132,6 +139,7 @@ public partial class DownloadItemViewModel : ObservableObject
         DownloadState.Skipped => "Already archived",
         DownloadState.Failed => "Failed",
         DownloadState.Cancelled => "Cancelled",
+        DownloadState.Paused => "Paused",
         _ => State.ToString(),
     };
 
@@ -217,6 +225,8 @@ public partial class DownloadItemViewModel : ObservableObject
 
     [RelayCommand] private void Start() => _owner.Enqueue(this);
 
+    [RelayCommand] private void Pause() => PauseInternal();
+
     [RelayCommand] private void Cancel() => CancelInternal();
 
     [RelayCommand] private void Remove() => _owner.Remove(this);
@@ -237,12 +247,31 @@ public partial class DownloadItemViewModel : ObservableObject
 
     internal void CancelInternal()
     {
-        if (State == DownloadState.Queued)
+        if (State is DownloadState.Queued or DownloadState.Paused)
         {
             State = DownloadState.Cancelled;
         }
 
+        _pausing = false;
         _cts?.Cancel();
+    }
+
+    /// <summary>
+    /// Stops a running download (yt-dlp leaves its partly downloaded files and carries on from them next time), or
+    /// holds a queued one.
+    /// </summary>
+    internal void PauseInternal()
+    {
+        if (State == DownloadState.Queued)
+        {
+            State = DownloadState.Paused;
+            ProgressText = "Paused";
+        }
+        else if (State == DownloadState.Downloading)
+        {
+            _pausing = true;
+            _cts?.Cancel();
+        }
     }
 
     internal CancellationToken BeginOperation()
@@ -360,8 +389,8 @@ public partial class DownloadItemViewModel : ObservableObject
         }
         catch (OperationCanceledException)
         {
-            State = DownloadState.Cancelled;
-            ProgressText = "Cancelled";
+            State = _pausing ? DownloadState.Paused : DownloadState.Cancelled;
+            ProgressText = _pausing ? "Paused" : "Cancelled";
         }
         catch (Exception e)
         {
@@ -370,6 +399,7 @@ public partial class DownloadItemViewModel : ObservableObject
         }
         finally
         {
+            _pausing = false;
             IsIndeterminate = false;
         }
     }

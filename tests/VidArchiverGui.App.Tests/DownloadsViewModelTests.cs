@@ -55,6 +55,20 @@ public sealed class DownloadsViewModelTests : IDisposable
     private static Task WaitUntilStopped(DownloadItemViewModel item) =>
         Headless.WaitUntil(() => item.State is not (DownloadState.Queued or DownloadState.Downloading or DownloadState.Resolving), "it stops");
 
+    /// <summary>Makes FakeYtDlp take about 2 seconds per video instead of a fraction of one, so there's time to act mid-download.</summary>
+    private static async Task Slowly(Func<Task> test)
+    {
+        Environment.SetEnvironmentVariable("FAKEYTDLP_STEP_MS", "100");
+        try
+        {
+            await test();
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("FAKEYTDLP_STEP_MS", null);
+        }
+    }
+
     private static int Runs(DownloadItemViewModel item) => item.LogText.Split('\n').Count(l => l.StartsWith("> ", StringComparison.Ordinal));
 
     [Fact]
@@ -117,6 +131,80 @@ public sealed class DownloadsViewModelTests : IDisposable
         File.Delete(last);
         await item.OpenFolderCommand.ExecuteAsync(null);
         Assert.Equal(_folder, _t.Dialogs.Opened[^1]);
+    });
+
+    [Fact]
+    public Task Pausing_stops_the_download_and_resume_carries_on_from_the_partial_file() => Headless.Run(() => Slowly(async () =>
+    {
+        var item = await AddAsync("https://fake.test/video/pausable");
+        item.StartCommand.Execute(null);
+        await Headless.WaitUntil(() => item.Progress >= 30, "it's part way");
+
+        item.PauseCommand.Execute(null);
+        await Headless.WaitUntil(() => item.State == DownloadState.Paused, "it pauses");
+        Assert.Equal("Resume", item.StartText);
+        Assert.Equal(0, _vm.ActiveCount); // no "quit while downloading?" for it
+        Assert.True(File.Exists(Path.Combine(_folder, "pausable.f1.mp4.part")));
+
+        item.StartCommand.Execute(null);
+        await Headless.WaitUntil(() => item.State == DownloadState.Completed, "it finishes");
+        Assert.Contains("Resuming download at byte", item.LogText);
+        Assert.True(File.Exists(Path.Combine(_folder, "pausable.mkv")));
+    }));
+
+    [Fact]
+    public Task A_paused_queued_download_stays_paused_when_a_slot_frees_up() => Headless.Run(() => Slowly(async () =>
+    {
+        _t.Settings.MaxConcurrentDownloads = 1;
+        var first = await AddAsync("https://fake.test/video/first");
+        var second = await AddAsync("https://fake.test/video/second");
+        _vm.StartAllCommand.Execute(null);
+        Assert.Equal(DownloadState.Queued, second.State);
+
+        second.PauseCommand.Execute(null);
+        Assert.Equal(DownloadState.Paused, second.State);
+        Assert.Contains("1 paused", _vm.Summary);
+
+        await WaitUntilStopped(first);
+        Assert.Equal(DownloadState.Completed, first.State);
+        Assert.Equal(DownloadState.Paused, second.State);
+    }));
+
+    [Fact]
+    public Task Pause_all_pauses_running_and_queued_downloads_and_start_all_resumes_them() => Headless.Run(() => Slowly(async () =>
+    {
+        _t.Settings.MaxConcurrentDownloads = 1;
+        var first = await AddAsync("https://fake.test/video/one");
+        var second = await AddAsync("https://fake.test/video/two");
+        _vm.StartAllCommand.Execute(null);
+        await Headless.WaitUntil(() => first.Progress > 0, "the first is downloading");
+
+        _vm.PauseAllCommand.Execute(null);
+        await Headless.WaitUntil(() => first.State == DownloadState.Paused, "the first pauses");
+        Assert.Equal(DownloadState.Paused, second.State);
+
+        _vm.StartAllCommand.Execute(null);
+        await Headless.WaitUntil(() => first.State == DownloadState.Completed && second.State == DownloadState.Completed, "both finish", 60);
+    }));
+
+    [Fact]
+    public Task A_paused_download_is_still_paused_after_a_restart() => Headless.Run(async () =>
+    {
+        var item = await AddAsync("https://fake.test/video/later");
+        item.StartCommand.Execute(null);
+        item.PauseCommand.Execute(null); // queued for a moment, or already downloading
+        await Headless.WaitUntil(() => item.State is DownloadState.Paused or DownloadState.Completed, "it pauses");
+        Assert.Equal(DownloadState.Paused, item.State);
+
+        _vm.SaveUnfinished();
+        Assert.True(Assert.Single(_t.Settings.UnfinishedDownloads).Paused);
+
+        var next = new DownloadsViewModel(_t.Host);
+        next.RestoreUnfinished();
+        next.ResumeRestored();
+        var restored = Assert.Single(next.Items);
+        await Headless.WaitUntil(() => restored.State != DownloadState.Resolving, "its info is read");
+        Assert.Equal(DownloadState.Paused, restored.State);
     });
 
     [Fact]

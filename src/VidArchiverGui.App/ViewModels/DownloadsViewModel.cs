@@ -166,6 +166,14 @@ public partial class DownloadsViewModel : ObservableObject
             }
 
             ApplyRoute(item);
+            if (item.RestoredPaused)
+            {
+                item.RestoredPaused = false;
+                item.State = DownloadState.Paused;
+                item.ProgressText = "Paused";
+                return;
+            }
+
             item.State = DownloadState.Ready;
             item.ProgressText = "";
             if (startAfter || _host.Settings.AutoStartDownloads)
@@ -310,9 +318,18 @@ public partial class DownloadsViewModel : ObservableObject
     [RelayCommand]
     private void StartAll()
     {
-        foreach (var item in Items.Where(i => i.State is DownloadState.Ready or DownloadState.Failed).ToList())
+        foreach (var item in Items.Where(i => i.State is DownloadState.Ready or DownloadState.Failed or DownloadState.Paused).ToList())
         {
             Enqueue(item);
+        }
+    }
+
+    [RelayCommand]
+    private void PauseAll()
+    {
+        foreach (var item in Items.Where(i => i.CanPause).ToList())
+        {
+            item.PauseInternal();
         }
     }
 
@@ -354,6 +371,7 @@ public partial class DownloadsViewModel : ObservableObject
                 CookieId = i.CookieId,
                 DownloaderId = i.DownloaderOverride?.Id,
                 Destination = i.DestinationEdited && !string.IsNullOrWhiteSpace(i.Destination) ? i.Destination : null,
+                Paused = i.State == DownloadState.Paused,
             })
             .ToList();
     }
@@ -371,6 +389,7 @@ public partial class DownloadsViewModel : ObservableObject
                 CookieId = saved.CookieId,
                 DownloaderOverride = _host.Settings.FindDownloader(saved.DownloaderId),
                 Restored = true,
+                RestoredPaused = saved.Paused,
                 ProgressText = "Waiting for the startup checks…",
                 IsIndeterminate = true,
             };

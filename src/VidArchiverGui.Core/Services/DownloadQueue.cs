@@ -73,6 +73,7 @@ public static partial class DownloadQueue
         [
             (DownloadState.Downloading, "downloading"),
             (DownloadState.Queued, "queued"),
+            (DownloadState.Paused, "paused"),
             (DownloadState.Resolving, "reading info"),
             (DownloadState.Ready, "ready"),
             (DownloadState.Completed, "done"),
