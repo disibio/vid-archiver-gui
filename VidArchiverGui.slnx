@@ -4,6 +4,7 @@
     <Project Path="src/VidArchiverGui.Core/VidArchiverGui.Core.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/FakeYtDlp/FakeYtDlp.csproj" />
     <Project Path="tests/VidArchiverGui.App.Tests/VidArchiverGui.App.Tests.csproj" />
     <Project Path="tests/VidArchiverGui.Core.Tests/VidArchiverGui.Core.Tests.csproj" />
   </Folder>

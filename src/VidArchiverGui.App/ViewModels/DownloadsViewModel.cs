@@ -139,7 +139,8 @@ public partial class DownloadsViewModel : ObservableObject
         return added;
     }
 
-    private async Task ResolveAsync(DownloadItemViewModel item)
+    /// <param name="startAfter">Queue it once its info is read, even if downloads don't start on their own.</param>
+    private async Task ResolveAsync(DownloadItemViewModel item, bool startAfter = false)
     {
         var token = item.BeginOperation();
         item.State = DownloadState.Resolving;
@@ -167,7 +168,7 @@ public partial class DownloadsViewModel : ObservableObject
             ApplyRoute(item);
             item.State = DownloadState.Ready;
             item.ProgressText = "";
-            if (_host.Settings.AutoStartDownloads)
+            if (startAfter || _host.Settings.AutoStartDownloads)
             {
                 Enqueue(item);
             }
@@ -239,7 +240,7 @@ public partial class DownloadsViewModel : ObservableObject
     {
         if (item.Info is null)
         {
-            _ = ResolveAsync(item); // metadata failed earlier: retry that first
+            _ = ResolveAsync(item, startAfter: true); // metadata failed earlier: retry that first
             return;
         }
         if (string.IsNullOrWhiteSpace(item.Destination))
@@ -309,7 +310,7 @@ public partial class DownloadsViewModel : ObservableObject
     [RelayCommand]
     private void StartAll()
     {
-        foreach (var item in Items.Where(i => i.State == DownloadState.Ready).ToList())
+        foreach (var item in Items.Where(i => i.State is DownloadState.Ready or DownloadState.Failed).ToList())
         {
             Enqueue(item);
         }
