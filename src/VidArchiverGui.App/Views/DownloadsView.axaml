@@ -81,7 +81,7 @@
 
             <TextBlock Grid.Row="2" Grid.ColumnSpan="2" Text="{Binding Details}" Classes="hint" Margin="0,2,0,4" />
 
-            <Grid Grid.Row="3" Grid.ColumnSpan="2" IsEnabled="{Binding CanEdit}">
+            <Grid Grid.Row="3" Grid.ColumnSpan="2" IsEnabled="{Binding CanEdit}" IsVisible="{Binding !IsFinished}">
               <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="3*" />
