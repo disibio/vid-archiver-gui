@@ -58,9 +58,23 @@ up to date for you. Packagers can turn the check off by putting an empty `no-upd
 2. The app asks yt-dlp what the link is (`yt-dlp -J --flat-playlist`): which site, channel and playlist it belongs to.
 3. It goes through your folder rules from top to bottom, and the first one that matches picks the folder (and the
    preset, if you set one). If nothing matches, it uses your fallback folder. You can still change the folder by hand.
-4. Click **Start** or **Start all**. yt-dlp runs with your preset's options plus `-P <folder>`.
+4. Click **Start** or **Start all** (which also tries failed downloads again). yt-dlp runs with your preset's options
+   plus `-P <folder>`.
 
 If you set a folder by hand, you can click **Remember** to turn it into a rule for that channel.
+
+**Pause** stops a download and keeps what's downloaded so far, and **Resume** carries on from there, even after you
+restart the app. A playlist's bar fills across the whole playlist, not just the current video.
+
+When a download is done, **Open folder** opens its folder with the file selected. If your preset saves or embeds the
+thumbnail (`--write-thumbnail` or `--embed-thumbnail`, as the built-in presets do), it's shown next to the download.
+It's read from the downloaded files, not fetched from the site.
+
+### Keyboard
+
+Tab moves through the Downloads tab, including each download's own buttons. With a download selected, **Enter**
+starts or resumes it, **Delete** removes it (asking first if it's still downloading), and **Shift+F10** or the menu key
+opens its right-click menu. Hold **Alt** to see which letter presses each button above the list.
 
 ## Folder rules
 
@@ -239,6 +253,9 @@ and choose **Open** instead.
   running yt-dlp and reading its output, and installing and updating tools.
 - `src/VidArchiverGui.App`: the Avalonia UI (MVVM with CommunityToolkit.Mvvm).
 - `tests/VidArchiverGui.Core.Tests`: unit tests for Core.
+- `tests/VidArchiverGui.App.Tests`: tests for the view models and the Downloads tab, run in a headless window.
+  Downloads there use `tests/FakeYtDlp`, a stand-in for yt-dlp that needs no network (it also works as a custom
+  downloader, for trying the app by hand). Set `VIDARCHIVERGUI_TEST_SCREENSHOTS=<folder>` to get pictures of the tab.
 
 ### Screenshot mode
 
