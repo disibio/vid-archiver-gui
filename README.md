@@ -20,7 +20,7 @@ every download gets filed into the right folder automatically.
 
 ____
 
-![Downloads tab with four videos, each filed into a folder by a rule](docs/screenshots/downloads-light.png)
+![Downloads tab with four Blender open movies, each filed into a folder by a rule, two finished with thumbnails](docs/screenshots/downloads-light.png)
 
 It's a from-scratch rewrite in C# (.NET 10 and Avalonia), not a fork, and it doesn't include any code from yt-dlg.
 Most of the code was written with AI (Claude Opus 5.5), and I've tested it a lot.
@@ -284,6 +284,9 @@ and choose **Open** instead.
 
 Debug builds can render every tab to PNG files without opening a window and then exit, which is handy for checking UI changes. Set
 `VIDARCHIVERGUI_SNAPSHOT_DIR=<folder>`, and optionally `VIDARCHIVERGUI_SNAPSHOT_URLS=url1;url2` to add some links first.
+`VIDARCHIVERGUI_SNAPSHOT_START=<n>` downloads the first n of those links for real before taking the pictures, and
+`VIDARCHIVERGUI_SNAPSHOT_THEME=Dark,Light` takes them in both themes. The Downloads screenshots in `docs/screenshots`
+were made this way, with Blender's open movies from video.blender.org.
 
 To simulate a first run, also set `VIDARCHIVERGUI_SNAPSHOT_SETUP=1` (with a `portable.txt` next to the app so it
 starts with a clean data folder). It captures the setup banner and presses **Fix now**. Add

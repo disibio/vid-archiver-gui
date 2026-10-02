@@ -10,7 +10,8 @@ namespace VidArchiverGui.App;
 
 /// <summary>
 /// Development aid: VIDARCHIVERGUI_SNAPSHOT_DIR=&lt;dir&gt; renders each tab to a PNG offscreen and exits. Optional:
-/// VIDARCHIVERGUI_SNAPSHOT_THEME (Light/Dark), _URLS (";"-separated links to add), _COPY=1 (copy the first URL),
+/// VIDARCHIVERGUI_SNAPSHOT_THEME (Light/Dark, or "Light,Dark" for both), _URLS (";"-separated links to add),
+/// _START=&lt;n&gt; (download the first n links for real and wait for them), _COPY=1 (copy the first URL),
 /// _SETUP=1 (fresh-machine run: capture, press "Fix now", capture again), _DOWNLOAD=&lt;url&gt; and _PRESET=&lt;name&gt;
 /// (with _SETUP: download for real to prove the whole pipeline).
 /// </summary>
@@ -43,6 +44,7 @@ public partial class App
     {
         if (SnapshotDir is { } dir)
         {
+            vm.SettingsTab.Settings.NotifyWhenDone = false; // the window is never in front, so every finished run would notify
             window.Opened += async (_, _) => await SnapshotTabsAsync(window, vm, dir, desktop);
         }
     }
@@ -59,10 +61,13 @@ public partial class App
     private static async Task SnapshotTabsAsync(Window window, MainWindowViewModel vm, string dir, IClassicDesktopStyleApplicationLifetime desktop)
     {
         Directory.CreateDirectory(dir);
-        // Preview a theme without touching the saved setting.
-        if (Enum.TryParse<AppTheme>(Environment.GetEnvironmentVariable("VIDARCHIVERGUI_SNAPSHOT_THEME"), out var theme))
+        // Preview themes without touching the saved setting.
+        var themes = (Environment.GetEnvironmentVariable("VIDARCHIVERGUI_SNAPSHOT_THEME") ?? "")
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(t => Enum.TryParse<AppTheme>(t, out var theme) ? theme : (AppTheme?)null).OfType<AppTheme>().ToList();
+        if (themes.Count > 0)
         {
-            ((App)Current!).ApplyTheme(theme);
+            ((App)Current!).ApplyTheme(themes[0]);
         }
 
         if (Environment.GetEnvironmentVariable("VIDARCHIVERGUI_SNAPSHOT_URLS") is { Length: > 0 } urls)
@@ -83,6 +88,21 @@ public partial class App
         }
 
         await WaitForSetupCheckAsync(vm);
+        if (int.TryParse(Environment.GetEnvironmentVariable("VIDARCHIVERGUI_SNAPSHOT_START"), out var start))
+        {
+            foreach (var item in vm.Downloads.Items.Take(start))
+            {
+                item.StartCommand.Execute(null);
+            }
+
+            for (var i = 0; i < 1200 && vm.Downloads.Items.Any(x => x.State is DownloadState.Queued or DownloadState.Downloading); i++)
+            {
+                await Task.Delay(500);
+            }
+
+            await Task.Delay(3000); // thumbnails load after a download finishes
+        }
+
         if (Environment.GetEnvironmentVariable("VIDARCHIVERGUI_SNAPSHOT_COPY") == "1" && vm.Downloads.Items.FirstOrDefault() is { } first)
         {
             await first.CopyUrlCommand.ExecuteAsync(null);
@@ -131,9 +151,19 @@ public partial class App
         }
 
         vm.About.ShowNotices = true; // proves the embedded notices load
-        foreach (var tab in Enum.GetValues<MainTab>())
+        vm.CurrentTab = MainTab.About; // leaving the tab takes the focus off the URL box, so it has no focus border
+        await Task.Delay(300);
+        foreach (var theme in themes.Count > 1 ? themes.Cast<AppTheme?>() : [null])
         {
-            await SaveTabAsync(window, vm, tab, Path.Combine(dir, $"tab{(int)tab}.png"));
+            if (theme is { } t)
+            {
+                ((App)Current!).ApplyTheme(t);
+            }
+
+            foreach (var tab in Enum.GetValues<MainTab>())
+            {
+                await SaveTabAsync(window, vm, tab, Path.Combine(dir, theme is null ? $"tab{(int)tab}.png" : $"tab{(int)tab}-{theme}.png"));
+            }
         }
 
         desktop.Shutdown();
