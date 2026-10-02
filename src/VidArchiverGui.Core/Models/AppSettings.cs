@@ -39,6 +39,9 @@ public partial class AppSettings : ObservableObject
     /// <summary>Pause between requests and videos and back off longer on errors (see <see cref="Services.DownloadRunner.GentleArgs"/>).</summary>
     [ObservableProperty] private bool _gentleDownloads;
 
+    /// <summary>Adds --ignore-errors, so a failed extra (e.g. subtitles hitting HTTP 429) is a warning and the video still downloads.</summary>
+    [ObservableProperty] private bool _ignoreExtraErrors = true;
+
     /// <summary>When extraction fails, try the other downloaders of the same kind (installing them if needed).</summary>
     [ObservableProperty] private bool _autoFallback = true;
     [ObservableProperty] private bool _autoUpdateYtDlp = true;

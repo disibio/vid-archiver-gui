@@ -168,6 +168,10 @@
       <CheckBox Content="Start downloading as soon as a URL has been routed" IsChecked="{Binding Settings.AutoStartDownloads}" />
       <CheckBox Content="Show a notification when all downloads have finished (only while the app is in the background)"
                 IsChecked="{Binding Settings.NotifyWhenDone}" />
+      <CheckBox IsChecked="{Binding Settings.IgnoreExtraErrors}">
+        <TextBlock TextWrapping="Wrap"
+                   Text="Keep downloading when subtitles, comments or the thumbnail can't be fetched (adds --ignore-errors). The video is still saved and the log shows a warning. If it's off, the whole download fails." />
+      </CheckBox>
       <CheckBox IsChecked="{Binding Settings.GentleDownloads}">
         <TextBlock TextWrapping="Wrap"
                    Text="Download gently: pause between requests and videos, and wait longer before retrying. Slower, but much less likely to be throttled or asked to sign in. Recommended for archiving whole channels, together with 1 simultaneous download." />

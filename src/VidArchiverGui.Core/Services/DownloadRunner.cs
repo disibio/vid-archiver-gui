@@ -11,6 +11,9 @@ public sealed record DownloadRequest(string Url, IReadOnlyList<string> PresetArg
     /// <summary>Adds <see cref="DownloadRunner.GentleArgs"/>.</summary>
     public bool Gentle { get; init; }
 
+    /// <summary>Adds --ignore-errors before the preset (see <see cref="Models.AppSettings.IgnoreExtraErrors"/>).</summary>
+    public bool IgnoreErrors { get; init; }
+
     /// <summary>yt-dlp only: a file that the path of every finished file is added to, one per line.</summary>
     public string? FileListPath { get; init; }
 }
@@ -38,6 +41,12 @@ public static class DownloadRunner
     public static List<string> BuildArguments(DownloadRequest request, string? ffmpegLocation, IReadOnlyList<string>? extraArgs = null)
     {
         List<string> args = request.Gentle ? [.. GentleArgs(request.Flavor)] : [];
+        if (request.IgnoreErrors)
+        {
+            // Before the preset, so a preset's --abort-on-error still wins.
+            args.Add("--ignore-errors");
+        }
+
         args.AddRange(ArgumentParser.WithCookies(request.PresetArgs, request.CookieArgs));
         if (request.Flavor == DownloaderFlavor.YtDlp)
         {

@@ -120,8 +120,28 @@ A preset is a set of normal yt-dlp options ([full list](https://github.com/yt-dl
 can paste in the command you already use. Quotes group text, backslashes stay as they are (so Windows paths work),
 you can split options over several lines, and lines starting with `#` are comments.
 
-The app adds `-P`, `--ffmpeg-location`, `--newline` and a progress template itself. Everything else is up to you.
-Login options like `--cookies-from-browser`, `--cookies` and `--proxy` are also used when looking up a link.
+### What the app adds
+
+The app adds a few options of its own to every download. The full command, including these, is shown at the top of
+each download's log.
+
+| Option | When | Why | Can a preset change it? |
+|---|---|---|---|
+| `--ignore-errors` | While **Keep downloading when subtitles, comments or the thumbnail can't be fetched** is on in Settings > Downloads (it is by default) | If an extra like subtitles can't be downloaded (for example "HTTP Error 429: Too Many Requests"), the video is still saved and the log shows a warning, instead of the whole download failing | Yes: add `--abort-on-error`, or turn the setting off |
+| `--sleep-requests`, `--sleep-interval`, `--max-sleep-interval`, `--retry-sleep`, `--extractor-retries` | Only with [Download gently](#download-gently) on | Fewer throttles and bot checks | Yes: a preset's own values win |
+| `--cookies-from-browser` or `--cookies` | Only when you pick [cookies](#cookies) | Logging in | No: your pick replaces the preset's cookie options |
+| `-P <folder>` (yt-dlp) or `-o <folder>/...` (youtube-dl) | Always | Saves to the folder from your folder rules | No: the app's folder wins, and a relative `-o` ends up inside it |
+| `--ffmpeg-location` | When the app installed ffmpeg, or you chose one in Settings | Uses that ffmpeg for merging and embedding | No: the app's ffmpeg wins |
+| `--js-runtimes deno:<path>` | yt-dlp, when it uses the Deno the app installed (Deno isn't on PATH) | YouTube needs a JavaScript runtime | It adds to any `--js-runtimes` in the preset |
+| `--newline`, `--encoding utf-8` | Always | Lets the app read the progress and non-English titles | No |
+| `--progress-template ...` | yt-dlp | Shows the progress bar | No |
+| `--print-to-file after_move:filepath <temp file>` | yt-dlp | Tells the app which files were saved (for the thumbnail and **Open folder**) | No |
+
+Everything else is up to you. Options are read left to right and the last one wins, so it's harmless if a preset
+repeats one of these.
+
+To look up a link, the app runs `-J --flat-playlist --playlist-items 1 --no-warnings --encoding utf-8`, plus the
+preset's login options (like `--cookies-from-browser`, `--cookies` and `--proxy`). It downloads nothing.
 
 Presets can be exported and imported with **Export…** and **Import…** on the Presets tab, the same way as folder
 rules. If you're moving to another computer, import your presets before your rules, since rules find their preset by

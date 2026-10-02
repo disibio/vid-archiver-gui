@@ -81,6 +81,14 @@ public class ArgumentsTests
     }
 
     [Fact]
+    public void Ignore_errors_comes_before_the_preset_so_it_can_override_it()
+    {
+        var args = DownloadRunner.BuildArguments(new DownloadRequest("u", ["--abort-on-error"], Dest) { IgnoreErrors = true }, null);
+        Assert.True(args.IndexOf("--ignore-errors") < args.IndexOf("--abort-on-error"));
+        Assert.DoesNotContain("--ignore-errors", DownloadRunner.BuildArguments(new DownloadRequest("u", [], Dest), null));
+    }
+
+    [Fact]
     public void Extra_downloader_args_are_passed_before_the_url()
     {
         var args = DownloadRunner.BuildArguments(new DownloadRequest("https://x", ["-f", "b"], "/d"), null, ["--js-runtimes", "deno:/app/deno"]);
