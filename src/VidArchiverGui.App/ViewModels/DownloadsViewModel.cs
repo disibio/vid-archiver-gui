@@ -362,8 +362,17 @@ public partial class DownloadsViewModel : ObservableObject
     private bool CanCancelAll => Items.Any(i => i.CanCancel);
 
     [RelayCommand(CanExecute = nameof(CanCancelAll))]
-    private void CancelAll()
+    private async Task CancelAll()
     {
+        var running = Items.Count(i => i.State == DownloadState.Downloading);
+        if (running > 0 && _host.Settings.ConfirmCancelAll && !await _host.Dialogs.ConfirmAsync("Cancel all downloads?",
+                (running == 1 ? "1 download is" : $"{running} downloads are") +
+                " still running. Cancel everything in the list? What's downloaded so far stays in its folder.",
+                "Cancel all", "Keep downloading"))
+        {
+            return;
+        }
+
         foreach (var item in Items.Where(i => i.CanCancel).ToList())
         {
             item.CancelInternal();

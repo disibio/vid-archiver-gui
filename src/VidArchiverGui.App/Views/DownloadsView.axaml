@@ -42,7 +42,8 @@
                 ToolTip.Tip="Start everything that's ready or paused, and try failed downloads again. Cancelled ones have their own Start button." />
         <Button Content="_Pause all" Command="{Binding PauseAllCommand}"
                 ToolTip.Tip="Stop everything that's downloading or waiting, keeping what's downloaded so far. Start all or Resume carries on." />
-        <Button Content="_Cancel all" Command="{Binding CancelAllCommand}" />
+        <Button Content="_Cancel all" Command="{Binding CancelAllCommand}"
+                ToolTip.Tip="Stop everything that's downloading, waiting or paused. Asks first if something is downloading (you can turn that off in Settings)." />
         <Button Content="C_lear finished" Command="{Binding ClearFinishedCommand}"
                 ToolTip.Tip="Remove downloads that are done, already archived or cancelled from the list." />
         <Button Content="_Re-apply rules" Command="{Binding ReapplyRulesCommand}"

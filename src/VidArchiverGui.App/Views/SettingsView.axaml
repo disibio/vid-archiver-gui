@@ -168,6 +168,7 @@
       <CheckBox Content="Start downloading as soon as a URL has been routed" IsChecked="{Binding Settings.AutoStartDownloads}" />
       <CheckBox Content="Show a notification when all downloads have finished (only while the app is in the background)"
                 IsChecked="{Binding Settings.NotifyWhenDone}" />
+      <CheckBox Content="Ask before &quot;Cancel all&quot; stops downloads that are running" IsChecked="{Binding Settings.ConfirmCancelAll}" />
       <CheckBox IsChecked="{Binding Settings.IgnoreExtraErrors}">
         <TextBlock TextWrapping="Wrap"
                    Text="Keep downloading when subtitles, comments or the thumbnail can't be fetched (adds --ignore-errors). The video is still saved and the log shows a warning. If it's off, the whole download fails." />

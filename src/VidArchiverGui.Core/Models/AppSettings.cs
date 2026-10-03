@@ -36,6 +36,9 @@ public partial class AppSettings : ObservableObject
     /// <summary>Show a system notification when the queue finishes while the window isn't in front.</summary>
     [ObservableProperty] private bool _notifyWhenDone;
 
+    /// <summary>Ask before "Cancel all" stops downloads that are running.</summary>
+    [ObservableProperty] private bool _confirmCancelAll = true;
+
     /// <summary>Pause between requests and videos and back off longer on errors (see <see cref="Services.DownloadRunner.GentleArgs"/>).</summary>
     [ObservableProperty] private bool _gentleDownloads;
 

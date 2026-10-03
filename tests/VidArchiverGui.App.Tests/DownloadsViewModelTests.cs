@@ -240,6 +240,25 @@ public sealed class DownloadsViewModelTests : DownloadListTests
     });
 
     [Fact]
+    public Task Cancel_all_asks_first_while_something_is_downloading_unless_turned_off() => Headless.Run(() => Slowly(async () =>
+    {
+        var item = await AddAsync("https://fake.test/video/long");
+        item.StartCommand.Execute(null);
+        await Headless.WaitUntil(() => item.State == DownloadState.Downloading, "it starts");
+
+        _t.Dialogs.Answers.Enqueue(false);
+        await _vm.CancelAllCommand.ExecuteAsync(null);
+        Assert.Single(_t.Dialogs.Questions);
+        Assert.Equal(DownloadState.Downloading, item.State);
+
+        _t.Settings.ConfirmCancelAll = false;
+        await _vm.CancelAllCommand.ExecuteAsync(null);
+        await WaitUntilStopped(item);
+        Assert.Single(_t.Dialogs.Questions);
+        Assert.Equal(DownloadState.Cancelled, item.State);
+    }));
+
+    [Fact]
     public Task Pause_all_also_pauses_downloads_whose_info_is_still_being_read() => Headless.Run(async () =>
     {
         _t.Settings.AutoStartDownloads = true;

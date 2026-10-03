@@ -52,6 +52,15 @@ public sealed class SettingsTests : IDisposable
     }
 
     [Fact]
+    public void Settings_saved_before_a_setting_existed_get_its_default()
+    {
+        var path = Path.Combine(_dir, "settings.json");
+        File.WriteAllText(path, "{ \"MaxConcurrentDownloads\": 3 }");
+
+        Assert.True(new SettingsStore(path).Load().ConfirmCancelAll);
+    }
+
+    [Fact]
     public void Data_is_kept_beside_the_app_only_with_portable_txt()
     {
         Assert.Null(AppPaths.PortableDataDir(_dir));
