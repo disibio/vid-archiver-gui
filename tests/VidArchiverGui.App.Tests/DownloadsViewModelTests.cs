@@ -225,6 +225,8 @@ public sealed class DownloadsViewModelTests : DownloadListTests
         Assert.True(_vm.StartAllCommand.CanExecute(null));
         Assert.False(_vm.PauseAllCommand.CanExecute(null));
         Assert.True(_vm.ReapplyRulesCommand.CanExecute(null));
+        item.Destination = Path.Combine(_folder, "picked"); // picked by hand, so rules leave it alone
+        Assert.False(_vm.ReapplyRulesCommand.CanExecute(null));
 
         item.State = DownloadState.Queued;
         Assert.False(_vm.StartAllCommand.CanExecute(null));

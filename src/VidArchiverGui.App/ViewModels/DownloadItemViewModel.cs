@@ -103,7 +103,6 @@ public partial class DownloadItemViewModel : ObservableObject
     [ObservableProperty] private bool _isIndeterminate;
     [ObservableProperty] private string _progressText = "";
     [ObservableProperty] private string? _error;
-    [ObservableProperty] private string _logText = "";
 
     /// <summary>The finished file's thumbnail, from the file itself or the one saved beside it; null if it has none.</summary>
     [ObservableProperty] private Bitmap? _thumbnail;
@@ -544,6 +543,10 @@ public partial class DownloadItemViewModel : ObservableObject
         });
     }
 
+    /// <summary>The last <see cref="MaxLogLines"/> lines, joined only when read (only the selected item's log is shown).</summary>
+    public string LogText => _logText ??= string.Join(Environment.NewLine, _log);
+    private string? _logText;
+
     internal void AppendLog(string line)
     {
         _log.Add(line);
@@ -552,6 +555,7 @@ public partial class DownloadItemViewModel : ObservableObject
             _log.RemoveRange(0, _log.Count - MaxLogLines);
         }
 
-        LogText = string.Join(Environment.NewLine, _log);
+        _logText = null;
+        OnPropertyChanged(nameof(LogText));
     }
 }
