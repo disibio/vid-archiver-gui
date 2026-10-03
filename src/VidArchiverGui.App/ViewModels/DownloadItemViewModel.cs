@@ -94,7 +94,9 @@ public partial class DownloadItemViewModel : ObservableObject
     [ObservableProperty] private string _title;
     [ObservableProperty] private string _details = "";
     [ObservableProperty] private MediaInfo? _info;
-    [ObservableProperty] private string _destination = "";
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(OpenFolderCommand), nameof(CopyFolderCommand))]
+    private string _destination = "";
     [ObservableProperty] private Preset _preset;
     [ObservableProperty] private string _routeDescription = "";
     [ObservableProperty] private double _progress;
@@ -112,7 +114,15 @@ public partial class DownloadItemViewModel : ObservableObject
     private DownloadState _state = DownloadState.Resolving;
 
     /// <summary>True once the user picks a folder by hand, so re-applying rules won't overwrite it.</summary>
-    public bool DestinationEdited { get; set; }
+    public bool DestinationEdited
+    {
+        get;
+        set
+        {
+            field = value;
+            _owner.RefreshCommands();
+        }
+    }
 
     /// <summary>Put back from last session and its info not read yet: its preset and cookies were already chosen, so rules don't change them.</summary>
     internal bool Restored { get; set; }
@@ -124,6 +134,8 @@ public partial class DownloadItemViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanPause))]
     private bool _pauseRequested;
+
+    partial void OnPauseRequestedChanged(bool value) => _owner.RefreshCommands();
 
     /// <summary>The file the last download produced (for a playlist, its last one), if known.</summary>
     internal string? LastFile { get; private set; }
@@ -165,6 +177,7 @@ public partial class DownloadItemViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(CanRemember));
         UpdateDetails();
+        _owner.RefreshCommands();
     }
 
     partial void OnRouteDescriptionChanged(string value) => UpdateDetails();
@@ -244,7 +257,9 @@ public partial class DownloadItemViewModel : ObservableObject
 
     [RelayCommand] private Task Browse() => _owner.BrowseDestinationAsync(this);
 
-    [RelayCommand] private Task OpenFolder() => _owner.OpenFolderAsync(this);
+    private bool HasDestination => !string.IsNullOrWhiteSpace(Destination);
+
+    [RelayCommand(CanExecute = nameof(HasDestination))] private Task OpenFolder() => _owner.OpenFolderAsync(this);
 
     [RelayCommand] private void Remember() => _owner.CreateRuleFrom(this);
 
@@ -252,7 +267,7 @@ public partial class DownloadItemViewModel : ObservableObject
 
     [RelayCommand] private Task CopyTitle() => _owner.CopyAsync(Title, "title");
 
-    [RelayCommand] private Task CopyFolder() => _owner.CopyAsync(Destination, "folder");
+    [RelayCommand(CanExecute = nameof(HasDestination))] private Task CopyFolder() => _owner.CopyAsync(Destination, "folder");
 
     [RelayCommand] private void AddAgain() => _owner.AddAgain(this);
 

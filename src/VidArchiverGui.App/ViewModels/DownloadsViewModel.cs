@@ -35,6 +35,16 @@ public partial class DownloadsViewModel : ObservableObject
 
     internal void OnItemStateChanged() => UpdateSummary();
 
+    /// <summary>Called when something that decides which toolbar buttons are enabled changes on an item.</summary>
+    internal void RefreshCommands()
+    {
+        StartAllCommand.NotifyCanExecuteChanged();
+        PauseAllCommand.NotifyCanExecuteChanged();
+        CancelAllCommand.NotifyCanExecuteChanged();
+        ClearFinishedCommand.NotifyCanExecuteChanged();
+        ReapplyRulesCommand.NotifyCanExecuteChanged();
+    }
+
     public ObservableCollection<Preset> Presets => _host.Settings.Presets;
     public ObservableCollection<DownloadItemViewModel> Items { get; } = [];
     public AppSettings Settings => _host.Settings;
@@ -100,14 +110,18 @@ public partial class DownloadsViewModel : ObservableObject
         }
     }
 
-    [ObservableProperty] private string _urlInput = "";
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(AddCommand))]
+    private string _urlInput = "";
     [ObservableProperty] private Preset? _selectedPreset;
     [ObservableProperty] private DownloadItemViewModel? _selectedItem;
     [ObservableProperty] private string _summary = "";
 
     // ---------- adding ----------
 
-    [RelayCommand]
+    private bool CanAdd => !string.IsNullOrWhiteSpace(UrlInput);
+
+    [RelayCommand(CanExecute = nameof(CanAdd))]
     private void Add()
     {
         AddUrls(UrlInput);
@@ -231,11 +245,15 @@ public partial class DownloadsViewModel : ObservableObject
         }
     }
 
-    [RelayCommand]
+    private IEnumerable<DownloadItemViewModel> Reroutable => Items.Where(i => i.CanEdit && !i.DestinationEdited && i.Info is not null);
+
+    private bool CanReapplyRules => Reroutable.Any();
+
+    [RelayCommand(CanExecute = nameof(CanReapplyRules))]
     private void ReapplyRules()
     {
         var count = 0;
-        foreach (var item in Items.Where(i => i.CanEdit && !i.DestinationEdited && i.Info is not null))
+        foreach (var item in Reroutable.ToList())
         {
             ApplyRoute(item);
             count++;
@@ -317,16 +335,22 @@ public partial class DownloadsViewModel : ObservableObject
     /// <summary>Downloads that are running or waiting for a free slot.</summary>
     public int ActiveCount => Items.Count(i => i.State is DownloadState.Queued or DownloadState.Downloading);
 
-    [RelayCommand]
+    private IEnumerable<DownloadItemViewModel> Startable => Items.Where(i => i.State is DownloadState.Ready or DownloadState.Failed or DownloadState.Paused);
+
+    private bool CanStartAll => Startable.Any();
+
+    [RelayCommand(CanExecute = nameof(CanStartAll))]
     private void StartAll()
     {
-        foreach (var item in Items.Where(i => i.State is DownloadState.Ready or DownloadState.Failed or DownloadState.Paused).ToList())
+        foreach (var item in Startable.ToList())
         {
             Enqueue(item);
         }
     }
 
-    [RelayCommand]
+    private bool CanPauseAll => Items.Any(i => i.CanPause);
+
+    [RelayCommand(CanExecute = nameof(CanPauseAll))]
     private void PauseAll()
     {
         foreach (var item in Items.Where(i => i.CanPause).ToList())
@@ -335,7 +359,9 @@ public partial class DownloadsViewModel : ObservableObject
         }
     }
 
-    [RelayCommand]
+    private bool CanCancelAll => Items.Any(i => i.CanCancel);
+
+    [RelayCommand(CanExecute = nameof(CanCancelAll))]
     private void CancelAll()
     {
         foreach (var item in Items.Where(i => i.CanCancel).ToList())
@@ -344,10 +370,14 @@ public partial class DownloadsViewModel : ObservableObject
         }
     }
 
-    [RelayCommand]
+    private IEnumerable<DownloadItemViewModel> Clearable => Items.Where(i => i.IsFinished || i.State == DownloadState.Cancelled);
+
+    private bool CanClearFinished => Clearable.Any();
+
+    [RelayCommand(CanExecute = nameof(CanClearFinished))]
     private void ClearFinished()
     {
-        foreach (var item in Items.Where(i => i.IsFinished || i.State == DownloadState.Cancelled).ToList())
+        foreach (var item in Clearable.ToList())
         {
             Items.Remove(item);
         }
@@ -514,5 +544,9 @@ public partial class DownloadsViewModel : ObservableObject
         _host.SetStatus($"Added rule \"{rule.Name}\" → {rule.Destination}");
     }
 
-    private void UpdateSummary() => Summary = DownloadQueue.ListSummary(Items.Select(i => i.State).ToList());
+    private void UpdateSummary()
+    {
+        Summary = DownloadQueue.ListSummary(Items.Select(i => i.State).ToList());
+        RefreshCommands();
+    }
 }

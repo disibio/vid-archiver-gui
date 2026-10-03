@@ -209,6 +209,37 @@ public sealed class DownloadsViewModelTests : DownloadListTests
     });
 
     [Fact]
+    public Task Toolbar_buttons_are_only_enabled_when_they_have_something_to_act_on() => Headless.Run(async () =>
+    {
+        Assert.False(_vm.AddCommand.CanExecute(null));
+        Assert.False(_vm.StartAllCommand.CanExecute(null));
+        Assert.False(_vm.PauseAllCommand.CanExecute(null));
+        Assert.False(_vm.CancelAllCommand.CanExecute(null));
+        Assert.False(_vm.ClearFinishedCommand.CanExecute(null));
+        Assert.False(_vm.ReapplyRulesCommand.CanExecute(null));
+
+        _vm.UrlInput = "https://fake.test/video/one";
+        Assert.True(_vm.AddCommand.CanExecute(null));
+
+        var item = await AddAsync("https://fake.test/video/one");
+        Assert.True(_vm.StartAllCommand.CanExecute(null));
+        Assert.False(_vm.PauseAllCommand.CanExecute(null));
+        Assert.True(_vm.ReapplyRulesCommand.CanExecute(null));
+
+        item.State = DownloadState.Queued;
+        Assert.False(_vm.StartAllCommand.CanExecute(null));
+        Assert.True(_vm.PauseAllCommand.CanExecute(null));
+        Assert.True(_vm.CancelAllCommand.CanExecute(null));
+
+        item.State = DownloadState.Completed;
+        Assert.False(_vm.CancelAllCommand.CanExecute(null));
+        Assert.True(_vm.ClearFinishedCommand.CanExecute(null));
+
+        _vm.ClearFinishedCommand.Execute(null);
+        Assert.False(_vm.ClearFinishedCommand.CanExecute(null));
+    });
+
+    [Fact]
     public Task Pause_all_also_pauses_downloads_whose_info_is_still_being_read() => Headless.Run(async () =>
     {
         _t.Settings.AutoStartDownloads = true;
