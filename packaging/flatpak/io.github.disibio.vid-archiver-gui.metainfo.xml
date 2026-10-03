@@ -77,6 +77,20 @@
   </requires>
 
   <releases>
+    <release version="1.2.0" date="2026-10-02">
+      <url type="details">https://github.com/disibio/vid-archiver-gui/releases/tag/v1.2.0</url>
+      <description>
+        <ul>
+          <li>Added Pause/Resume.</li>
+          <li>Added thumbnails for completed downloads (if you downloaded a thumbnail file).</li>
+          <li>Added basic keyboard controls.</li>
+          <li>Made it so failed subtitles don't stop the download by default.</li>
+          <li>Better default behavior (example canceling downloads in progress).</li>
+          <li>Notifications disabled by default.</li>
+          <li>Minor UI changes.</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.1.0" date="2026-09-30">
       <url type="details">https://github.com/disibio/vid-archiver-gui/releases/tag/v1.1.0</url>
       <description>

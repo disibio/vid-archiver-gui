@@ -6,7 +6,7 @@
     <LangVersion>latest</LangVersion>
     <!-- Report .editorconfig style rules (e.g. braces) as build warnings. -->
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
-    <Version>1.1.0</Version>
+    <Version>1.2.0</Version>
     <Product>Vid Archiver GUI</Product>
   </PropertyGroup>
   <!-- Keep the build machine's folder paths out of released binaries (debug-file pointers, source paths). -->
