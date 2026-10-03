@@ -35,14 +35,17 @@ public static class Headless
     }, CancellationToken.None);
 
     /// <summary>Waits until <paramref name="condition"/> holds, letting the UI thread run meanwhile; fails after <paramref name="seconds"/>.</summary>
-    public static async Task WaitUntil(Func<bool> condition, string what, int seconds = 30)
+    public static Task WaitUntil(Func<bool> condition, string what, int seconds = 30) => WaitUntil(condition, () => what, seconds);
+
+    /// <summary>As above, with a description worked out when it times out, so it can say what state things were in.</summary>
+    public static async Task WaitUntil(Func<bool> condition, Func<string> what, int seconds = 30)
     {
         var deadline = DateTime.UtcNow.AddSeconds(seconds);
         while (!condition())
         {
             if (DateTime.UtcNow > deadline)
             {
-                Assert.Fail("Timed out waiting until " + what);
+                Assert.Fail("Timed out waiting until " + what());
             }
 
             await Task.Delay(20);

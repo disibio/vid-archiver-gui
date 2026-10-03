@@ -23,6 +23,9 @@ public abstract class DownloadListTests : IDisposable
         _t.Settings.Downloaders.Add(fake);
         _t.Settings.DefaultDownloaderId = fake.Id;
         _t.Settings.AutoFallback = false; // never install the real downloaders
+        // A missing ffmpeg, so a finished download's thumbnail isn't looked for with a real one, which could still be
+        // reading the file when the test deletes its folder.
+        _t.Settings.FfmpegPath = Path.Combine(_folder, "no-ffmpeg");
 
         // The default presets write to the real archive file; downloads here go to a scratch folder instead.
         var preset = new Preset { Name = "Test" };
@@ -63,10 +66,13 @@ public abstract class DownloadListTests : IDisposable
     protected static Task WaitUntilStopped(DownloadItemViewModel item) =>
         Headless.WaitUntil(() => item.State is not (DownloadState.Queued or DownloadState.Downloading or DownloadState.Resolving), "it stops");
 
-    /// <summary>Makes FakeYtDlp take about 2 seconds per video instead of a fraction of one, so there's time to act mid-download.</summary>
-    protected static async Task Slowly(Func<Task> test)
+    /// <summary>
+    /// Makes FakeYtDlp take about 2 seconds per video instead of a fraction of one, so there's time to act mid-download.
+    /// A test that must act while it's still running, however slow the machine, can pass a longer step.
+    /// </summary>
+    protected static async Task Slowly(Func<Task> test, int stepMs = 100)
     {
-        Environment.SetEnvironmentVariable("FAKEYTDLP_STEP_MS", "100");
+        Environment.SetEnvironmentVariable("FAKEYTDLP_STEP_MS", stepMs.ToString(System.Globalization.CultureInfo.InvariantCulture));
         try
         {
             await test();

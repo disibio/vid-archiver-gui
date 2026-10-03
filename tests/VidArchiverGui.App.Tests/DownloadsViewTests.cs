@@ -176,6 +176,7 @@ public sealed class DownloadsViewTests : DownloadListTests
         item.StartCommand.Execute(null);
         await Headless.WaitUntil(() => item.Progress > 0, "it's downloading");
         await FocusRow(0);
+        Assert.Equal(DownloadState.Downloading, item.State);
 
         _t.Dialogs.Answers.Enqueue(false);
         Press(Key.Delete, PhysicalKey.Delete);
@@ -190,7 +191,7 @@ public sealed class DownloadsViewTests : DownloadListTests
         Assert.Equal(2, _t.Dialogs.Questions.Count);
         await WaitUntilStopped(item);
         Assert.Equal(DownloadState.Cancelled, item.State);
-    }));
+    }, stepMs: 1000)); // about 20 seconds per video, so it's still downloading on a slow CI machine
 
     [Fact]
     public Task Shift_F10_opens_the_rows_menu_and_the_arrow_keys_work_in_it() => Headless.Run(async () =>

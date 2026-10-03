@@ -162,7 +162,17 @@ public static class DownloadRunner
 
         using (ProcessHelper.KillOnCancel(process, ct))
         {
-            await process.WaitForExitAsync(ct);
+            try
+            {
+                await process.WaitForExitAsync(ct);
+            }
+            catch (OperationCanceledException)
+            {
+                // Killing doesn't wait for the process to go. Until it has, Windows keeps its .part file locked, and a
+                // Resume straight after Pause would start a second downloader on a file still in use.
+                await Task.WhenAny(process.WaitForExitAsync(CancellationToken.None), Task.Delay(TimeSpan.FromSeconds(10)));
+                throw;
+            }
         }
 
         return process.ExitCode;

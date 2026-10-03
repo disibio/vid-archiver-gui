@@ -79,7 +79,11 @@ public sealed class DownloadsViewModelTests : DownloadListTests
         await Headless.WaitUntil(() => item.State == DownloadState.Paused, "it pauses");
         Assert.Equal("Resume", item.StartText);
         Assert.Equal(0, _vm.ActiveCount); // no "quit while downloading?" for it
-        Assert.True(File.Exists(Path.Combine(_folder, "pausable.f1.mp4.part")));
+        var part = Path.Combine(_folder, "pausable.f1.mp4.part");
+        using (File.Open(part, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+        {
+            // Opens only once the downloader has really exited; otherwise resuming would find the file still in use.
+        }
 
         item.StartCommand.Execute(null);
         await Headless.WaitUntil(() => item.State == DownloadState.Completed, "it finishes");
@@ -119,7 +123,8 @@ public sealed class DownloadsViewModelTests : DownloadListTests
         Assert.Equal(DownloadState.Paused, second.State);
 
         _vm.StartAllCommand.Execute(null);
-        await Headless.WaitUntil(() => first.State == DownloadState.Completed && second.State == DownloadState.Completed, "both finish", 60);
+        await Headless.WaitUntil(() => first.State == DownloadState.Completed && second.State == DownloadState.Completed,
+            () => $"both finish (first: {first.State} {first.Error}; second: {second.State} {second.Error})", 60);
     }));
 
     [Fact]
