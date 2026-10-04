@@ -62,7 +62,9 @@ Packagers can turn the check off by putting an empty `no-update-check.txt` next 
 ## How it works
 
 1. Paste one or more links on the Downloads tab and click **Add** (or press Ctrl+Enter).
-2. The app asks yt-dlp what the link is (`yt-dlp -J --flat-playlist`): which site, channel and playlist it belongs to.
+2. When the link is next in line to download, the app asks yt-dlp what it is (`yt-dlp -J --flat-playlist`): which
+   site, channel and playlist it belongs to. It looks up only a few links ahead of the downloads, never the whole list
+   at once, so a long list doesn't get you blocked by sites like YouTube.
 3. It goes through your folder rules from top to bottom, and the first one that matches picks the folder (and the
    preset, if you set one). If nothing matches, it uses your fallback folder. You can still change the folder by hand.
 4. The download starts. yt-dlp runs with your preset's options plus `-P <folder>`. To start downloads yourself

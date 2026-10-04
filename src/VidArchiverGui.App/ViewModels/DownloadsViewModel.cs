@@ -142,7 +142,7 @@ public partial class DownloadsViewModel : ObservableObject
 
             var item = new DownloadItemViewModel(this, url, preset) { CookieId = _host.Settings.LastCookieId };
             Items.Add(item);
-            _ = ResolveAsync(item);
+            Added(item);
             added++;
         }
         if (added == 0)
@@ -153,8 +153,21 @@ public partial class DownloadsViewModel : ObservableObject
         return added;
     }
 
-    /// <param name="startAfter">Queue it once its info is read, even if downloads don't start on their own.</param>
-    private async Task ResolveAsync(DownloadItemViewModel item, bool startAfter = false)
+    /// <summary>
+    /// A new item waits with only its link: its info (title, channel) is read when it's next to download, not now, so
+    /// a long list doesn't make the site look up every video at once (YouTube starts asking to sign in after a burst).
+    /// </summary>
+    private void Added(DownloadItemViewModel item)
+    {
+        item.State = DownloadState.Ready;
+        if (_host.Settings.AutoStartDownloads)
+        {
+            Enqueue(item);
+        }
+    }
+
+    /// <summary>Reads the info of a queued item that's next in line, then queues it to download.</summary>
+    private async Task ResolveAsync(DownloadItemViewModel item)
     {
         var token = item.BeginOperation();
         item.State = DownloadState.Resolving;
@@ -191,10 +204,7 @@ public partial class DownloadsViewModel : ObservableObject
 
             item.State = DownloadState.Ready;
             item.ProgressText = "";
-            if (startAfter || _host.Settings.AutoStartDownloads)
-            {
-                Enqueue(item);
-            }
+            Enqueue(item);
         }
         catch (OperationCanceledException)
         {
@@ -211,7 +221,7 @@ public partial class DownloadsViewModel : ObservableObject
         finally
         {
             item.IsIndeterminate = false;
-            UpdateSummary();
+            Pump(); // read the next one, whether this one is ready, failed or was stopped
         }
     }
 
@@ -270,7 +280,11 @@ public partial class DownloadsViewModel : ObservableObject
         item.PauseRequested = false;
         if (item.Info is null)
         {
-            _ = ResolveAsync(item, startAfter: true); // metadata failed earlier: retry that first
+            // Not read yet, or reading it failed: it's read again once it's next in line.
+            item.Error = null;
+            item.ProgressText = "";
+            item.State = DownloadState.Queued;
+            Pump();
             return;
         }
         if (string.IsNullOrWhiteSpace(item.Destination))
@@ -287,12 +301,28 @@ public partial class DownloadsViewModel : ObservableObject
         Pump();
     }
 
+    /// <summary>How many queued downloads have their info read ahead of the ones running, so the next few show their titles.</summary>
+    private const int ReadAhead = 3;
+
+    /// <summary>
+    /// Starts queued downloads whose info is read while there are free slots, and reads the info of the next ones in
+    /// line: enough to fill the free slots, plus <see cref="ReadAhead"/>.
+    /// </summary>
     private void Pump()
     {
-        foreach (var next in DownloadQueue.ToStart(Items, i => i.State, _host.Settings.MaxConcurrentDownloads))
+        var max = _host.Settings.MaxConcurrentDownloads;
+        foreach (var next in DownloadQueue.ToStart(Items.Where(i => i.Info is not null || i.State != DownloadState.Queued).ToList(), i => i.State, max))
         {
             _ = DownloadAsync(next);
         }
+
+        var wanted = Math.Max(0, max - Items.Count(i => i.State == DownloadState.Downloading)) + ReadAhead;
+        var ahead = Items.Count(i => (i.State == DownloadState.Resolving && !_restored.Contains(i)) || (i.State == DownloadState.Queued && i.Info is not null));
+        foreach (var next in Items.Where(i => i.State == DownloadState.Queued && i.Info is null).Take(wanted - ahead).ToList())
+        {
+            _ = ResolveAsync(next);
+        }
+
         UpdateSummary();
     }
 
@@ -486,11 +516,14 @@ public partial class DownloadsViewModel : ObservableObject
             }
             else
             {
-                _ = ResolveAsync(item);
+                item.IsIndeterminate = false;
+                item.ProgressText = "";
+                Added(item);
             }
         }
 
         _restored.Clear();
+        Pump();
     }
 
     private static void StayPaused(DownloadItemViewModel item)
@@ -540,7 +573,7 @@ public partial class DownloadsViewModel : ObservableObject
     {
         var copy = new DownloadItemViewModel(this, item.Url, item.Preset) { CookieId = item.CookieId, DownloaderOverride = item.DownloaderOverride };
         Items.Insert(Items.IndexOf(item) + 1, copy);
-        _ = ResolveAsync(copy);
+        Added(copy);
     }
 
     /// <summary>Turns the item's current folder into a rule, so this channel (or playlist/site) is routed there from now on.</summary>

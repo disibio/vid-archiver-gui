@@ -55,6 +55,7 @@ public abstract class DownloadListTests : IDisposable
         }
     }
 
+    /// <summary>Adds a link; if it starts on its own and is next in line, waits until its info is read.</summary>
     protected async Task<DownloadItemViewModel> AddAsync(string url)
     {
         Assert.Equal(1, _vm.AddUrls(url));

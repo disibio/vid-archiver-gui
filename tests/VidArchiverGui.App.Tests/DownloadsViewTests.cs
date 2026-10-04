@@ -121,6 +121,7 @@ public sealed class DownloadsViewTests : DownloadListTests
     {
         Show();
         var item = await AddAsync("https://fake.test/video/a");
+        item.Destination = _folder;
         await Settle();
         var box = _list.ContainerFromIndex(0)!.GetVisualDescendants().OfType<TextBox>().First(t => t.Text == item.Destination);
         box.Focus();
@@ -140,6 +141,7 @@ public sealed class DownloadsViewTests : DownloadListTests
         Show();
         var a = await AddAsync("https://fake.test/video/a");
         var b = await AddAsync("https://fake.test/video/b");
+        a.Destination = _folder;
         await FocusRow(0);
 
         var reached = new List<string>();
@@ -154,7 +156,7 @@ public sealed class DownloadsViewTests : DownloadListTests
         }
 
         Assert.Same(b, (Focused as ListBoxItem)?.DataContext);
-        Assert.Equal(["Start", "Copy URL", "Open folder", "✕", "Browse…", "Remember"], reached);
+        Assert.Equal(["Start", "Copy URL", "Open folder", "✕", "Browse…"], reached); // Remember needs its info, read when it's next to download
     });
 
     [Fact]

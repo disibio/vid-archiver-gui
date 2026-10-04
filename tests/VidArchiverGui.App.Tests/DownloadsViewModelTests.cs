@@ -54,8 +54,7 @@ public sealed class DownloadsViewModelTests : DownloadListTests
     public Task Open_folder_selects_the_downloaded_file_while_it_exists() => Headless.Run(async () =>
     {
         var item = await AddAsync("https://fake.test/playlist/2");
-        await item.OpenFolderCommand.ExecuteAsync(null);
-        Assert.Equal(_folder, _t.Dialogs.Opened[^1]); // nothing downloaded yet
+        Assert.False(item.OpenFolderCommand.CanExecute(null)); // no folder until its info is read
 
         item.StartCommand.Execute(null);
         await Headless.WaitUntil(() => item.State == DownloadState.Completed, "it downloads");
@@ -98,10 +97,10 @@ public sealed class DownloadsViewModelTests : DownloadListTests
         var first = await AddAsync("https://fake.test/video/first");
         var second = await AddAsync("https://fake.test/video/second");
         _vm.StartAllCommand.Execute(null);
-        Assert.Equal(DownloadState.Queued, second.State);
+        Assert.Equal(DownloadState.Resolving, second.State);
 
-        second.PauseCommand.Execute(null);
-        Assert.Equal(DownloadState.Paused, second.State);
+        second.PauseCommand.Execute(null); // while its info is read, one ahead of the download
+        await Headless.WaitUntil(() => second.State == DownloadState.Paused, "it pauses");
         Assert.Contains("1 paused", _vm.Summary);
 
         await WaitUntilStopped(first);
@@ -217,6 +216,8 @@ public sealed class DownloadsViewModelTests : DownloadListTests
         var item = await AddAsync("https://fake.test/video/one");
         Assert.True(_vm.StartAllCommand.CanExecute(null));
         Assert.False(_vm.PauseAllCommand.CanExecute(null));
+        Assert.False(_vm.ReapplyRulesCommand.CanExecute(null)); // no info to route it by until it's next to download
+        item.Info = new MediaInfo { Url = item.Url, Channel = "Fake channel" };
         Assert.True(_vm.ReapplyRulesCommand.CanExecute(null));
         item.Destination = Path.Combine(_folder, "picked"); // picked by hand, so rules leave it alone
         Assert.False(_vm.ReapplyRulesCommand.CanExecute(null));
@@ -274,6 +275,51 @@ public sealed class DownloadsViewModelTests : DownloadListTests
     });
 
     [Fact]
+    public Task A_long_list_reads_each_videos_info_only_when_it_is_next_to_download() => Headless.Run(() => Slowly(async () =>
+    {
+        // Looking up a whole list at once makes YouTube ask to sign in after a few videos.
+        _t.Settings.AutoStartDownloads = true;
+        _t.Settings.MaxConcurrentDownloads = 1;
+        Assert.Equal(10, _vm.AddUrls(string.Join('\n', Enumerable.Range(1, 10).Select(i => $"https://fake.test/video/v{i}"))));
+
+        var mostAhead = 0;
+        while (_vm.Items.Count(i => i.State == DownloadState.Completed) < 3)
+        {
+            var downloading = _vm.Items.Count(i => i.State == DownloadState.Downloading);
+            Assert.True(downloading <= 1);
+            if (downloading == 1) // before the first starts, it and the three after it are read
+            {
+                var ahead = _vm.Items.Count(i => i.State == DownloadState.Resolving || (i.Info is not null && i.State == DownloadState.Queued));
+                mostAhead = Math.Max(mostAhead, ahead);
+            }
+            await Task.Delay(10);
+        }
+
+        Assert.Equal(3, mostAhead);
+        Assert.True(_vm.Items.Count(i => i.Info is not null) <= 7, "3 done, 1 downloading and 3 ahead at most");
+        Assert.Contains(_vm.Items, i => i.Info is null && i.State == DownloadState.Queued);
+    }));
+
+    [Fact]
+    public Task Start_all_and_last_sessions_list_read_info_only_for_the_next_download() => Headless.Run(() => Slowly(async () =>
+    {
+        _t.Settings.MaxConcurrentDownloads = 1;
+        _t.Settings.UnfinishedDownloads = Enumerable.Range(1, 6).Select(i => new SavedDownload { Url = $"https://fake.test/video/r{i}" }).ToList();
+        _t.Settings.UnfinishedDownloads.AddRange(Enumerable.Range(1, 6).Select(i => new SavedDownload { Url = $"https://fake.test/video/f{i}", Error = "Could not read info" }));
+        _vm.RestoreUnfinished();
+
+        _vm.ResumeRestored(); // start on add is off: the unfinished ones wait for Start, unread
+        Assert.All(_vm.Items, i => Assert.Null(i.Info));
+        Assert.DoesNotContain(_vm.Items, i => i.State == DownloadState.Resolving);
+
+        _vm.StartAllCommand.Execute(null);
+        await Headless.WaitUntil(() => _vm.Items.Any(i => i.State == DownloadState.Downloading), "one downloads");
+        await Task.Delay(500);
+        Assert.Equal(1, _vm.Items.Count(i => i.State == DownloadState.Downloading));
+        Assert.True(_vm.Items.Count(i => i.Info is not null) <= 4, string.Join(", ", _vm.Items.Select(i => i.State)));
+    }));
+
+    [Fact]
     public Task Pause_all_stops_a_long_list_from_reading_info_and_starting() => Headless.Run(async () =>
     {
         _t.Settings.AutoStartDownloads = true;
@@ -323,11 +369,12 @@ public sealed class DownloadsViewModelTests : DownloadListTests
     [Fact]
     public Task Starting_a_download_whose_info_failed_reads_it_again_and_then_downloads() => Headless.Run(async () =>
     {
-        DownloadItemViewModel item;
+        var item = await AddAsync("https://fake.test/video/later");
         Environment.SetEnvironmentVariable("FAKEYTDLP_INFO_FAIL", "1");
         try
         {
-            item = await AddAsync("https://fake.test/video/later");
+            item.StartCommand.Execute(null);
+            await WaitUntilStopped(item);
         }
         finally
         {
@@ -335,7 +382,7 @@ public sealed class DownloadsViewModelTests : DownloadListTests
         }
 
         Assert.Equal(DownloadState.Failed, item.State);
-        Assert.False(_t.Settings.AutoStartDownloads);
+        Assert.StartsWith("Could not read info", item.Error);
 
         item.StartCommand.Execute(null);
         await Headless.WaitUntil(() => item.State == DownloadState.Completed, "it downloads");
