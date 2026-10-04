@@ -62,12 +62,16 @@ public static partial class DownloadQueue
 
     /// <summary>
     /// The queued items that fit beside the running ones under <paramref name="max"/>, in list order. Only those whose
-    /// info has been read can start; the others are looked up first (<see cref="ToLookUp"/>).
+    /// info has been read can start; the others are looked up first (<see cref="ToLookUp"/>). Nothing behind an item
+    /// whose info is being read starts before it, so the downloads still go in list order when the lookups finish out
+    /// of order.
     /// </summary>
     public static IReadOnlyList<T> ToStart<T>(IReadOnlyCollection<T> items, Func<T, DownloadState> state, Func<T, bool> hasInfo, int max)
     {
         var free = max - items.Count(i => state(i) == DownloadState.Downloading);
-        return free <= 0 ? [] : items.Where(i => state(i) == DownloadState.Queued && hasInfo(i)).Take(free).ToList();
+        return free <= 0
+            ? []
+            : items.TakeWhile(i => state(i) != DownloadState.Resolving).Where(i => state(i) == DownloadState.Queued && hasInfo(i)).Take(free).ToList();
     }
 
     /// <summary>

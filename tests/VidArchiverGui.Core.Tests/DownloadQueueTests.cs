@@ -87,6 +87,13 @@ public class DownloadQueueTests
     }
 
     [Fact]
+    public void A_download_whose_info_comes_back_first_waits_for_the_one_above_it()
+    {
+        Assert.Empty(ToStart(1, DownloadState.Resolving, DownloadState.Queued));
+        Assert.Equal([1], ToStart(2, DownloadState.Completed, DownloadState.Queued, DownloadState.Resolving, DownloadState.Queued));
+    }
+
+    [Fact]
     public void Looks_up_the_free_slots_and_three_more_not_the_whole_list()
     {
         var queued = Enumerable.Repeat((DownloadState.Queued, false), 10).ToArray();
