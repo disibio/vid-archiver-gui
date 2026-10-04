@@ -20,7 +20,7 @@ every download gets filed into the right folder automatically.
 
 ____
 
-![Downloads tab with four Blender open movies, each filed into a folder by a rule, two finished with thumbnails](docs/screenshots/downloads-light.png)
+![Downloads tab with four Blender open movies, each filed into a folder by a rule, one finished with its thumbnail, one downloading and two waiting](docs/screenshots/downloads-light.png)
 
 It's a from-scratch rewrite in C# (.NET 10 and Avalonia), not a fork, and it doesn't include any code from yt-dlg.
 Most of the code was written with AI (Claude Opus 5.5), and I've tested it a lot.
