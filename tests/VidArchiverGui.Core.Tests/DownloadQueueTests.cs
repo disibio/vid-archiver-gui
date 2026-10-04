@@ -36,6 +36,18 @@ public class DownloadQueueTests
     }
 
     [Fact]
+    public void A_line_with_just_one_word_or_a_search_goes_to_the_downloader_as_it_is()
+    {
+        const string text = """
+              abcDEF12345
+            examplesearch5:some words
+            The information is here
+            example:abcDEF12345
+            """;
+        Assert.Equal(["abcDEF12345", "examplesearch5:some words", "example:abcDEF12345"], DownloadQueue.ExtractUrls(text));
+    }
+
+    [Fact]
     public void Summary_counts_every_state_that_occurs_so_they_add_up()
     {
         Assert.Equal("0 items", DownloadQueue.ListSummary([]));

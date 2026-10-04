@@ -13,11 +13,17 @@ public static partial class DownloadQueue
     /// <summary>
     /// The links in typed, pasted or dropped text: anything with a scheme (https://…), or a bare domain with an
     /// optional path (archive.org/details/…). Other words, such as "e.g." or the end of a sentence, are ignored.
+    /// A line without a link that is one word (an id) or a yt-dlp search (examplesearch5:some words)
+    /// is kept whole, since yt-dlp accepts those too and says so when it can't.
     /// </summary>
     public static IReadOnlyList<string> ExtractUrls(string text) =>
-        text.Split((char[])[' ', '\t', '\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
-            .Select(StripSurroundings)
-            .Where(s => SchemeUrlRegex().IsMatch(s) || BareDomainUrlRegex().IsMatch(s))
+        text.Split((char[])['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .SelectMany(line =>
+            {
+                var words = line.Split((char[])[' ', '\t'], StringSplitOptions.RemoveEmptyEntries);
+                var links = words.Select(StripSurroundings).Where(s => SchemeUrlRegex().IsMatch(s) || BareDomainUrlRegex().IsMatch(s)).ToList();
+                return links.Count == 0 && (words.Length == 1 || SearchRegex().IsMatch(line)) ? [line] : links;
+            })
             .Distinct()
             .ToList();
 
@@ -36,6 +42,10 @@ public static partial class DownloadQueue
 
         return word;
     }
+
+    // yt-dlp's search prefixes: <site>search:, <site>search5:, <site>searchall:, <site>searchdate:
+    [GeneratedRegex(@"^[a-z0-9]+search(?:\d+|all|date)?:\S", RegexOptions.IgnoreCase)]
+    private static partial Regex SearchRegex();
 
     [GeneratedRegex(@"^[a-z][a-z0-9+.-]*://\S+$", RegexOptions.IgnoreCase)]
     private static partial Regex SchemeUrlRegex();
