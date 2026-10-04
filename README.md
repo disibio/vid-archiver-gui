@@ -60,8 +60,9 @@ up to date for you. Packagers can turn the check off by putting an empty `no-upd
 2. The app asks yt-dlp what the link is (`yt-dlp -J --flat-playlist`): which site, channel and playlist it belongs to.
 3. It goes through your folder rules from top to bottom, and the first one that matches picks the folder (and the
    preset, if you set one). If nothing matches, it uses your fallback folder. You can still change the folder by hand.
-4. Click **Start** or **Start all** (which also tries failed downloads again). yt-dlp runs with your preset's options
-   plus `-P <folder>`.
+4. The download starts. yt-dlp runs with your preset's options plus `-P <folder>`. To start downloads yourself
+   instead, turn off **Start on add** at the right of the toolbar, then click **Start** or **Start all** (which also
+   tries failed downloads again).
 
 If you set a folder by hand, you can click **Remember** to turn it into a rule for that channel.
 
@@ -103,6 +104,10 @@ Folder paths can include tokens that get filled in per video:
 - `{channel|channel_id|uploader}` uses the first one that has a value (`{(a|b)}` works too). Put text in quotes to
   use it as-is, e.g. `{playlist|"Singles"}`.
 - If none of them have a value, the folder is called `Unknown`.
+- Values are written the way yt-dlp writes file names, so the folders match ones it made: characters a folder name
+  can't have become look-alikes (`A | B` becomes `A ｜ B`). With **Use only plain ASCII in folder and file names** on
+  in Settings > Downloads, they're written as `--restrict-filenames` writes them instead (`Café | Live` becomes
+  `Cafe_Live`).
 
 For example, `E:\ARCHIVE\{site}\{channel|channel_id|uploader|uploader_id}` gives each channel its own folder
 under its site.
@@ -128,6 +133,7 @@ each download's log.
 | Option | When | Why | Can a preset change it? |
 |---|---|---|---|
 | `--ignore-errors` | While **Keep downloading when subtitles, comments or the thumbnail can't be fetched** is on in Settings > Downloads (it is by default) | If an extra like subtitles can't be downloaded (for example "HTTP Error 429: Too Many Requests"), the video is still saved and the log shows a warning, instead of the whole download failing | Yes: add `--abort-on-error`, or turn the setting off |
+| `--restrict-filenames` | Only with **Use only plain ASCII in folder and file names** on in Settings > Downloads | File names in plain ASCII, like the folders | Yes: add `--no-restrict-filenames`, or turn the setting off |
 | `--sleep-requests`, `--sleep-interval`, `--max-sleep-interval`, `--retry-sleep`, `--extractor-retries` | Only with [Download gently](#download-gently) on | Fewer throttles and bot checks | Yes: a preset's own values win |
 | `--cookies-from-browser` or `--cookies` | Only when you pick [cookies](#cookies) | Logging in | No: your pick replaces the preset's cookie options |
 | `-P <folder>` (yt-dlp) or `-o <folder>/...` (youtube-dl) | Always | Saves to the folder from your folder rules | No: the app's folder wins, and a relative `-o` ends up inside it |

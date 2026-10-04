@@ -201,7 +201,7 @@ footer a:hover { color: var(--text); }
   <div class="wrap">
     <h2>What it does</h2>
     <div class="features">
-      <div><h3>yt-dlp without the command line</h3><p>Paste links, pick a preset and click Start. The app builds the yt-dlp command and shows its progress.</p></div>
+      <div><h3>yt-dlp without the command line</h3><p>Paste links, pick a preset, and the download starts. The app builds the yt-dlp command and shows its progress.</p></div>
       <div><h3>Presets are yt-dlp options</h3><p>Paste the command you already use. Any yt-dlp option works.</p></div>
       <div><h3>Folder rules</h3><p>Pick the save folder automatically from the info yt-dlp reports for each link. <a href="#rules">More below</a>.</p></div>
       <div><h3>A queue</h3><p>Add lots of links and run several downloads side by side.</p></div>
@@ -227,6 +227,8 @@ footer a:hover { color: var(--text); }
           <li>Match on site, domain, channel, playlist, title or URL (Equals, Contains, StartsWith or Regex)</li>
           <li>Use tokens like <code>{site}</code>, <code>{channel}</code> or any yt-dlp field in the folder path,
             with fallbacks like <code>{channel|uploader|"Unknown"}</code></li>
+          <li>Folders are named the way yt-dlp names files, so they match the ones it made, or in plain ASCII if you
+            prefer</li>
           <li><strong>Test a URL</strong> shows which folder a link would get</li>
           <li>Set a folder by hand, then click <strong>Remember</strong> to turn it into a rule</li>
         </ul>
