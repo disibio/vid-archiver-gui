@@ -77,6 +77,19 @@
   </requires>
 
   <releases>
+    <release version="1.3.0" date="2026-10-04">
+      <url type="details">https://github.com/disibio/vid-archiver-gui/releases/tag/v1.3.0</url>
+      <description>
+        <ul>
+          <li>New setting to pass your own proxy to yt-dlp (--proxy).</li>
+          <li>Added ASCII folder and file name setting, off by default.</li>
+          <li>Added "Uploaded subtitles only (all languages)" to download only user uploaded subtitles.</li>
+          <li>Changed "Cancel all" to ask first. Can be turned off.</li>
+          <li>Start on add switch added, on by default.</li>
+          <li>Fixed bugs related to UI.</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.2.0" date="2026-10-02">
       <url type="details">https://github.com/disibio/vid-archiver-gui/releases/tag/v1.2.0</url>
       <description>
