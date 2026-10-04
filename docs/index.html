@@ -140,9 +140,9 @@ th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--bor
 th { font-weight: 600; font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
 td code { word-break: break-all; }
 
-.features { display: grid; gap: 24px 40px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
-.features div { border-top: 2px solid var(--accent); padding-top: 10px; }
-.features p { margin: 0; color: var(--muted); }
+.prose > * { max-width: 760px; }
+.prose ol, .prose ul { padding-left: 22px; }
+.prose li { margin: 8px 0; }
 
 .gallery { display: grid; grid-template-columns: repeat(2, 1fr); gap: 28px; }
 @media (max-width: 640px) { .gallery { grid-template-columns: 1fr; } }
@@ -165,8 +165,9 @@ footer a:hover { color: var(--text); }
   <div class="wrap">
     <a class="brand" href="#"><img src="icon.png" alt="" width="24" height="24">Vid Archiver GUI</a>
     <nav>
-      <a href="#features">What it does</a>
+      <a href="#how">How it works</a>
       <a href="#rules">Folder rules</a>
+      <a href="#archiving">Archiving</a>
       <a href="#screenshots">Screenshots</a>
       <a href="#download">Download</a>
       <a href="https://github.com/disibio/vid-archiver-gui">GitHub</a>
@@ -197,22 +198,20 @@ footer a:hover { color: var(--text); }
        alt="Downloads tab in the dark theme: four Blender open movies, each filed into a folder by a rule, one finished with its thumbnail, one downloading and two waiting">
 </div>
 
-<section id="features" class="alt">
-  <div class="wrap">
-    <h2>What it does</h2>
-    <div class="features">
-      <div><h3>yt-dlp without the command line</h3><p>Paste links, pick a preset, and the download starts. The app builds the yt-dlp command and shows its progress.</p></div>
-      <div><h3>Presets are yt-dlp options</h3><p>Paste the command you already use. Any yt-dlp option works.</p></div>
-      <div><h3>Folder rules</h3><p>Pick the save folder automatically from the info yt-dlp reports for each link. <a href="#rules">More below</a>.</p></div>
-      <div><h3>A queue</h3><p>Add lots of links and run several downloads side by side.</p></div>
-      <div><h3>Automatic setup</h3><p>Installs yt-dlp on first run, and FFmpeg and deno with one click, verified against the publishers' checksums.</p></div>
-      <div><h3>Updates and rollback</h3><p>Checks for yt-dlp updates daily. If a new release breaks something, roll back with one click.</p></div>
-      <div><h3>Pick your yt-dlp build</h3><p>Stable, nightly, master or your own fork, chosen per preset. youtube-dl works too.</p></div>
-      <div><h3>Readable errors</h3><p>Reads yt-dlp's error output, retries network problems, and tells you what went wrong.</p></div>
-      <div><h3>Private</h3><p>No accounts, analytics or telemetry. Everything stays on your computer.</p></div>
-    </div>
-    <p class="muted" style="margin-top:28px">The <a href="https://github.com/disibio/vid-archiver-gui#readme">README</a>
-      covers everything in more detail.</p>
+<section id="how" class="alt">
+  <div class="wrap prose">
+    <h2>How it works</h2>
+    <ol>
+      <li>Paste one or more links and click <strong>Add</strong>.</li>
+      <li>yt-dlp looks each one up: the site, channel, playlist and title.</li>
+      <li>Your folder rules pick where it goes, and can pick the preset and cookies too.</li>
+      <li>It downloads, a few at a time. <strong>Pause</strong> keeps what's done so far, and <strong>Resume</strong>
+        carries on from there, even after you restart the app.</li>
+    </ol>
+    <p>Presets are plain yt-dlp options, so you can paste in the command you already use. If a folder isn't right,
+      change it on the download and click <strong>Remember</strong> to make it a rule. When something fails, the app
+      says why in plain words, retries network trouble by itself, and points you at cookies or a slower pace when
+      that's what's needed.</p>
   </div>
 </section>
 
@@ -248,7 +247,43 @@ footer a:hover { color: var(--text); }
   </div>
 </section>
 
-<section id="screenshots" class="alt">
+<section id="archiving" class="alt">
+  <div class="wrap prose">
+    <h2>Made for archiving</h2>
+    <p>The default preset is set up for keeping videos, not just watching them once.</p>
+    <ul>
+      <li>It keeps a download archive, so adding a whole channel again only gets the videos you don't have yet. The
+        ones you have show as <strong>Already archived</strong>.</li>
+      <li>Next to each video it saves the thumbnail, description, comments, the full info JSON and a link back to the
+        page. English subtitles go into the video and stay beside it as a file.</li>
+      <li>The <strong>Uploaded subtitles only</strong> preset fetches subtitles in every language for videos you
+        already have. Most videos have none, so it's quick.</li>
+      <li><strong>Download gently</strong> spaces out the requests, so a long channel is less likely to get you
+        throttled or asked to sign in.</li>
+      <li>Cookies from your browser or a cookies.txt file get members-only and age-restricted videos. They're only
+        used when you pick them.</li>
+      <li>If a site changes and the stable yt-dlp can't read it, the app tries the nightly and master builds before
+        giving up.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="setup">
+  <div class="wrap prose">
+    <h2>Setup, updates and privacy</h2>
+    <p>The first time you open it, the app installs yt-dlp, and FFmpeg and deno are one click each. Everything it
+      installs comes from the official releases and is checked against the published SHA-256 checksums. If you already
+      have them installed, it uses yours.</p>
+    <p>yt-dlp is checked for updates every day. If a new release breaks something, you can roll back to the previous
+      one with one click. Each preset can use stable, nightly or master yt-dlp, your own fork, or youtube-dl.</p>
+    <p>There are no accounts, analytics or telemetry. The app only connects to GitHub, for tools and update checks,
+      and to the sites you download from. See the <a href="https://github.com/disibio/vid-archiver-gui/blob/main/PRIVACY.md">privacy
+      policy</a>, and the <a href="https://github.com/disibio/vid-archiver-gui#readme">README</a> for everything
+      else.</p>
+  </div>
+</section>
+
+<section id="screenshots">
   <div class="wrap">
     <h2>Screenshots</h2>
     <div class="gallery">
@@ -260,7 +295,7 @@ footer a:hover { color: var(--text); }
   </div>
 </section>
 
-<section id="download">
+<section id="download" class="alt">
   <div class="wrap">
     <h2>Download</h2>
     <p>Get the latest build from <a href="https://github.com/disibio/vid-archiver-gui/releases/latest">Releases</a>.

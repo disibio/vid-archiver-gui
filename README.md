@@ -23,7 +23,6 @@ ____
 ![Downloads tab with four Blender open movies, each filed into a folder by a rule, one finished with its thumbnail, one downloading and two waiting](docs/screenshots/downloads-light.png)
 
 It's a from-scratch rewrite in C# (.NET 10 and Avalonia), not a fork, and it doesn't include any code from yt-dlg.
-Most of the code was written with AI (Claude Opus 5.5), and I've tested it a lot.
 
 ## Download
 
@@ -37,14 +36,16 @@ Grab the latest build from [Releases](https://github.com/disibio/vid-archiver-gu
 - **Linux:** an `.AppImage` for x64 and arm64. Make it executable (`chmod +x Vid-Archiver-GUI-*.AppImage`) and run
   it. If it says FUSE is missing, run it with `--appimage-extract-and-run`. Or use the `.tar.gz`: unpack it and run
   `./install.sh` to add it to your application menu.
-- **macOS:** build it yourself for now (see [Building](#building)).
+- **macOS 14 or newer:** a `.zip` for Apple Silicon and one for Intel. The app isn't notarized, so macOS blocks it
+  the first time. On macOS 15 or newer, try to open it once, then go to **System Settings > Privacy & Security**,
+  scroll down and click **Open Anyway**. On macOS 14, right-click the app and choose **Open** instead.
 
 The first time you open it, the app offers to install yt-dlp, FFmpeg and deno for you.
 
 The versions from Releases check once a day whether a newer version is out and, if so, show a link to it. They don't
 download or install anything themselves. To turn the check off, click **Stop checking** on that notice or clear the
-box in **Settings > Updates**. The Microsoft Store, Flatpak and AUR versions don't check, because those keep the app
-up to date for you. Packagers can turn the check off by putting an empty `no-update-check.txt` next to the program.
+box in **Settings > Updates**. The Microsoft Store version doesn't check, because the Store keeps it up to date.
+Packagers can turn the check off by putting an empty `no-update-check.txt` next to the program.
 
 ## Screenshots
 
@@ -69,9 +70,12 @@ If you set a folder by hand, you can click **Remember** to turn it into a rule f
 **Pause** stops a download and keeps what's downloaded so far, and **Resume** carries on from there, even after you
 restart the app. A playlist's bar fills across the whole playlist, not just the current video.
 
-When a download is done, **Open folder** opens its folder with the file selected (with yt-dlp). If your preset saves or embeds the
-thumbnail (`--write-thumbnail` or `--embed-thumbnail`, as the built-in presets do), it's shown next to the download.
-It's read from the downloaded files, not fetched from the site.
+When a download is done, **Open folder** opens its folder with the file selected. If your preset saves or embeds the
+thumbnail (as the built-in presets do), it's shown next to the download. It's read from the downloaded file, not
+fetched from the site.
+
+Every download shows the link it came from. Use **Copy URL**, or right-click to copy the link, title or folder, or
+to add it again.
 
 ### Keyboard
 
@@ -208,16 +212,11 @@ That also means a folder rule can send a site through, say, the nightly build by
 | Custom | Any program you point it at (a fork, a pip install, etc.), marked *yt-dlp compatible* or *youtube-dl compatible* |
 
 The default downloader is installed the first time you run the app, and the ones the app installed are checked for
-updates once a day. youtube-dl-style downloaders get their folder through `-o` instead of `-P` (a relative `-o` in the
-preset ends up inside the chosen folder), and progress is read from their normal output. Options aren't the same between downloaders, so write each preset for the
-one it uses.
+updates once a day. Options aren't the same between downloaders, so write each preset for the one it uses.
 
 When the app updates a downloader, it keeps the old version. If a new release breaks something, select it and click
 **Roll back to...**. The daily check then skips that release until a newer one comes out. **Check for update**
 installs it anyway, and clicking **Roll back** again undoes the rollback.
-
-Every download shows the link it came from. Use **Copy URL**, or right-click to copy the link, title or folder, or
-to add it again.
 
 ## First-run setup
 
@@ -272,10 +271,6 @@ The packaged builds are self-contained, so people don't need .NET installed.
 
 Releases can also be built by GitHub Actions (`.github/workflows/release.yml`): push a tag such as `v1.0.1` that matches `<Version>` in `Directory.Build.props`, and all of the above except the Store package is built on GitHub's Windows, Linux and Mac machines and attached to a draft release, with `SHA256SUMS.txt`.
 
-The macOS app isn't notarized, so macOS blocks it the first time. On macOS 15 or newer, try to open it once, then go
-to **System Settings > Privacy & Security**, scroll down and click **Open Anyway**. On macOS 14, right-click the app
-and choose **Open** instead.
-
 ### Project layout
 
 - `src/VidArchiverGui.Core`: all the logic with no UI. Models, the rules engine, path tokens, argument parsing,
@@ -290,9 +285,11 @@ and choose **Open** instead.
 
 Debug builds can render every tab to PNG files without opening a window and then exit, which is handy for checking UI changes. Set
 `VIDARCHIVERGUI_SNAPSHOT_DIR=<folder>`, and optionally `VIDARCHIVERGUI_SNAPSHOT_URLS=url1;url2` to add some links first.
-`VIDARCHIVERGUI_SNAPSHOT_START=<n>` downloads the first n of those links for real before taking the pictures, and
+`VIDARCHIVERGUI_SNAPSHOT_START=<n>` downloads the first n of those links for real before taking the pictures,
+`VIDARCHIVERGUI_SNAPSHOT_DURING=<n>` takes them while the nth link is part way through downloading instead, and
 `VIDARCHIVERGUI_SNAPSHOT_THEME=Dark,Light` takes them in both themes. The Downloads screenshots in `docs/screenshots`
-were made this way, with Blender's open movies from video.blender.org.
+were made with `_DURING=2` and four of Blender's open movies from video.blender.org, one download at a time, from a
+portable copy with demo settings so nothing personal shows.
 
 To simulate a first run, also set `VIDARCHIVERGUI_SNAPSHOT_SETUP=1` (with a `portable.txt` next to the app so it
 starts with a clean data folder). It captures the setup banner and presses **Fix now**. Add
