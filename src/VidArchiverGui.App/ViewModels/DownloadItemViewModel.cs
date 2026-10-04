@@ -378,6 +378,7 @@ public partial class DownloadItemViewModel : ObservableObject
                         CookieArgs = Cookies.Args(settings, CookieId, downloader.Flavor),
                         Gentle = settings.GentleDownloads,
                         IgnoreErrors = settings.IgnoreExtraErrors,
+                        AsciiNames = settings.AsciiNames,
                     };
                     _lastError = null;
                     var run = await DownloadRunner.RunAsync(request, downloader, ffmpeg, OnOutput, ct);

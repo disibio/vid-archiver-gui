@@ -89,6 +89,13 @@ public class ArgumentsTests
     }
 
     [Fact]
+    public void Ascii_names_restrict_file_names_too()
+    {
+        Assert.Contains("--restrict-filenames", DownloadRunner.BuildArguments(new DownloadRequest("u", [], Dest) { AsciiNames = true }, null));
+        Assert.DoesNotContain("--restrict-filenames", DownloadRunner.BuildArguments(new DownloadRequest("u", [], Dest), null));
+    }
+
+    [Fact]
     public void Extra_downloader_args_are_passed_before_the_url()
     {
         var args = DownloadRunner.BuildArguments(new DownloadRequest("https://x", ["-f", "b"], "/d"), null, ["--js-runtimes", "deno:/app/deno"]);

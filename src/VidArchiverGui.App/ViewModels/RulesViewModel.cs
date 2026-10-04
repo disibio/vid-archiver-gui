@@ -304,7 +304,7 @@ public partial class RulesViewModel : ObservableObject
         {
             var preset = Settings.DefaultPreset;
             var info = await MetadataService.FetchAsync(TestUrl.Trim(), ArgumentParser.Split(preset.Arguments), ToolManager.Resolve(Settings.DownloaderFor(preset)));
-            var route = Router.Resolve(info, Rules, Settings.FallbackDestination);
+            var route = Router.Resolve(info, Rules, Settings.FallbackDestination, Settings.AsciiNames);
             string F(string name) => info.Fields.TryGetValue(name, out var v) ? v : "—";
             TestResult =
                 $"site: {info.Site}   domain: {info.Domain}   playlist: {info.Playlist ?? "—"}   title: {info.Title}\n" +

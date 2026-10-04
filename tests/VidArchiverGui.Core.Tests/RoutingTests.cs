@@ -168,8 +168,35 @@ public class RoutingTests
     [InlineData("  spaced ", "  spaced#", "  spaced ")]
     public void Sanitizes_like_yt_dlp(string input, string windows, string elsewhere)
     {
-        Assert.Equal(windows, PathTemplate.SanitizeSegment(input, windows: true));
-        Assert.Equal(elsewhere, PathTemplate.SanitizeSegment(input, windows: false));
+        Assert.Equal(windows, PathTemplate.SanitizeSegment(input, ascii: false, windows: true));
+        Assert.Equal(elsewhere, PathTemplate.SanitizeSegment(input, ascii: false, windows: false));
+    }
+
+    // What yt-dlp names them with --restrict-filenames.
+    [Theory]
+    [InlineData("Some Channel | Notes", "Some_Channel_Notes")]
+    [InlineData("Café: Ünïcode & more", "Cafe_-_Unicode_more")]
+    [InlineData("(Official) Video!", "Official_Video")]
+    [InlineData("日本語 Title", "Title")]
+    [InlineData("Ｆｕｌｌ ｗｉｄｔｈ", "Full_width")]
+    [InlineData("Straße Æon", "Strasse_AEon")]
+    [InlineData("e\u0301tude", "etude")]
+    [InlineData("At 12:30: news", "At_12_30_-_news")]
+    [InlineData("a__b", "a__b")]
+    [InlineData("Fun 😀 times", "Fun_times")]
+    [InlineData("😀", "Unknown")]
+    public void Sanitizes_to_ascii_like_yt_dlp_restrict_filenames(string input, string expected)
+    {
+        Assert.Equal(expected, PathTemplate.SanitizeSegment(input, ascii: true, windows: false));
+    }
+
+    [Fact]
+    public void Ascii_names_apply_to_the_folders_rules_make()
+    {
+        var info = Video with { Fields = new Dictionary<string, string> { ["channel"] = "Café | Live" } };
+        const string template = @"E:\A\{channel}\{playlist|""Not sorted""}";
+        Assert.Equal(@"E:\A\Cafe_Live\Not_sorted", Router.Resolve(info, [], template, ascii: true).Destination);
+        Assert.Equal(@"E:\A\Café ｜ Live\Not sorted", Router.Resolve(info, [], template).Destination);
     }
 
     [Fact]

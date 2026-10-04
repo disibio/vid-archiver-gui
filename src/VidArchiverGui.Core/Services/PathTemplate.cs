@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 using VidArchiverGui.Core.Models;
@@ -12,7 +13,7 @@ namespace VidArchiverGui.Core.Services;
 /// <item><c>{a|b|c}</c> or <c>{(a|b|c)}</c> — the first alternative that has a value.</item>
 /// <item><c>{a|"text"}</c> — a quoted alternative is used literally.</item>
 /// </list>
-/// Values are made safe as a single folder name on every OS; if nothing resolves the segment becomes "Unknown".
+/// Values are made safe as a single folder name the way yt-dlp names files; if nothing resolves the segment becomes "Unknown".
 /// </summary>
 public static partial class PathTemplate
 {
@@ -20,7 +21,8 @@ public static partial class PathTemplate
         "Tokens: {site} {domain} {playlist} {yyyy} {mm} (today's date) {upload_yyyy} {upload_mm} (upload date), or any yt-dlp field such as {channel} {channel_id} {uploader} {uploader_id} {upload_date} {title} {id}. " +
         "Fallbacks: {channel|uploader_id|\"Unknown channel\"} uses the first one that has a value.";
 
-    public static string Expand(string template, MediaInfo info, DateTime? now = null)
+    /// <param name="ascii">Names only of ASCII letters, digits and _ (see <see cref="AppSettings.AsciiNames"/>).</param>
+    public static string Expand(string template, MediaInfo info, DateTime? now = null, bool ascii = false)
     {
         if (string.IsNullOrWhiteSpace(template))
         {
@@ -41,12 +43,12 @@ public static partial class PathTemplate
             {
                 if (IsLiteral(alt))
                 {
-                    return SanitizeSegment(alt[1..^1]);
+                    return SanitizeSegment(alt[1..^1], ascii);
                 }
 
                 if (Resolve(alt, info, date) is { Length: > 0 } value)
                 {
-                    return SanitizeSegment(value);
+                    return SanitizeSegment(value, ascii);
                 }
             }
             return "Unknown";
@@ -86,43 +88,37 @@ public static partial class PathTemplate
 
     /// <summary>
     /// Turns an arbitrary string into one folder name the way yt-dlp names files (its sanitize_filename and, on Windows,
-    /// sanitize_path), so folders match the ones it or yt-dlg made: "A | B" becomes "A ｜ B", not "A _ B".
+    /// sanitize_path), so folders match the ones it or yt-dlg made: "A | B" becomes "A ｜ B", not "A _ B". With
+    /// <paramref name="ascii"/>, as with --restrict-filenames, it becomes "A_B" and "Café" becomes "Cafe".
     /// </summary>
-    public static string SanitizeSegment(string? value) => SanitizeSegment(value, OperatingSystem.IsWindows());
+    public static string SanitizeSegment(string? value, bool ascii = false) => SanitizeSegment(value, ascii, OperatingSystem.IsWindows());
 
-    public static string SanitizeSegment(string? value, bool windows)
+    public static string SanitizeSegment(string? value, bool ascii, bool windows)
     {
         if (string.IsNullOrWhiteSpace(value))
         {
             return "Unknown";
         }
 
-        value = TimestampRegex().Replace(value.Trim('\n'), m => m.Value.Replace(':', '_'));
-        var sb = new StringBuilder(value.Length);
-        foreach (var c in value)
+        if (ascii)
         {
-            if (c == '\n')
-            {
-                sb.Append(' ');
-            }
-            else if (c is '/' or '\\')
-            {
-                sb.Append(c == '/' ? '⧸' : '⧹');
-            }
-            else if ("\"*:<>?|".Contains(c))
-            {
-                sb.Append((char)(c + 0xFEE0)); // the full-width look-alike
-            }
-            else if (c >= 32 && c != 127)
-            {
-                sb.Append(c);
-            }
+            value = value.Normalize(NormalizationForm.FormKC); // full-width and other look-alike letters become plain ones
         }
 
-        var result = sb.ToString();
+        value = TimestampRegex().Replace(value, m => m.Value.Replace(':', '_'));
+        var sb = new StringBuilder(value.Length);
+        foreach (var rune in value.EnumerateRunes())
+        {
+            sb.Append(Replace(rune, ascii));
+        }
+
+        // Replacements are marked with \0 so that, as in yt-dlp, runs of the same one collapse and they're trimmed from
+        // the ends ("(Live) A & B" → "Live_A_B").
+        var marked = SubstituteRunRegex().Replace(sb.ToString(), "$1");
+        var result = SubstituteEdgesRegex().Replace(marked, "").Replace("\0", "");
         if (result.Length > 120)
         {
-            result = result[..120];
+            result = result[..(char.IsHighSurrogate(result[119]) ? 119 : 120)];
         }
 
         if (result.Trim().Length == 0 || result is "." or "..")
@@ -144,6 +140,73 @@ public static partial class PathTemplate
 
         return result;
     }
+
+    private static string Replace(Rune rune, bool ascii)
+    {
+        if (rune.IsBmp)
+        {
+            var c = (char)rune.Value;
+            if (ascii && AccentChars.TryGetValue(c, out var plain))
+            {
+                return plain;
+            }
+
+            if (!ascii && c == '\n')
+            {
+                return "\0 ";
+            }
+
+            if (!ascii && "\"*:<>?|/\\".Contains(c))
+            {
+                return c switch { '/' => "⧸", '\\' => "⧹", _ => ((char)(c + 0xFEE0)).ToString() }; // look-alikes
+            }
+
+            if (c == '?' || c < 32 || c == 127 || c == '"')
+            {
+                return "";
+            }
+
+            if (c == ':')
+            {
+                return "\0_\0-";
+            }
+
+            if ("\\/|*<>".Contains(c))
+            {
+                return "\0_";
+            }
+
+            if (ascii && "!&'()[]{}$;`^,#".Contains(c))
+            {
+                return "\0_";
+            }
+        }
+
+        if (ascii && (Rune.IsWhiteSpace(rune) || rune.Value > 127))
+        {
+            return Rune.GetUnicodeCategory(rune) switch
+            {
+                UnicodeCategory.Control or UnicodeCategory.Format or UnicodeCategory.Surrogate or UnicodeCategory.PrivateUse
+                    or UnicodeCategory.OtherNotAssigned or UnicodeCategory.NonSpacingMark or UnicodeCategory.SpacingCombiningMark
+                    or UnicodeCategory.EnclosingMark => "",
+                _ => "\0_",
+            };
+        }
+
+        return rune.ToString();
+    }
+
+    // yt-dlp's ACCENT_CHARS.
+    private static readonly Dictionary<char, string> AccentChars =
+        "ÂÃÄÀÁÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖŐØŒÙÚÛÜŰÝÞßàáâãäåæçèéêëìíîïðñòóôõöőøœùúûüűýþÿ"
+            .Zip("A A A A A A AE C E E E E I I I I D N O O O O O O O OE U U U U U Y TH ss a a a a a a ae c e e e e i i i i o n o o o o o o o oe u u u u u y th y".Split(' '))
+            .ToDictionary(p => p.First, p => p.Second);
+
+    [GeneratedRegex(@"(\x00.)(?:(?=\1)..)+", RegexOptions.Singleline)]
+    private static partial Regex SubstituteRunRegex();
+
+    [GeneratedRegex(@"^\x00.(?:\x00.|[ _-])*|(?:\x00.|[ _-])*\x00.$", RegexOptions.Singleline)]
+    private static partial Regex SubstituteEdgesRegex();
 
     [GeneratedRegex(@"[0-9]+(?::[0-9]+)+")]
     private static partial Regex TimestampRegex();

@@ -11,16 +11,17 @@ public sealed record RouteResult(RoutingRule? Rule, string Destination, string? 
 public static class Router
 {
     /// <summary>Returns the first enabled rule (top to bottom) whose conditions match, or the fallback.</summary>
-    public static RouteResult Resolve(MediaInfo info, IEnumerable<RoutingRule> rules, string fallbackDestination)
+    /// <param name="ascii">See <see cref="AppSettings.AsciiNames"/>.</param>
+    public static RouteResult Resolve(MediaInfo info, IEnumerable<RoutingRule> rules, string fallbackDestination, bool ascii = false)
     {
         foreach (var rule in rules)
         {
             if (rule.Enabled && !string.IsNullOrWhiteSpace(rule.Destination) && Matches(rule, info))
             {
-                return new RouteResult(rule, PathTemplate.Expand(rule.Destination, info), rule.PresetId, rule.CookieId);
+                return new RouteResult(rule, PathTemplate.Expand(rule.Destination, info, ascii: ascii), rule.PresetId, rule.CookieId);
             }
         }
-        return new RouteResult(null, PathTemplate.Expand(fallbackDestination, info), null);
+        return new RouteResult(null, PathTemplate.Expand(fallbackDestination, info, ascii: ascii), null);
     }
 
     public static bool Matches(RoutingRule rule, MediaInfo info)

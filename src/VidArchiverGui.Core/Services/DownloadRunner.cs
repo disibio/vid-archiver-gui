@@ -14,6 +14,9 @@ public sealed record DownloadRequest(string Url, IReadOnlyList<string> PresetArg
     /// <summary>Adds --ignore-errors before the preset (see <see cref="Models.AppSettings.IgnoreExtraErrors"/>).</summary>
     public bool IgnoreErrors { get; init; }
 
+    /// <summary>Adds --restrict-filenames (see <see cref="Models.AppSettings.AsciiNames"/>).</summary>
+    public bool AsciiNames { get; init; }
+
     /// <summary>yt-dlp only: a file that the path of every finished file is added to, one per line.</summary>
     public string? FileListPath { get; init; }
 }
@@ -45,6 +48,11 @@ public static class DownloadRunner
         {
             // Before the preset, so a preset's --abort-on-error still wins.
             args.Add("--ignore-errors");
+        }
+
+        if (request.AsciiNames)
+        {
+            args.Add("--restrict-filenames");
         }
 
         args.AddRange(ArgumentParser.WithCookies(request.PresetArgs, request.CookieArgs));

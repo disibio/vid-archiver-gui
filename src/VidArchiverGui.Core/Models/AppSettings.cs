@@ -42,6 +42,12 @@ public partial class AppSettings : ObservableObject
     /// <summary>Pause between requests and videos and back off longer on errors (see <see cref="Services.DownloadRunner.GentleArgs"/>).</summary>
     [ObservableProperty] private bool _gentleDownloads;
 
+    /// <summary>
+    /// Folder and file names only of ASCII letters, digits and _ ("Café | Live" → "Cafe_Live"): folders from rules are
+    /// named that way and downloads get --restrict-filenames.
+    /// </summary>
+    [ObservableProperty] private bool _asciiNames;
+
     /// <summary>Adds --ignore-errors, so a failed extra (e.g. subtitles hitting HTTP 429) is a warning and the video still downloads.</summary>
     [ObservableProperty] private bool _ignoreExtraErrors = true;
 

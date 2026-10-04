@@ -173,6 +173,10 @@
         <TextBlock TextWrapping="Wrap"
                    Text="Keep downloading when subtitles, comments or the thumbnail can't be fetched (adds --ignore-errors). The video is still saved and the log shows a warning. If it's off, the whole download fails." />
       </CheckBox>
+      <CheckBox IsChecked="{Binding Settings.AsciiNames}">
+        <TextBlock TextWrapping="Wrap"
+                   Text="Use only plain ASCII in folder and file names (adds --restrict-filenames): &quot;Café | Live&quot; becomes &quot;Cafe_Live&quot;. Off, names keep their characters the way yt-dlp writes them, with look-alikes for the few that aren't allowed (| becomes ｜)." />
+      </CheckBox>
       <CheckBox IsChecked="{Binding Settings.GentleDownloads}">
         <TextBlock TextWrapping="Wrap"
                    Text="Download gently: pause between requests and videos, and wait longer before retrying. Slower, but much less likely to be throttled or asked to sign in. Recommended for archiving whole channels, together with 1 simultaneous download." />

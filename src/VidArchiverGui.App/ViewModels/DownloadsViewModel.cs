@@ -223,7 +223,7 @@ public partial class DownloadsViewModel : ObservableObject
             return;
         }
 
-        var route = Router.Resolve(item.Info, _host.Settings.Rules, _host.Settings.FallbackDestination);
+        var route = Router.Resolve(item.Info, _host.Settings.Rules, _host.Settings.FallbackDestination, _host.Settings.AsciiNames);
         if (!item.DestinationEdited)
         {
             item.SetRoutedDestination(route.Destination);
