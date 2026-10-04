@@ -5,8 +5,8 @@ namespace VidArchiverGui.Core.Services;
 
 /// <summary>
 /// The download list's decisions, kept apart from the view models so they can be tested: which links pasted text
-/// contains, which queued downloads to start, which ones to keep for next time, and what the summary and the
-/// "all done" notification say.
+/// contains, which queued downloads to start or look up, which ones to keep for next time, and what the summary and
+/// the "all done" notification say.
 /// </summary>
 public static partial class DownloadQueue
 {
@@ -54,11 +54,31 @@ public static partial class DownloadQueue
     [GeneratedRegex(@"^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}(?::\d+)?(?:[/?#]\S*)?$", RegexOptions.IgnoreCase)]
     private static partial Regex BareDomainUrlRegex();
 
-    /// <summary>The queued items that fit beside the running ones under <paramref name="max"/>, in list order.</summary>
-    public static IReadOnlyList<T> ToStart<T>(IReadOnlyCollection<T> items, Func<T, DownloadState> state, int max)
+    /// <summary>
+    /// How many queued downloads have their info read ahead of the ones that can start now, so the next few show
+    /// their titles. Not the whole list: looking up many videos at once makes YouTube ask to sign in.
+    /// </summary>
+    public const int ReadAhead = 3;
+
+    /// <summary>
+    /// The queued items that fit beside the running ones under <paramref name="max"/>, in list order. Only those whose
+    /// info has been read can start; the others are looked up first (<see cref="ToLookUp"/>).
+    /// </summary>
+    public static IReadOnlyList<T> ToStart<T>(IReadOnlyCollection<T> items, Func<T, DownloadState> state, Func<T, bool> hasInfo, int max)
     {
         var free = max - items.Count(i => state(i) == DownloadState.Downloading);
-        return free <= 0 ? [] : items.Where(i => state(i) == DownloadState.Queued).Take(free).ToList();
+        return free <= 0 ? [] : items.Where(i => state(i) == DownloadState.Queued && hasInfo(i)).Take(free).ToList();
+    }
+
+    /// <summary>
+    /// The queued items to look up next, in list order: enough that the free slots under <paramref name="max"/>, plus
+    /// <see cref="ReadAhead"/> more, have their info read or being read.
+    /// </summary>
+    public static IReadOnlyList<T> ToLookUp<T>(IReadOnlyCollection<T> items, Func<T, DownloadState> state, Func<T, bool> hasInfo, int max)
+    {
+        var free = Math.Max(0, max - items.Count(i => state(i) == DownloadState.Downloading));
+        var lookedUp = items.Count(i => state(i) == DownloadState.Resolving || (state(i) == DownloadState.Queued && hasInfo(i)));
+        return items.Where(i => state(i) == DownloadState.Queued && !hasInfo(i)).Take(free + ReadAhead - lookedUp).ToList();
     }
 
     /// <summary>

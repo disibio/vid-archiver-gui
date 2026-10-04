@@ -95,7 +95,7 @@ public partial class MainWindowViewModel : ObservableObject
         }
         finally
         {
-            Downloads.ResumeRestored();
+            Downloads.StartupChecksFinished();
         }
 
         await Updates.CheckIfDueAsync();

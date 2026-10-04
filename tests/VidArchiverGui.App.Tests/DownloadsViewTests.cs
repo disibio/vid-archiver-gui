@@ -246,6 +246,7 @@ public sealed class DownloadsViewTests : DownloadListTests
         }
 
         _vm.RestoreUnfinished();
+        _vm.StartupChecksFinished();
         for (var i = 0; i < 150; i += 3)
         {
             _vm.Items[i].State = DownloadState.Completed;

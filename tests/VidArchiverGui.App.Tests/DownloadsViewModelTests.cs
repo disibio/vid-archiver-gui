@@ -140,7 +140,7 @@ public sealed class DownloadsViewModelTests : DownloadListTests
 
         var next = new DownloadsViewModel(_t.Host);
         next.RestoreUnfinished();
-        next.ResumeRestored();
+        next.StartupChecksFinished();
         var restored = Assert.Single(next.Items);
         Assert.Equal(DownloadState.Paused, restored.State);
         await Task.Delay(500); // long enough for a lookup to show
@@ -154,7 +154,7 @@ public sealed class DownloadsViewModelTests : DownloadListTests
         _t.Settings.AutoStartDownloads = false;
         _t.Settings.UnfinishedDownloads = [new SavedDownload { Url = "https://fake.test/video/offline", Paused = true }];
         _vm.RestoreUnfinished();
-        _vm.ResumeRestored();
+        _vm.StartupChecksFinished();
         var item = Assert.Single(_vm.Items);
         Assert.Equal(DownloadState.Paused, item.State);
         _vm.SaveUnfinished();
@@ -175,7 +175,7 @@ public sealed class DownloadsViewModelTests : DownloadListTests
 
         var next = new DownloadsViewModel(_t.Host);
         next.RestoreUnfinished();
-        next.ResumeRestored();
+        next.StartupChecksFinished();
         var restored = Assert.Single(next.Items);
         Assert.Equal(DownloadState.Failed, restored.State);
         Assert.Equal(item.Error, restored.Error);
@@ -268,10 +268,25 @@ public sealed class DownloadsViewModelTests : DownloadListTests
         _vm.SaveUnfinished();
         Assert.True(Assert.Single(_t.Settings.UnfinishedDownloads).Paused);
 
-        _vm.ResumeRestored();
+        _vm.StartupChecksFinished();
         await Task.Delay(500); // long enough for a lookup or an auto-start to show
         Assert.Equal(DownloadState.Paused, item.State);
         Assert.Null(item.Info);
+    });
+
+    [Fact]
+    public Task A_link_added_during_the_startup_checks_waits_for_them() => Headless.Run(async () =>
+    {
+        // The downloader may still be being installed or updated.
+        _t.Settings.AutoStartDownloads = true;
+        _vm.RestoreUnfinished();
+        var item = await AddAsync("https://fake.test/video/early");
+        await Task.Delay(500); // long enough for a lookup to show
+        Assert.Equal(DownloadState.Queued, item.State);
+        Assert.Null(item.Info);
+
+        _vm.StartupChecksFinished();
+        await Headless.WaitUntil(() => item.State == DownloadState.Completed, "it downloads");
     });
 
     [Fact]
@@ -308,7 +323,7 @@ public sealed class DownloadsViewModelTests : DownloadListTests
         _t.Settings.UnfinishedDownloads.AddRange(Enumerable.Range(1, 6).Select(i => new SavedDownload { Url = $"https://fake.test/video/f{i}", Error = "Could not read info" }));
         _vm.RestoreUnfinished();
 
-        _vm.ResumeRestored(); // start on add is off: the unfinished ones wait for Start, unread
+        _vm.StartupChecksFinished(); // start on add is off: the unfinished ones wait for Start, unread
         Assert.All(_vm.Items, i => Assert.Null(i.Info));
         Assert.DoesNotContain(_vm.Items, i => i.State == DownloadState.Resolving);
 

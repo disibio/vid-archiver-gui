@@ -10,13 +10,14 @@ namespace VidArchiverGui.App.ViewModels;
 public partial class DownloadsViewModel : ObservableObject
 {
     private readonly AppHost _host;
-    private readonly SemaphoreSlim _resolveGate = new(3);
+    private readonly SemaphoreSlim _lookUpGate = new(3);
 
     // Downloads that ended since the queue was last empty, for the "all done" notification.
     private readonly List<DownloadItemViewModel> _batch = [];
 
-    // Put back from last session, waiting for ResumeRestored to read their info.
-    private readonly List<DownloadItemViewModel> _restored = [];
+    // From RestoreUnfinished until StartupChecksFinished nothing is looked up or started, as the downloader may still be
+    // being installed or updated.
+    private bool _waitingForStartupChecks;
 
     public DownloadsViewModel(AppHost host)
     {
@@ -28,7 +29,7 @@ public partial class DownloadsViewModel : ObservableObject
         {
             if (e.PropertyName == nameof(AppSettings.MaxConcurrentDownloads))
             {
-                Pump(); // start queued items right away if the limit was raised
+                AdvanceQueue(); // start queued items right away if the limit was raised
             }
         };
     }
@@ -142,7 +143,7 @@ public partial class DownloadsViewModel : ObservableObject
 
             var item = new DownloadItemViewModel(this, url, preset) { CookieId = _host.Settings.LastCookieId };
             Items.Add(item);
-            Added(item);
+            QueueIfStartOnAdd(item);
             added++;
         }
         if (added == 0)
@@ -154,10 +155,10 @@ public partial class DownloadsViewModel : ObservableObject
     }
 
     /// <summary>
-    /// A new item waits with only its link: its info (title, channel) is read when it's next to download, not now, so
-    /// a long list doesn't make the site look up every video at once (YouTube starts asking to sign in after a burst).
+    /// A new item has only its link: its info (title, channel) is read once it's near the front of the line (see
+    /// <see cref="AdvanceQueue"/>). It joins the line now if downloads start on add, or waits for Start.
     /// </summary>
-    private void Added(DownloadItemViewModel item)
+    private void QueueIfStartOnAdd(DownloadItemViewModel item)
     {
         item.State = DownloadState.Ready;
         if (_host.Settings.AutoStartDownloads)
@@ -166,8 +167,8 @@ public partial class DownloadsViewModel : ObservableObject
         }
     }
 
-    /// <summary>Reads the info of a queued item that's next in line, then queues it to download.</summary>
-    private async Task ResolveAsync(DownloadItemViewModel item)
+    /// <summary>Reads the info of a queued item near the front of the line, routes it, and puts it back in line.</summary>
+    private async Task LookUpAsync(DownloadItemViewModel item)
     {
         var token = item.BeginOperation();
         item.State = DownloadState.Resolving;
@@ -176,7 +177,7 @@ public partial class DownloadsViewModel : ObservableObject
         item.ProgressText = "Reading info…";
         try
         {
-            await _resolveGate.WaitAsync(token);
+            await _lookUpGate.WaitAsync(token);
             bool gotInfo;
             try
             {
@@ -184,7 +185,7 @@ public partial class DownloadsViewModel : ObservableObject
             }
             finally
             {
-                _resolveGate.Release();
+                _lookUpGate.Release();
             }
 
             if (!gotInfo)
@@ -196,9 +197,7 @@ public partial class DownloadsViewModel : ObservableObject
             item.Restored = false;
             if (item.PauseRequested)
             {
-                item.PauseRequested = false;
-                item.State = DownloadState.Paused;
-                item.ProgressText = "Paused";
+                StayPaused(item);
                 return;
             }
 
@@ -221,7 +220,7 @@ public partial class DownloadsViewModel : ObservableObject
         finally
         {
             item.IsIndeterminate = false;
-            Pump(); // read the next one, whether this one is ready, failed or was stopped
+            AdvanceQueue(); // look up the next one, whether this one is in line, failed or was stopped
         }
     }
 
@@ -275,55 +274,47 @@ public partial class DownloadsViewModel : ObservableObject
 
     // ---------- queue ----------
 
+    /// <summary>Puts the item in line to download. One whose info isn't read yet is looked up when it's near the front.</summary>
     internal void Enqueue(DownloadItemViewModel item)
     {
         item.PauseRequested = false;
-        if (item.Info is null)
+        if (item.Info is not null && FolderProblem(item.Destination) is { } problem)
         {
-            // Not read yet, or reading it failed: it's read again once it's next in line.
-            item.Error = null;
-            item.ProgressText = "";
-            item.State = DownloadState.Queued;
-            Pump();
+            item.Error = problem;
             return;
         }
-        if (string.IsNullOrWhiteSpace(item.Destination))
-        {
-            item.Error = "Choose a destination folder first.";
-            return;
-        }
-        if (!Path.IsPathFullyQualified(item.Destination))
-        {
-            item.Error = $"\"{item.Destination}\" is not a full path. Use a complete folder such as E:\\Videos (check your folder rule).";
-            return;
-        }
+
+        item.Error = null;
         item.State = DownloadState.Queued;
-        Pump();
+        AdvanceQueue();
     }
 
-    /// <summary>How many queued downloads have their info read ahead of the ones running, so the next few show their titles.</summary>
-    private const int ReadAhead = 3;
+    private static string? FolderProblem(string folder) =>
+        string.IsNullOrWhiteSpace(folder) ? "Choose a destination folder first."
+        : !Path.IsPathFullyQualified(folder) ? $"\"{folder}\" is not a full path. Use a complete folder such as E:\\Videos (check your folder rule)."
+        : null;
 
     /// <summary>
-    /// Starts queued downloads whose info is read while there are free slots, and reads the info of the next ones in
-    /// line: enough to fill the free slots, plus <see cref="ReadAhead"/>.
+    /// Moves the line along: starts queued downloads that fit under the limit, and looks up the next few in line
+    /// (<see cref="DownloadQueue.ToLookUp"/>). Called whenever something joins or leaves the line.
     /// </summary>
-    private void Pump()
+    private void AdvanceQueue()
     {
+        if (_waitingForStartupChecks)
+        {
+            return;
+        }
+
         var max = _host.Settings.MaxConcurrentDownloads;
-        foreach (var next in DownloadQueue.ToStart(Items.Where(i => i.Info is not null || i.State != DownloadState.Queued).ToList(), i => i.State, max))
+        foreach (var item in DownloadQueue.ToStart(Items, i => i.State, i => i.Info is not null, max))
         {
-            _ = DownloadAsync(next);
+            _ = DownloadAsync(item);
         }
 
-        var wanted = Math.Max(0, max - Items.Count(i => i.State == DownloadState.Downloading)) + ReadAhead;
-        var ahead = Items.Count(i => (i.State == DownloadState.Resolving && !_restored.Contains(i)) || (i.State == DownloadState.Queued && i.Info is not null));
-        foreach (var next in Items.Where(i => i.State == DownloadState.Queued && i.Info is null).Take(wanted - ahead).ToList())
+        foreach (var item in DownloadQueue.ToLookUp(Items, i => i.State, i => i.Info is not null, max))
         {
-            _ = ResolveAsync(next);
+            _ = LookUpAsync(item);
         }
-
-        UpdateSummary();
     }
 
     private async Task DownloadAsync(DownloadItemViewModel item)
@@ -339,7 +330,7 @@ public partial class DownloadsViewModel : ObservableObject
             _batch.Add(item);
         }
 
-        Pump();
+        AdvanceQueue();
         NotifyIfQueueDone();
     }
 
@@ -460,11 +451,12 @@ public partial class DownloadsViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Puts last session's unfinished downloads back in the list. Their info is read by <see cref="ResumeRestored"/>,
-    /// once startup has installed or updated the downloader; paused and failed ones wait for Start instead.
+    /// Puts last session's unfinished downloads back in the list, as if just added (paused and failed ones stay that
+    /// way). Nothing is looked up or started until <see cref="StartupChecksFinished"/>.
     /// </summary>
     public void RestoreUnfinished()
     {
+        _waitingForStartupChecks = true;
         foreach (var saved in _host.Settings.UnfinishedDownloads)
         {
             var item = new DownloadItemViewModel(this, saved.Url, _host.Settings.FindPreset(saved.PresetId) ?? _host.Settings.DefaultPreset)
@@ -481,18 +473,16 @@ public partial class DownloadsViewModel : ObservableObject
             Items.Add(item);
             if (saved.Error is { } error)
             {
-                item.State = DownloadState.Failed; // Start reads its info again
+                item.State = DownloadState.Failed; // Start looks it up again
                 item.Error = error;
             }
             else if (saved.Paused)
             {
-                StayPaused(item); // Resume reads its info
+                StayPaused(item); // Resume looks it up
             }
             else
             {
-                item.ProgressText = "Waiting for the startup checks…";
-                item.IsIndeterminate = true;
-                _restored.Add(item);
+                QueueIfStartOnAdd(item);
             }
         }
 
@@ -506,24 +496,11 @@ public partial class DownloadsViewModel : ObservableObject
         }
     }
 
-    public void ResumeRestored()
+    /// <summary>Called once the downloader is installed or updated at startup: the queue can start (see <see cref="RestoreUnfinished"/>).</summary>
+    public void StartupChecksFinished()
     {
-        foreach (var item in _restored.Where(Items.Contains))
-        {
-            if (item.PauseRequested) // paused while waiting for the startup checks
-            {
-                StayPaused(item);
-            }
-            else
-            {
-                item.IsIndeterminate = false;
-                item.ProgressText = "";
-                Added(item);
-            }
-        }
-
-        _restored.Clear();
-        Pump();
+        _waitingForStartupChecks = false;
+        AdvanceQueue();
     }
 
     private static void StayPaused(DownloadItemViewModel item)
@@ -573,7 +550,7 @@ public partial class DownloadsViewModel : ObservableObject
     {
         var copy = new DownloadItemViewModel(this, item.Url, item.Preset) { CookieId = item.CookieId, DownloaderOverride = item.DownloaderOverride };
         Items.Insert(Items.IndexOf(item) + 1, copy);
-        Added(copy);
+        QueueIfStartOnAdd(copy);
     }
 
     /// <summary>Turns the item's current folder into a rule, so this channel (or playlist/site) is routed there from now on.</summary>

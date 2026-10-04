@@ -60,7 +60,10 @@ public class DownloadQueueTests
     }
 
     private static IReadOnlyList<int> ToStart(int max, params DownloadState[] states) =>
-        DownloadQueue.ToStart(Enumerable.Range(0, states.Length).ToList(), i => states[i], max);
+        DownloadQueue.ToStart(Enumerable.Range(0, states.Length).ToList(), i => states[i], _ => true, max);
+
+    private static IReadOnlyList<int> ToLookUp(int max, params (DownloadState State, bool HasInfo)[] items) =>
+        DownloadQueue.ToLookUp(Enumerable.Range(0, items.Length).ToList(), i => items[i].State, i => items[i].HasInfo, max);
 
     [Fact]
     public void Starts_queued_downloads_in_list_order_up_to_the_limit()
@@ -74,6 +77,32 @@ public class DownloadQueueTests
     {
         Assert.Empty(ToStart(1, DownloadState.Downloading, DownloadState.Queued));
         Assert.Empty(ToStart(1, DownloadState.Downloading, DownloadState.Downloading, DownloadState.Queued));
+    }
+
+    [Fact]
+    public void A_queued_download_starts_only_once_its_info_is_read()
+    {
+        var hasInfo = new[] { false, true };
+        Assert.Equal([1], DownloadQueue.ToStart([0, 1], _ => DownloadState.Queued, i => hasInfo[i], 1));
+    }
+
+    [Fact]
+    public void Looks_up_the_free_slots_and_three_more_not_the_whole_list()
+    {
+        var queued = Enumerable.Repeat((DownloadState.Queued, false), 10).ToArray();
+        Assert.Equal([0, 1, 2, 3], ToLookUp(1, queued));
+        Assert.Equal([0, 1, 2, 3, 4], ToLookUp(2, queued));
+    }
+
+    [Fact]
+    public void Looks_up_only_what_keeps_three_ahead_of_the_running_downloads()
+    {
+        Assert.Equal([4], ToLookUp(1,
+            (DownloadState.Downloading, true), (DownloadState.Queued, true), (DownloadState.Resolving, false),
+            (DownloadState.Ready, false), (DownloadState.Queued, false), (DownloadState.Queued, false)));
+        Assert.Empty(ToLookUp(1,
+            (DownloadState.Downloading, true), (DownloadState.Queued, true), (DownloadState.Queued, true),
+            (DownloadState.Resolving, false), (DownloadState.Queued, false)));
     }
 
     [Theory]
