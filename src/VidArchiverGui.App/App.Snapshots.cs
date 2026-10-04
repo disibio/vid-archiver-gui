@@ -11,7 +11,8 @@ namespace VidArchiverGui.App;
 /// <summary>
 /// Development aid: VIDARCHIVERGUI_SNAPSHOT_DIR=&lt;dir&gt; renders each tab to a PNG offscreen and exits. Optional:
 /// VIDARCHIVERGUI_SNAPSHOT_THEME (Light/Dark, or "Light,Dark" for both), _URLS (";"-separated links to add),
-/// _START=&lt;n&gt; (download the first n links for real and wait for them), _COPY=1 (copy the first URL),
+/// _START=&lt;n&gt; (download the first n links for real and wait for them), _DURING=&lt;n&gt; (take the pictures while the
+/// nth link is part way through downloading, e.g. with Start on add and one download at a time), _COPY=1 (copy the first URL),
 /// _SETUP=1 (fresh-machine run: capture, press "Fix now", capture again), _DOWNLOAD=&lt;url&gt; and _PRESET=&lt;name&gt;
 /// (with _SETUP: download for real to prove the whole pipeline).
 /// </summary>
@@ -103,6 +104,15 @@ public partial class App
             await Task.Delay(3000); // thumbnails load after a download finishes
         }
 
+        if (int.TryParse(Environment.GetEnvironmentVariable("VIDARCHIVERGUI_SNAPSHOT_DURING"), out var during)
+            && vm.Downloads.Items.ElementAtOrDefault(during - 1) is { } current)
+        {
+            for (var i = 0; i < 6000 && !(current.State == DownloadState.Downloading && current.Progress is > 20 and < 80); i++)
+            {
+                await Task.Delay(100);
+            }
+        }
+
         if (Environment.GetEnvironmentVariable("VIDARCHIVERGUI_SNAPSHOT_COPY") == "1" && vm.Downloads.Items.FirstOrDefault() is { } first)
         {
             await first.CopyUrlCommand.ExecuteAsync(null);
@@ -153,15 +163,16 @@ public partial class App
         vm.About.ShowNotices = true; // proves the embedded notices load
         vm.CurrentTab = MainTab.About; // leaving the tab takes the focus off the URL box, so it has no focus border
         await Task.Delay(300);
-        foreach (var theme in themes.Count > 1 ? themes.Cast<AppTheme?>() : [null])
+        // Each tab in every theme before the next tab, so a download in progress is at the same point in each picture.
+        foreach (var tab in Enum.GetValues<MainTab>())
         {
-            if (theme is { } t)
+            foreach (var theme in themes.Count > 1 ? themes.Cast<AppTheme?>() : [null])
             {
-                ((App)Current!).ApplyTheme(t);
-            }
+                if (theme is { } t)
+                {
+                    ((App)Current!).ApplyTheme(t);
+                }
 
-            foreach (var tab in Enum.GetValues<MainTab>())
-            {
                 await SaveTabAsync(window, vm, tab, Path.Combine(dir, theme is null ? $"tab{(int)tab}.png" : $"tab{(int)tab}-{theme}.png"));
             }
         }
