@@ -306,6 +306,10 @@ public sealed class DownloadsViewTests : DownloadListTests
         await Settle();
         Assert.False(item.CanStart);
         Assert.Same(row, Focused);
+        await Headless.WaitUntil(() => row.GetVisualDescendants().OfType<Button>().Any(b => b.IsEffectivelyVisible && b.Content as string == "Pause"),
+            "its Pause button shows");
+        await Settle();
+        Assert.Same(row, Focused);
 
         Press(Key.Tab, PhysicalKey.Tab);
         await Settle();
