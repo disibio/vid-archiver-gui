@@ -479,25 +479,9 @@ public partial class SettingsViewModel : ObservableObject
 
         Setup.ShowWaiting(what);
         // The live text goes to the status bar too, so it's visible from every tab.
-        var result = await Busy.RunAsync(what, action, _host.SetStatus);
-        switch (result.Outcome)
+        if (await Busy.RunAndReportAsync(what, action, _host.SetStatus, quietOnError) is { } result)
         {
-            case JobOutcome.Succeeded:
-                ToolOutput = result.Message;
-                _host.SetStatus(result.Message.Split('\n').Last());
-                break;
-            case JobOutcome.Cancelled:
-                ToolOutput = $"{what}: cancelled.";
-                _host.SetStatus(ToolOutput);
-                break;
-            case JobOutcome.Failed:
-                ToolOutput = $"{what} failed: {result.Message}";
-                if (!quietOnError)
-                {
-                    _host.SetStatus(ToolOutput);
-                }
-
-                break;
+            ToolOutput = result.Message;
         }
     }
 }

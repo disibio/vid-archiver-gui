@@ -70,6 +70,35 @@ public partial class BusyStatusViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// Runs <paramref name="job"/> as <see cref="RunAsync"/> does, and returns how it went in a few words: the job's own
+    /// message, "&lt;what&gt;: cancelled." or "&lt;what&gt; failed: &lt;error&gt;". That goes to <paramref name="setStatus"/> too
+    /// (the last line of a long message, and not a failure if <paramref name="quietOnError"/>), as does the live text.
+    /// Returns null, without running it, while another job is running.
+    /// </summary>
+    public async Task<JobResult?> RunAndReportAsync(string what, Func<IProgress<TransferProgress>, CancellationToken, Task<string>> job,
+        Action<string> setStatus, bool quietOnError = false)
+    {
+        if (IsActive)
+        {
+            return null;
+        }
+
+        var result = await RunAsync(what, job, setStatus);
+        var report = result.Outcome switch
+        {
+            JobOutcome.Succeeded => result.Message,
+            JobOutcome.Cancelled => $"{what}: cancelled.",
+            _ => $"{what} failed: {result.Message}",
+        };
+        if (result.Outcome != JobOutcome.Failed || !quietOnError)
+        {
+            setStatus(report.Split('\n').Last());
+        }
+
+        return result with { Message = report };
+    }
+
     private CancellationToken Start(string what, Action<string>? onText)
     {
         _cts?.Dispose();

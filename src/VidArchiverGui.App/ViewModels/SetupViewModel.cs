@@ -230,11 +230,6 @@ public partial class SetupViewModel(AppHost host, BusyStatusViewModel busy, Func
 
     private async Task<bool> RunFixAsync(SetupItemViewModel item)
     {
-        if (Busy.IsActive)
-        {
-            return false;
-        }
-
         Message = "";
         var what = item.Item.Fix switch
         {
@@ -242,7 +237,7 @@ public partial class SetupViewModel(AppHost host, BusyStatusViewModel busy, Func
             SetupFix.MissingFolder => $"Creating {item.Item.Folder}",
             _ => $"Installing {item.Name}",
         };
-        var result = await Busy.RunAsync(what, async (progress, ct) =>
+        var result = await Busy.RunAndReportAsync(what, async (progress, ct) =>
         {
             switch (item.Item.Fix)
             {
@@ -260,12 +255,11 @@ public partial class SetupViewModel(AppHost host, BusyStatusViewModel busy, Func
                     break;
             }
 
-            return "done.";
+            return $"{item.Name}: done.";
         }, host.SetStatus);
 
-        Message = result.Outcome == JobOutcome.Cancelled ? $"{item.Name}: cancelled." : $"{item.Name}: {result.Message}";
-        host.SetStatus(Message);
-        return result.Outcome == JobOutcome.Succeeded;
+        Message = result?.Message ?? "";
+        return result?.Outcome == JobOutcome.Succeeded;
     }
 
     /// <summary>Instead of creating a missing archive folder, point the presets that use it at another folder.</summary>
