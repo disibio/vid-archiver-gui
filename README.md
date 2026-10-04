@@ -9,6 +9,10 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/disibio/vid-archiver-gui/releases/latest"><img src="https://img.shields.io/github/v/release/disibio/vid-archiver-gui" alt="Latest release"></a>
+</p>
+
+<p align="center">
   <a href="https://apps.microsoft.com/detail/9NDN8K16996C?mode=direct"><img src="docs/microsoft-store-badge.svg" width="161" height="44" alt="Download from the Microsoft Store"></a>
 </p>
 
