@@ -303,7 +303,8 @@ public partial class RulesViewModel : ObservableObject
         try
         {
             var preset = Settings.DefaultPreset;
-            var info = await MetadataService.FetchAsync(TestUrl.Trim(), ArgumentParser.Split(preset.Arguments), ToolManager.Resolve(Settings.DownloaderFor(preset)));
+            var info = await MetadataService.FetchAsync(TestUrl.Trim(), ArgumentParser.Split(preset.Arguments), ToolManager.Resolve(Settings.DownloaderFor(preset)),
+                proxy: Settings.Proxy);
             var route = Router.Resolve(info, Rules, Settings.FallbackDestination, Settings.AsciiNames);
             string F(string name) => info.Fields.TryGetValue(name, out var v) ? v : "—";
             TestResult =

@@ -147,6 +147,11 @@
       <TextBlock Text="{Binding CookieValueHint}" Classes="hint" TextWrapping="Wrap" />
       <SelectableTextBlock Text="{Binding CookieMessage}" FontSize="12" TextWrapping="Wrap" />
 
+      <TextBlock Text="Proxy" Classes="h2" />
+      <TextBlock Classes="hint" TextWrapping="Wrap"
+                 Text="Sends every lookup and download through a proxy server (adds --proxy), for example the SOCKS5 proxy that comes with some VPN plans, or one your network requires. Leave it empty to connect directly. A preset's own --proxy still wins. A user name and password in the address are saved in the settings file as plain text." />
+      <TextBox Text="{Binding Settings.Proxy}" PlaceholderText="e.g. socks5://127.0.0.1:1080 or http://user:password@host:8080" />
+
       <TextBlock Text="ffmpeg" Classes="h2" />
       <SelectableTextBlock Text="{Binding FfmpegStatus}" TextWrapping="Wrap" />
       <StackPanel Orientation="Horizontal" Spacing="6" IsEnabled="{Binding !Busy.IsActive}">

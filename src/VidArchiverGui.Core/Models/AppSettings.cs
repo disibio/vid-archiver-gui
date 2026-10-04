@@ -78,6 +78,9 @@ public partial class AppSettings : ObservableObject
     /// <summary>Cookie choice last picked on the Downloads tab; null = no cookies.</summary>
     [ObservableProperty] private string? _lastCookieId;
 
+    /// <summary>Passed as --proxy to every lookup and download, e.g. socks5://127.0.0.1:1080; empty = none.</summary>
+    [ObservableProperty] private string? _proxy;
+
     /// <summary>Downloads that were still in the list when the app closed; restored on the next start.</summary>
     public List<SavedDownload> UnfinishedDownloads { get; set; } = [];
 

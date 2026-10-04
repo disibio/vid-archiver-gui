@@ -127,6 +127,13 @@ public static class ArgumentParser
         return value;
     }
 
+    /// <summary>
+    /// The app's proxy setting as options. They go before the preset, so a preset's own --proxy wins (the last one
+    /// counts); empty = none, leaving yt-dlp to use the system's proxy variables as usual.
+    /// </summary>
+    public static IReadOnlyList<string> ProxyArgs(string? proxy) =>
+        string.IsNullOrWhiteSpace(proxy) ? [] : ["--proxy", proxy.Trim()];
+
     private static readonly string[] CookieOptions = ["--cookies", "--cookies-from-browser"];
 
     /// <summary>

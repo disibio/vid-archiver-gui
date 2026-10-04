@@ -140,6 +140,22 @@ public class ArgumentsTests
     }
 
     [Fact]
+    public void Proxy_comes_before_the_preset_so_its_own_proxy_wins()
+    {
+        var args = DownloadRunner.BuildArguments(new DownloadRequest("u", ["--proxy=http://preset:1"], Dest) { Proxy = " socks5://127.0.0.1:1080 " }, null);
+        Assert.Equal(["--proxy", "socks5://127.0.0.1:1080"], args[..2]);
+        Assert.True(args.IndexOf("--proxy=http://preset:1") > 1);
+    }
+
+    [Fact]
+    public void Empty_proxy_adds_nothing()
+    {
+        Assert.Empty(ArgumentParser.ProxyArgs(null));
+        Assert.Empty(ArgumentParser.ProxyArgs("  "));
+        Assert.DoesNotContain("--proxy", DownloadRunner.BuildArguments(new DownloadRequest("u", [], Dest) { Proxy = "" }, null));
+    }
+
+    [Fact]
     public void YoutubeDl_gets_output_template_instead_of_P()
     {
         var args = YoutubeDlArgs("-f", "best");

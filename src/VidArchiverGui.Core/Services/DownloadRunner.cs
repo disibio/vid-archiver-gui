@@ -8,6 +8,9 @@ public sealed record DownloadRequest(string Url, IReadOnlyList<string> PresetArg
     /// <summary>Cookie options chosen in the app; when present they replace any cookie options in the preset.</summary>
     public IReadOnlyList<string> CookieArgs { get; init; } = [];
 
+    /// <summary>See <see cref="Models.AppSettings.Proxy"/>.</summary>
+    public string? Proxy { get; init; }
+
     /// <summary>Adds <see cref="DownloadRunner.GentleArgs"/>.</summary>
     public bool Gentle { get; init; }
 
@@ -55,6 +58,7 @@ public static class DownloadRunner
             args.Add("--restrict-filenames");
         }
 
+        args.AddRange(ArgumentParser.ProxyArgs(request.Proxy));
         args.AddRange(ArgumentParser.WithCookies(request.PresetArgs, request.CookieArgs));
         if (request.Flavor == DownloaderFlavor.YtDlp)
         {

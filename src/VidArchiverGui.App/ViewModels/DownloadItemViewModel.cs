@@ -322,7 +322,7 @@ public partial class DownloadItemViewModel : ObservableObject
                 try
                 {
                     var cookieArgs = Cookies.Args(settings, CookieId, downloader.Flavor);
-                    Info = await MetadataService.FetchAsync(Url, presetArgs, downloader, cookieArgs, attemptCt);
+                    Info = await MetadataService.FetchAsync(Url, presetArgs, downloader, cookieArgs, settings.Proxy, attemptCt);
                     return null;
                 }
                 catch (DownloaderException e)
@@ -376,6 +376,7 @@ public partial class DownloadItemViewModel : ObservableObject
                     var request = new DownloadRequest(Url, presetArgs, Destination)
                     {
                         CookieArgs = Cookies.Args(settings, CookieId, downloader.Flavor),
+                        Proxy = settings.Proxy,
                         Gentle = settings.GentleDownloads,
                         IgnoreErrors = settings.IgnoreExtraErrors,
                         AsciiNames = settings.AsciiNames,

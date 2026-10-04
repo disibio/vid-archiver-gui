@@ -143,6 +143,7 @@ each download's log.
 | `--ignore-errors` | While **Keep downloading when subtitles, comments or the thumbnail can't be fetched** is on in Settings > Downloads (it is by default) | If an extra like subtitles can't be downloaded (for example "HTTP Error 429: Too Many Requests"), the video is still saved and the log shows a warning, instead of the whole download failing | Yes: add `--abort-on-error`, or turn the setting off |
 | `--restrict-filenames` | Only with **Use only plain ASCII in folder and file names** on in Settings > Downloads | File names in plain ASCII, like the folders | Yes: add `--no-restrict-filenames`, or turn the setting off |
 | `--sleep-requests`, `--sleep-interval`, `--max-sleep-interval`, `--retry-sleep`, `--extractor-retries` | Only with [Download gently](#download-gently) on | Fewer throttles and bot checks | Yes: a preset's own values win |
+| `--proxy <address>` | Only when you fill in [Proxy](#proxy) in Settings | Sends lookups and downloads through that proxy | Yes: a preset's own `--proxy` wins |
 | `--cookies-from-browser` or `--cookies` | Only when you pick [cookies](#cookies) | Logging in | No: your pick replaces the preset's cookie options |
 | `-P <folder>` (yt-dlp) or `-o <folder>/...` (youtube-dl) | Always | Saves to the folder from your folder rules | No: the app's folder wins, and a relative `-o` ends up inside it |
 | `--ffmpeg-location` | When the app installed ffmpeg, or you chose one in Settings | Uses that ffmpeg for merging and embedding | No: the app's ffmpeg wins |
@@ -155,7 +156,8 @@ Everything else is up to you. Options are read left to right and the last one wi
 repeats one of these.
 
 To look up a link, the app runs `-J --flat-playlist --playlist-items 1 --no-warnings --encoding utf-8`, plus the
-preset's login options (like `--cookies-from-browser`, `--cookies` and `--proxy`). It downloads nothing.
+preset's login options (like `--cookies-from-browser`, `--cookies` and `--proxy`) and your [proxy](#proxy). It
+downloads nothing.
 
 Presets can be exported and imported with **Export…** and **Import…** on the Presets tab, the same way as folder
 rules. If you're moving to another computer, import your presets before your rules, since rules find their preset by
@@ -203,6 +205,13 @@ then start it again.
   encrypt their cookies, so export a cookies.txt instead. youtube-dl only supports cookies.txt files.
 - Cookies link your downloads to your account, and heavy archiving with them can get that account rate-limited. Only
   use them where you need to.
+
+## Proxy
+
+**Settings > Proxy** sends every lookup and download through a proxy server, for example the SOCKS5 proxy that comes
+with some VPN plans (`socks5://user:password@host:1080`), or one your network requires (`http://host:8080`). Leave it
+empty to connect directly. A preset can still use its own `--proxy`, which wins over the setting, so you can route only
+some sites through a proxy. A user name and password in the address are saved in the settings file as plain text.
 
 ## Downloaders
 
