@@ -164,7 +164,7 @@
       </Thumb>
       <Expander Classes="drawer" Header="Log (selected item)" IsExpanded="{Binding Settings.ShowLog}" Margin="0,8,0,0" HorizontalAlignment="Stretch">
         <TextBox x:Name="LogBox" Text="{Binding SelectedItem.LogText, FallbackValue=''}" IsReadOnly="True" Classes="mono" Height="{Binding Settings.LogHeight}"
-                 TextWrapping="NoWrap" AcceptsReturn="True" CaretIndex="{Binding SelectedItem.LogText.Length, FallbackValue=0}"
+                 TextWrapping="NoWrap" AcceptsReturn="True"
                  ScrollViewer.AllowAutoHide="False" />
       </Expander>
     </DockPanel>

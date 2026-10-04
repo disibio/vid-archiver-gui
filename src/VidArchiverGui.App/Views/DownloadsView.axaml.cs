@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -17,6 +18,30 @@ public partial class DownloadsView : UserControl
         SizeChanged += (_, _) => LogBox.MaxHeight = MaxLogHeight;
         Loaded += FocusUrlBoxOnce;
         Queue.AddHandler(KeyDownEvent, OnQueueKeyDown, handledEventsToo: true); // the list marks Enter handled for its selection
+        LogBox.PropertyChanged += OnLogTextChanged;
+    }
+
+    private object? _logItem;
+
+    /// <summary>
+    /// Keeps the newest log lines in view: scrolled to the bottom and back to the left edge, for a newly selected item
+    /// or when already at the bottom. Someone scrolled up to read stays where they are.
+    /// </summary>
+    private void OnLogTextChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
+    {
+        if (e.Property != TextBox.TextProperty || LogBox.GetVisualDescendants().OfType<ScrollViewer>().FirstOrDefault() is not { } scroll)
+        {
+            return;
+        }
+
+        var item = (DataContext as DownloadsViewModel)?.SelectedItem;
+        var follow = !ReferenceEquals(item, _logItem) || scroll.Offset.Y >= scroll.Extent.Height - scroll.Viewport.Height - 1;
+        _logItem = item;
+        if (follow)
+        {
+            // After layout, so the extent includes the new lines.
+            Dispatcher.UIThread.Post(() => scroll.Offset = new Vector(0, Math.Max(0, scroll.Extent.Height - scroll.Viewport.Height)), DispatcherPriority.Loaded);
+        }
     }
 
     /// <summary>
