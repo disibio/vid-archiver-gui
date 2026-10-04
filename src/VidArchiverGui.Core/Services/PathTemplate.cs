@@ -84,29 +84,55 @@ public static partial class PathTemplate
         return path;
     }
 
-    /// <summary>Turns an arbitrary string into something usable as one folder name on Windows, macOS and Linux.</summary>
-    public static string SanitizeSegment(string? value)
+    /// <summary>
+    /// Turns an arbitrary string into one folder name the way yt-dlp names files (its sanitize_filename and, on Windows,
+    /// sanitize_path), so folders match the ones it or yt-dlg made: "A | B" becomes "A ｜ B", not "A _ B".
+    /// </summary>
+    public static string SanitizeSegment(string? value) => SanitizeSegment(value, OperatingSystem.IsWindows());
+
+    public static string SanitizeSegment(string? value, bool windows)
     {
         if (string.IsNullOrWhiteSpace(value))
         {
             return "Unknown";
         }
 
+        value = TimestampRegex().Replace(value.Trim('\n'), m => m.Value.Replace(':', '_'));
         var sb = new StringBuilder(value.Length);
         foreach (var c in value)
         {
-            sb.Append(c < 32 || "<>:\"/\\|?*".Contains(c) ? '_' : c);
+            if (c == '\n')
+            {
+                sb.Append(' ');
+            }
+            else if (c is '/' or '\\')
+            {
+                sb.Append(c == '/' ? '⧸' : '⧹');
+            }
+            else if ("\"*:<>?|".Contains(c))
+            {
+                sb.Append((char)(c + 0xFEE0)); // the full-width look-alike
+            }
+            else if (c >= 32 && c != 127)
+            {
+                sb.Append(c);
+            }
         }
 
-        var result = sb.ToString().Trim().TrimEnd('.', ' ');
+        var result = sb.ToString();
         if (result.Length > 120)
         {
-            result = result[..120].TrimEnd('.', ' ');
+            result = result[..120];
         }
 
-        if (result.Length == 0 || result is "." or "..")
+        if (result.Trim().Length == 0 || result is "." or "..")
         {
             return "Unknown";
+        }
+
+        if (windows && result[^1] is '.' or ' ')
+        {
+            result = result[..^1] + "#";
         }
 
         // Reserved device names on Windows.
@@ -118,6 +144,9 @@ public static partial class PathTemplate
 
         return result;
     }
+
+    [GeneratedRegex(@"[0-9]+(?::[0-9]+)+")]
+    private static partial Regex TimestampRegex();
 
     // {name}, {a|b}, {(a|b)} — the optional parentheses are just decoration.
     [GeneratedRegex(@"\{\(?([^{}()]+?)\)?\}")]

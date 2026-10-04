@@ -99,7 +99,7 @@ public class RoutingTests
     public void Tokens_are_expanded_and_sanitized()
     {
         var dest = PathTemplate.Expand("/root/{site}/{channel}/{title}/{upload_date}", Video);
-        Assert.Equal("/root/ArchiveOrg/NASA Archive/How_ things_work_/20240102", dest);
+        Assert.Equal("/root/ArchiveOrg/NASA Archive/How： things⧸work？/20240102", dest);
     }
 
     [Fact]
@@ -148,11 +148,28 @@ public class RoutingTests
     [Theory]
     [InlineData("CON", "_CON")]
     [InlineData("com1.txt", "_com1.txt")]
-    [InlineData("  trailing dots... ", "trailing dots")]
     [InlineData("..", "Unknown")]
+    [InlineData(".", "Unknown")]
     public void Sanitizes_problem_names(string input, string expected)
     {
         Assert.Equal(expected, PathTemplate.SanitizeSegment(input));
+    }
+
+    // What yt-dlp names them, so folders match the ones it (or yt-dlg) made.
+    [Theory]
+    [InlineData("Some Channel | Notes", "Some Channel ｜ Notes", "Some Channel ｜ Notes")]
+    [InlineData("\"Quotes\" * <tags> ?", "＂Quotes＂ ＊ ＜tags＞ ？", "＂Quotes＂ ＊ ＜tags＞ ？")]
+    [InlineData(@"AC/DC \ live", "AC⧸DC ⧹ live", "AC⧸DC ⧹ live")]
+    [InlineData("At 12:30: news", "At 12_30： news", "At 12_30： news")]
+    [InlineData("a||b", "a｜｜b", "a｜｜b")]
+    [InlineData("__a__-", "__a__-", "__a__-")]
+    [InlineData(".hidden", ".hidden", ".hidden")]
+    [InlineData("Inc.", "Inc#", "Inc.")]
+    [InlineData("  spaced ", "  spaced#", "  spaced ")]
+    public void Sanitizes_like_yt_dlp(string input, string windows, string elsewhere)
+    {
+        Assert.Equal(windows, PathTemplate.SanitizeSegment(input, windows: true));
+        Assert.Equal(elsewhere, PathTemplate.SanitizeSegment(input, windows: false));
     }
 
     [Fact]
