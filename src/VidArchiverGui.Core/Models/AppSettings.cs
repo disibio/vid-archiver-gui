@@ -31,7 +31,7 @@ public partial class AppSettings : ObservableObject
     [ObservableProperty] private string? _ffmpegPath;
 
     [ObservableProperty] private int _maxConcurrentDownloads = 2;
-    [ObservableProperty] private bool _autoStartDownloads;
+    [ObservableProperty] private bool _autoStartDownloads = true;
 
     /// <summary>Show a system notification when the queue finishes while the window isn't in front.</summary>
     [ObservableProperty] private bool _notifyWhenDone;

@@ -57,7 +57,9 @@ public sealed class SettingsTests : IDisposable
         var path = Path.Combine(_dir, "settings.json");
         File.WriteAllText(path, "{ \"MaxConcurrentDownloads\": 3 }");
 
-        Assert.True(new SettingsStore(path).Load().ConfirmCancelAll);
+        var settings = new SettingsStore(path).Load();
+        Assert.True(settings.ConfirmCancelAll);
+        Assert.True(settings.AutoStartDownloads);
     }
 
     [Fact]

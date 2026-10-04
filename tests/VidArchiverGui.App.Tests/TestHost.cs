@@ -63,6 +63,7 @@ public sealed class TestHost : IDisposable
     {
         Directory.CreateDirectory(_dir);
         Settings = SettingsStore.CreateDefaults();
+        Settings.AutoStartDownloads = false; // the tests start downloads themselves
         foreach (var downloader in Downloader.CreateBuiltIns())
         {
             Settings.Downloaders.Add(downloader);

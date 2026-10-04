@@ -49,7 +49,12 @@
         <Button Content="_Re-apply rules" Command="{Binding ReapplyRulesCommand}"
                 ToolTip.Tip="Route waiting items again using the current folder rules (folders you picked by hand are kept)." />
       </StackPanel>
-      <TextBlock Text="{Binding Summary}" Classes="hint" VerticalAlignment="Center" HorizontalAlignment="Right" />
+      <StackPanel Orientation="Horizontal" Spacing="12" DockPanel.Dock="Right" HorizontalAlignment="Right">
+        <TextBlock Text="{Binding Summary}" Classes="hint" VerticalAlignment="Center" />
+        <ToggleSwitch IsChecked="{Binding Settings.AutoStartDownloads}" OnContent="Start on add" OffContent="Start on add: off"
+                      VerticalAlignment="Center"
+                      ToolTip.Tip="On: downloads start by themselves once they're added. Off: they wait in the list until you click Start or Start all." />
+      </StackPanel>
     </DockPanel>
 
     <!-- Queue -->
