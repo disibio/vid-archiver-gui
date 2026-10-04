@@ -23,9 +23,9 @@ public sealed class DownloadsViewTests : DownloadListTests
     private Window _window = null!;
     private ListBox _list = null!;
 
-    private void Show()
+    private void Show(double width = 1150)
     {
-        _window = new Window { Width = 1150, Height = 780, Content = new DownloadsView { DataContext = _vm } };
+        _window = new Window { Width = width, Height = 780, Content = new DownloadsView { DataContext = _vm } };
         _window.Show();
         _list = _window.GetVisualDescendants().OfType<ListBox>().Single();
     }
@@ -286,5 +286,53 @@ public sealed class DownloadsViewTests : DownloadListTests
             Environment.SetEnvironmentVariable("FAKEYTDLP_INFO_FAIL", null);
             Environment.SetEnvironmentVariable("FAKEYTDLP_INFO_MS", null);
         }
+    });
+
+    [Fact]
+    public Task A_rows_button_that_hides_when_pressed_leaves_the_focus_on_its_row() => Headless.Run(() => Slowly(async () =>
+    {
+        Show();
+        var item = await AddAsync("https://fake.test/video/a");
+        var other = await AddAsync("https://fake.test/video/b");
+        await Settle();
+        var row = (ListBoxItem)_list.ContainerFromItem(item)!;
+        var start = row.GetVisualDescendants().OfType<Button>().First(b => b.IsVisible && b.Content as string == "Start");
+        start.Focus(NavigationMethod.Tab);
+
+        Press(Key.Space, PhysicalKey.Space, symbol: " ");
+        await Settle();
+        Assert.False(item.CanStart);
+        Assert.Same(row, Focused);
+
+        Press(Key.Tab, PhysicalKey.Tab);
+        await Settle();
+        Assert.Equal("Pause", (Focused as Button)?.Content);
+        Assert.Same(item, (Focused as Button)?.DataContext);
+
+        Press(Key.Space, PhysicalKey.Space, symbol: " "); // Pause hides too
+        await Settle();
+        Assert.Same(row, Focused);
+        Assert.NotSame(other, (Focused as Control)?.DataContext);
+    }, stepMs: 1000));
+
+    [Theory]
+    [InlineData(720)]
+    [InlineData(1150)]
+    public Task The_toolbar_fits_the_window(double width) => Headless.Run(async () =>
+    {
+        Show(width);
+        await AddAsync("https://fake.test/video/a");
+        await Settle();
+        var bounds = new Rect(_window.ClientSize);
+        Rect Where(Control c) => new(c.TranslatePoint(default, _window)!.Value, c.Bounds.Size);
+
+        var reapply = Where(_window.GetVisualDescendants().OfType<Button>().Single(b => b.Content as string == "_Re-apply rules"));
+        var summary = Where(_window.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Text?.Contains("1 item", StringComparison.Ordinal) == true));
+        var toggle = Where(_window.GetVisualDescendants().OfType<ToggleSwitch>().Single());
+        Headless.Capture(_window, $"toolbar-{width}");
+
+        Assert.True(bounds.Contains(toggle), $"the switch at {toggle} is outside {bounds}");
+        Assert.False(summary.Intersects(reapply), $"the summary at {summary} overlaps the button at {reapply}");
+        Assert.False(toggle.Intersects(reapply));
     });
 }

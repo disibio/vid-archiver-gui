@@ -19,6 +19,32 @@ public partial class DownloadsView : UserControl
         Loaded += FocusUrlBoxOnce;
         Queue.AddHandler(KeyDownEvent, OnQueueKeyDown, handledEventsToo: true); // the list marks Enter handled for its selection
         LogBox.PropertyChanged += OnLogTextChanged;
+        Queue.AddHandler(GotFocusEvent, (_, e) => _queueFocusMethod = e.NavigationMethod);
+        Queue.AddHandler(LostFocusEvent, OnQueueLostFocus);
+    }
+
+    private NavigationMethod _queueFocusMethod;
+
+    /// <summary>
+    /// Start, Pause and Cancel hide themselves once pressed, which would leave nothing focused and send the next Tab
+    /// back to the top of the window. The focus goes to their row instead, outlined only if the button was reached
+    /// with the keyboard.
+    /// </summary>
+    private void OnQueueLostFocus(object? sender, FocusChangedEventArgs e)
+    {
+        if (e.Source is not Control { IsEffectivelyVisible: false } hidden || hidden.FindAncestorOfType<ListBoxItem>() is not { } row)
+        {
+            return;
+        }
+
+        // After the hiding has finished, and only if nothing else took the focus meanwhile.
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement() is null && row.IsEffectivelyVisible)
+            {
+                row.Focus(_queueFocusMethod == NavigationMethod.Pointer ? NavigationMethod.Pointer : NavigationMethod.Directional);
+            }
+        });
     }
 
     private object? _logItem;
