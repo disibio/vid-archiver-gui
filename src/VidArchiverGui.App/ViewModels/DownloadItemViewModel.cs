@@ -110,7 +110,7 @@ public partial class DownloadItemViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(StateText), nameof(CanStart), nameof(StartText), nameof(CanPause), nameof(CanCancel), nameof(CanEdit),
         nameof(IsFinished), nameof(ShowProgress), nameof(CanRemember))]
-    private DownloadState _state = DownloadState.Resolving;
+    private DownloadState _state = DownloadState.Ready;
 
     /// <summary>True once the user picks a folder by hand, so re-applying rules won't overwrite it.</summary>
     public bool DestinationEdited
