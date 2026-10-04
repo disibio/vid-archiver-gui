@@ -3,6 +3,7 @@
 //
 // Links: https://fake.test/video/<name> is one video, https://fake.test/playlist/<count> is a playlist of that many.
 // Add ?fail to make the download fail, or set FAKEYTDLP_INFO_FAIL=1 to make reading the info (-J) fail.
+// FAKEYTDLP_INFO_MS makes reading the info take that long.
 // FAKEYTDLP_STEP_MS sets the pause between progress lines (default 20 ms). With --write-thumbnail, a 1x1 PNG is
 // written beside each video, or a copy of the image FAKEYTDLP_THUMBNAIL names.
 //
@@ -42,6 +43,11 @@ var titles = isPlaylist ? Enumerable.Range(1, count).Select(i => $"Fake video {i
 
 if (options.Contains("-J"))
 {
+    if (int.TryParse(Environment.GetEnvironmentVariable("FAKEYTDLP_INFO_MS"), out var infoMs))
+    {
+        Thread.Sleep(infoMs);
+    }
+
     if (Environment.GetEnvironmentVariable("FAKEYTDLP_INFO_FAIL") == "1")
     {
         Console.Error.WriteLine("ERROR: [fake] " + name + ": This video is private");

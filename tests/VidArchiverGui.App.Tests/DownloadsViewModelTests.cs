@@ -281,6 +281,33 @@ public sealed class DownloadsViewModelTests : DownloadListTests
     });
 
     [Fact]
+    public Task Pause_all_stops_a_long_list_from_reading_info_and_starting() => Headless.Run(async () =>
+    {
+        _t.Settings.AutoStartDownloads = true;
+        Environment.SetEnvironmentVariable("FAKEYTDLP_INFO_MS", "1000");
+        try
+        {
+            Assert.Equal(9, _vm.AddUrls(string.Join('\n', Enumerable.Range(1, 9).Select(i => $"https://fake.test/video/v{i}"))));
+            await Task.Delay(200); // the first few are reading their info
+            _vm.PauseAllCommand.Execute(null);
+
+            // All nine reads would take three seconds; stopped, they're over at once.
+            await Headless.WaitUntil(() => _vm.Items.All(i => i.State == DownloadState.Paused),
+                () => string.Join(", ", _vm.Items.Select(i => i.State)), seconds: 2);
+            await Task.Delay(1500);
+            Assert.All(_vm.Items, i => Assert.Equal(DownloadState.Paused, i.State));
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("FAKEYTDLP_INFO_MS", null);
+        }
+
+        var item = _vm.Items[0];
+        item.StartCommand.Execute(null); // Resume reads the info, then downloads
+        await Headless.WaitUntil(() => item.State == DownloadState.Completed, "it downloads");
+    });
+
+    [Fact]
     public Task A_finished_download_shows_the_thumbnail_saved_beside_it() => Headless.Run(async () =>
     {
         _t.Settings.DefaultPreset.Arguments = "--write-thumbnail";

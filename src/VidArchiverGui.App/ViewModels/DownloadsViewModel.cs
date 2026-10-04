@@ -198,7 +198,9 @@ public partial class DownloadsViewModel : ObservableObject
         }
         catch (OperationCanceledException)
         {
-            item.State = DownloadState.Cancelled;
+            item.State = item.PauseRequested ? DownloadState.Paused : DownloadState.Cancelled;
+            item.ProgressText = item.PauseRequested ? "Paused" : "Cancelled";
+            item.PauseRequested = false;
         }
         catch (Exception e)
         {

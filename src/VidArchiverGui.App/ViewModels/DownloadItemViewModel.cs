@@ -283,7 +283,7 @@ public partial class DownloadItemViewModel : ObservableObject
 
     /// <summary>
     /// Stops a running download (yt-dlp leaves its partly downloaded files and carries on from them next time), or
-    /// holds a queued one, or one whose info is still being read.
+    /// holds a queued one, or stops reading its info (read again on Resume) so a long list goes quiet straight away.
     /// </summary>
     internal void PauseInternal()
     {
@@ -295,10 +295,7 @@ public partial class DownloadItemViewModel : ObservableObject
         else if (State is DownloadState.Downloading or DownloadState.Resolving)
         {
             PauseRequested = true;
-            if (State == DownloadState.Downloading)
-            {
-                _cts?.Cancel();
-            }
+            _cts?.Cancel();
         }
     }
 
