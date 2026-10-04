@@ -85,6 +85,26 @@ public sealed class SettingsTests : IDisposable
     }
 
     [Fact]
+    public void The_archive_preset_keeps_subtitle_files_after_embedding_them()
+    {
+        var args = ArgumentParser.Split(SettingsStore.CreateDefaults().Presets[0].Arguments);
+        Assert.Contains("--embed-subs", args);
+        Assert.Contains("--write-subs", args);
+    }
+
+    [Fact]
+    public void The_subtitles_preset_downloads_only_uploaded_subtitles_even_for_archived_videos()
+    {
+        var preset = Assert.Single(SettingsStore.CreateDefaults().Presets, p => p.Name.StartsWith("Uploaded subtitles only"));
+        var args = ArgumentParser.Split(preset.Arguments);
+        Assert.Contains("--skip-download", args);
+        Assert.Contains("--write-subs", args);
+        Assert.Equal("all,-live_chat", args[args.IndexOf("--sub-langs") + 1]);
+        Assert.DoesNotContain("--write-auto-sub", args);
+        Assert.DoesNotContain("--download-archive", args);
+    }
+
+    [Fact]
     public void Settings_are_only_written_when_they_changed()
     {
         var store = new SettingsStore(Path.Combine(_dir, "settings.json"));

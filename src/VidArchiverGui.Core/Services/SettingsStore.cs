@@ -98,7 +98,9 @@ public sealed class SettingsStore(string path)
                 -f "bestvideo[height<=?1440]+bestaudio/best"
                 --write-comments --write-thumbnail --write-link --write-description --write-info-json
                 --embed-thumbnail --embed-metadata --embed-chapters
-                --write-auto-sub --sub-lang en --embed-subs
+                # --write-subs keeps the subtitle file next to the video after embedding it (yt-dlp deletes it
+                # otherwise) and prefers real subtitles over automatic ones.
+                --write-subs --write-auto-sub --sub-lang en --embed-subs
                 --download-archive "{archiveFile}"
                 --merge-output-format mkv
                 # Videos that come as one file (like .ogv or .mpg on archive.org) are repackaged into MKV too, so the
@@ -138,11 +140,23 @@ public sealed class SettingsStore(string path)
                 """,
         };
 
+        // Saves the subtitles uploaded for videos already downloaded, in every language. Most videos have none, so it
+        // usually finds nothing; automatic captions are left out, as YouTube offers machine translations into 100+
+        // languages. No --download-archive, since it would skip every video that's already archived.
+        var subtitles = new Preset
+        {
+            Name = "Uploaded subtitles only (all languages)",
+            Arguments = """
+                --skip-download --no-overwrites
+                --write-subs --sub-langs "all,-live_chat"
+                """,
+        };
+
         var downloads = Path.Combine(appVideos, "{site}", "{channel|uploader|\"Unknown\"}");
 
         return new AppSettings
         {
-            Presets = [archive, best, compatible, audio],
+            Presets = [archive, best, compatible, audio, subtitles],
             DefaultPresetId = archive.Id,
             FallbackDestination = downloads,
             Rules =
