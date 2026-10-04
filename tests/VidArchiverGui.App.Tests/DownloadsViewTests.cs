@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Presenters;
 using Avalonia.Controls.Primitives;
@@ -231,5 +232,59 @@ public sealed class DownloadsViewTests : DownloadListTests
         _window.KeyRelease(Key.LeftAlt, RawInputModifiers.None, PhysicalKey.AltLeft, null);
 
         await Headless.WaitUntil(() => item.State == DownloadState.Completed, "Start all ran");
+    });
+    [Fact]
+    public Task Starting_a_failed_download_keeps_the_list_where_it_was() => Headless.Run(async () =>
+    {
+        // Failed rows with their error, and much shorter finished ones among them: Avalonia's list used to guess every
+        // row's position from the average height once one row changed, and jump far away.
+        for (var i = 0; i < 150; i++)
+        {
+            _t.Settings.UnfinishedDownloads.Add(new SavedDownload { Url = "https://fake.test/video/v" + i, Error = "ERROR: [fake] v" + i + ": This video is private" });
+        }
+
+        _vm.RestoreUnfinished();
+        for (var i = 0; i < 150; i += 3)
+        {
+            _vm.Items[i].State = DownloadState.Completed;
+        }
+
+        Show();
+        var scroll = _list.GetVisualDescendants().OfType<ScrollViewer>().First();
+        scroll.Offset = new Vector(0, scroll.Extent.Height * 0.7);
+        await Settle();
+        var row = _list.GetRealizedContainers().OfType<ListBoxItem>().OrderBy(r => r.Bounds.Top)
+            .First(r => r.Bounds.Top > scroll.Offset.Y + 100 && r.DataContext is DownloadItemViewModel { State: DownloadState.Failed });
+        var item = (DownloadItemViewModel)row.DataContext!;
+        var start = row.GetVisualDescendants().OfType<Button>().First(b => b.IsVisible && b.Content as string == item.StartText);
+        var top = row.TranslatePoint(default, _window)!.Value.Y;
+
+        void StaysPut(string when)
+        {
+            var now = _list.ContainerFromItem(item)?.TranslatePoint(default, _window)?.Y;
+            Assert.True(now is { } y && Math.Abs(y - top) < 1, $"{when}, the row moved from {top} to {(now?.ToString() ?? "off screen")}");
+        }
+
+        Environment.SetEnvironmentVariable("FAKEYTDLP_INFO_FAIL", "1");
+        Environment.SetEnvironmentVariable("FAKEYTDLP_INFO_MS", "1000");
+        try
+        {
+            var at = start.TranslatePoint(new Point(5, 5), _window)!.Value;
+            _window.MouseDown(at, MouseButton.Left);
+            _window.MouseUp(at, MouseButton.Left);
+            await Settle();
+            Assert.Equal(DownloadState.Resolving, item.State);
+            StaysPut("Starting it");
+
+            await WaitUntilStopped(item);
+            await Settle();
+            Assert.Equal(DownloadState.Failed, item.State);
+            StaysPut("Failing again");
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("FAKEYTDLP_INFO_FAIL", null);
+            Environment.SetEnvironmentVariable("FAKEYTDLP_INFO_MS", null);
+        }
     });
 }
