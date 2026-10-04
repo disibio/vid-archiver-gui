@@ -143,28 +143,21 @@ public sealed class DownloadsViewModelTests : DownloadListTests
         next.RestoreUnfinished();
         next.ResumeRestored();
         var restored = Assert.Single(next.Items);
-        await Headless.WaitUntil(() => restored.State != DownloadState.Resolving, "its info is read");
         Assert.Equal(DownloadState.Paused, restored.State);
+        await Task.Delay(500); // long enough for a lookup to show
+        Assert.Equal(DownloadState.Paused, restored.State);
+        Assert.Null(restored.Info); // its info isn't read until it's resumed
     });
 
     [Fact]
-    public Task Resuming_a_restored_paused_download_whose_info_failed_downloads_it() => Headless.Run(async () =>
+    public Task Resuming_a_restored_paused_download_reads_its_info_and_downloads_it() => Headless.Run(async () =>
     {
+        _t.Settings.AutoStartDownloads = false;
         _t.Settings.UnfinishedDownloads = [new SavedDownload { Url = "https://fake.test/video/offline", Paused = true }];
         _vm.RestoreUnfinished();
+        _vm.ResumeRestored();
         var item = Assert.Single(_vm.Items);
-        Environment.SetEnvironmentVariable("FAKEYTDLP_INFO_FAIL", "1");
-        try
-        {
-            _vm.ResumeRestored();
-            await Headless.WaitUntil(() => item.State != DownloadState.Resolving, "its info is read");
-        }
-        finally
-        {
-            Environment.SetEnvironmentVariable("FAKEYTDLP_INFO_FAIL", null);
-        }
-
-        Assert.Equal(DownloadState.Failed, item.State);
+        Assert.Equal(DownloadState.Paused, item.State);
         _vm.SaveUnfinished();
         Assert.True(Assert.Single(_t.Settings.UnfinishedDownloads).Paused); // quitting now still keeps it paused
 
@@ -275,9 +268,9 @@ public sealed class DownloadsViewModelTests : DownloadListTests
         Assert.True(Assert.Single(_t.Settings.UnfinishedDownloads).Paused);
 
         _vm.ResumeRestored();
-        await Headless.WaitUntil(() => item.State != DownloadState.Resolving, "its info is read");
-        await Task.Delay(500); // long enough for an auto-start to show
+        await Task.Delay(500); // long enough for a lookup or an auto-start to show
         Assert.Equal(DownloadState.Paused, item.State);
+        Assert.Null(item.Info);
     });
 
     [Fact]

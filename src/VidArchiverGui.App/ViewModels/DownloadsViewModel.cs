@@ -431,7 +431,7 @@ public partial class DownloadsViewModel : ObservableObject
 
     /// <summary>
     /// Puts last session's unfinished downloads back in the list. Their info is read by <see cref="ResumeRestored"/>,
-    /// once startup has installed or updated the downloader.
+    /// once startup has installed or updated the downloader; paused and failed ones wait for Start instead.
     /// </summary>
     public void RestoreUnfinished()
     {
@@ -442,7 +442,6 @@ public partial class DownloadsViewModel : ObservableObject
                 CookieId = saved.CookieId,
                 DownloaderOverride = _host.Settings.FindDownloader(saved.DownloaderId),
                 Restored = true,
-                PauseRequested = saved.Paused,
             };
             if (saved.Destination is { } folder)
             {
@@ -455,6 +454,10 @@ public partial class DownloadsViewModel : ObservableObject
                 item.State = DownloadState.Failed; // Start reads its info again
                 item.Error = error;
             }
+            else if (saved.Paused)
+            {
+                StayPaused(item); // Resume reads its info
+            }
             else
             {
                 item.ProgressText = "Waiting for the startup checks…";
@@ -466,9 +469,10 @@ public partial class DownloadsViewModel : ObservableObject
         RefreshCookieChoices(); // a restored download may use a browser that's no longer installed
 
         // The saved list stays until the next autosave replaces it with the current list, which includes these.
-        if (_restored.Count > 0)
+        var count = _host.Settings.UnfinishedDownloads.Count(s => s.Error is null);
+        if (count > 0)
         {
-            _host.SetStatus($"Put back {_restored.Count} unfinished download(s) from last time.");
+            _host.SetStatus($"Put back {count} unfinished download(s) from last time.");
         }
     }
 
@@ -476,10 +480,25 @@ public partial class DownloadsViewModel : ObservableObject
     {
         foreach (var item in _restored.Where(Items.Contains))
         {
-            _ = ResolveAsync(item);
+            if (item.PauseRequested) // paused while waiting for the startup checks
+            {
+                StayPaused(item);
+            }
+            else
+            {
+                _ = ResolveAsync(item);
+            }
         }
 
         _restored.Clear();
+    }
+
+    private static void StayPaused(DownloadItemViewModel item)
+    {
+        item.PauseRequested = false;
+        item.IsIndeterminate = false;
+        item.State = DownloadState.Paused;
+        item.ProgressText = "Paused";
     }
 
     public void CancelEverything()
