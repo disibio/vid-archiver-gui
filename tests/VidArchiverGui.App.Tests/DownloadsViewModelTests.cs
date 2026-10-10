@@ -402,4 +402,25 @@ public sealed class DownloadsViewModelTests : DownloadListTests
         item.StartCommand.Execute(null);
         await Headless.WaitUntil(() => item.State == DownloadState.Completed, "it downloads");
     });
+
+    [Fact]
+    public Task A_download_whose_info_failed_is_in_the_all_done_notification() => Headless.Run(async () =>
+    {
+        _t.Settings.NotifyWhenDone = true;
+        _t.Dialogs.IsWindowActive = false;
+        var item = await AddAsync("https://fake.test/video/private");
+        Environment.SetEnvironmentVariable("FAKEYTDLP_INFO_FAIL", "1");
+        try
+        {
+            item.StartCommand.Execute(null);
+            await WaitUntilStopped(item);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("FAKEYTDLP_INFO_FAIL", null);
+        }
+
+        Assert.Equal(DownloadState.Failed, item.State);
+        Assert.Equal(["Downloads finished, with errors: Failed: https://fake.test/video/private"], _t.Dialogs.Notifications);
+    });
 }

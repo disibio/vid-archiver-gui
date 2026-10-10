@@ -16,7 +16,7 @@ public sealed class FakeDialogs : IDialogs
     /// <summary>The messages of the Confirm and Ask dialogs shown so far.</summary>
     public List<string> Questions { get; } = [];
 
-    public bool IsWindowActive => true;
+    public bool IsWindowActive { get; set; } = true;
 
     public Task<bool> ConfirmAsync(string title, string message, string yes, string no) =>
         Task.FromResult(Answer(message) == true);
@@ -49,9 +49,10 @@ public sealed class FakeDialogs : IDialogs
     public List<string> Opened { get; } = [];
     public Task CopyTextAsync(string text) => Task.CompletedTask;
 
-    public void Notify(string title, string message)
-    {
-    }
+    /// <summary>The desktop notifications shown so far, as "title: message".</summary>
+    public List<string> Notifications { get; } = [];
+
+    public void Notify(string title, string message) => Notifications.Add($"{title}: {message}");
 }
 
 /// <summary>An <see cref="AppHost"/> over fresh default settings, with a scratch folder for import and export files.</summary>

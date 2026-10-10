@@ -220,7 +220,13 @@ public partial class DownloadsViewModel : ObservableObject
         finally
         {
             item.IsIndeterminate = false;
+            if (item.State == DownloadState.Failed)
+            {
+                _batch.Add(item); // counts in the "all done" notification, like a download that failed
+            }
+
             AdvanceQueue(); // look up the next one, whether this one is in line, failed or was stopped
+            NotifyIfQueueDone();
         }
     }
 
