@@ -302,9 +302,11 @@ public partial class RulesViewModel : ObservableObject
         TestResult = "Reading info…";
         try
         {
+            // Looked up the way a link added on the Downloads tab is: with the cookies picked there.
             var preset = Settings.DefaultPreset;
-            var info = await MetadataService.FetchAsync(TestUrl.Trim(), ArgumentParser.Split(preset.Arguments), ToolManager.Resolve(Settings.DownloaderFor(preset)),
-                proxy: Settings.Proxy);
+            var downloader = ToolManager.Resolve(Settings.DownloaderFor(preset));
+            var info = await MetadataService.FetchAsync(TestUrl.Trim(), ArgumentParser.Split(preset.Arguments), downloader,
+                Cookies.Args(Settings, Settings.LastCookieId, downloader.Flavor), Settings.Proxy);
             var route = Router.Resolve(info, Rules, Settings.FallbackDestination, Settings.AsciiNames);
             string F(string name) => info.Fields.TryGetValue(name, out var v) ? v : "—";
             TestResult =
@@ -320,7 +322,9 @@ public partial class RulesViewModel : ObservableObject
         }
         catch (Exception e)
         {
-            TestResult = "Error: " + e.Message;
+            TestResult = "Error: " + e.Message + (Cookies.IsNone(Settings.LastCookieId)
+                ? ""
+                : $"\n(Looked up with the cookies picked on the Downloads tab: {Cookies.DisplayName(Settings, Settings.LastCookieId)})");
         }
         finally
         {

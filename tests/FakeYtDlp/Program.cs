@@ -2,7 +2,8 @@
 // without the network. It understands just enough of yt-dlp's options and prints the same kind of output.
 //
 // Links: https://fake.test/video/<name> is one video, https://fake.test/playlist/<count> is a playlist of that many.
-// Add ?fail to make the download fail, or set FAKEYTDLP_INFO_FAIL=1 to make reading the info (-J) fail.
+// Add ?fail to make the download fail, or set FAKEYTDLP_INFO_FAIL=1 to make reading the info (-J) fail. With
+// ?members, reading the info fails unless cookies are given.
 // FAKEYTDLP_INFO_MS makes reading the info take that long.
 // FAKEYTDLP_STEP_MS sets the pause between progress lines (default 20 ms). With --write-thumbnail, a 1x1 PNG is
 // written beside each video, or a copy of the image FAKEYTDLP_THUMBNAIL names.
@@ -46,6 +47,12 @@ if (options.Contains("-J"))
     if (int.TryParse(Environment.GetEnvironmentVariable("FAKEYTDLP_INFO_MS"), out var infoMs))
     {
         Thread.Sleep(infoMs);
+    }
+
+    if (uri.Query.Contains("members") && !options.Contains("--cookies") && !options.Contains("--cookies-from-browser"))
+    {
+        Console.Error.WriteLine("ERROR: [fake] " + name + ": Join this channel to get access to members-only content");
+        return 1;
     }
 
     if (Environment.GetEnvironmentVariable("FAKEYTDLP_INFO_FAIL") == "1")

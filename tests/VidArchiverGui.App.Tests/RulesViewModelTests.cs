@@ -142,4 +142,36 @@ public sealed class RulesViewModelTests : IDisposable
         Assert.Equal(missing, _t.Settings.Rules[1].CookieId);
         Assert.Equal(missing, vm.SelectedCookieChoice?.Id);
     }
+
+    [Fact]
+    public async Task Test_a_url_looks_it_up_with_the_cookies_picked_on_the_downloads_tab()
+    {
+        var fake = new Downloader
+        {
+            Name = "Fake",
+            ExecutablePath = Path.Combine(AppContext.BaseDirectory, OperatingSystem.IsWindows() ? "FakeYtDlp.exe" : "FakeYtDlp"),
+        };
+        _t.Settings.Downloaders.Add(fake);
+        _t.Settings.DefaultDownloaderId = fake.Id;
+        var vm = WithRules();
+        vm.TestUrl = "https://fake.test/video/members-only?members";
+
+        await vm.TestCommand.ExecuteAsync(null);
+        Assert.Contains("members-only content", vm.TestResult); // no cookies picked
+
+        var cookieFile = Path.GetTempFileName();
+        try
+        {
+            var source = new CookieSource { Name = "Mine", Value = cookieFile };
+            _t.Settings.CookieSources.Add(source);
+            _t.Settings.LastCookieId = source.Id;
+
+            await vm.TestCommand.ExecuteAsync(null);
+            Assert.StartsWith("site: Fake", vm.TestResult);
+        }
+        finally
+        {
+            File.Delete(cookieFile);
+        }
+    }
 }
