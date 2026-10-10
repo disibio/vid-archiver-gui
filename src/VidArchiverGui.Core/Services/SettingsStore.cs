@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -78,7 +79,14 @@ public sealed class SettingsStore(string path)
 
         Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
         var tmp = FilePath + ".tmp";
-        File.WriteAllText(tmp, json);
+        using (var file = File.Create(tmp))
+        {
+            file.Write(Encoding.UTF8.GetBytes(json));
+            // On the disk before it replaces the old file, so a power cut leaves the old settings or the new ones,
+            // never an empty file.
+            file.Flush(flushToDisk: true);
+        }
+
         File.Move(tmp, FilePath, overwrite: true);
         _lastWritten = json;
         return true;
