@@ -89,6 +89,28 @@ public class RoutingTests
     }
 
     [Fact]
+    public void A_condition_says_when_its_regex_is_invalid_and_stops_when_it_isnt()
+    {
+        var cond = new RuleCondition { Operator = MatchOperator.Regex, Value = "([invalid" };
+        var changed = new List<string?>();
+        cond.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+        Assert.StartsWith("Not a valid regular expression", cond.PatternError);
+
+        cond.Value = "(valid)";
+        Assert.Null(cond.PatternError);
+        Assert.Contains(nameof(RuleCondition.PatternError), changed);
+
+        cond.Value = "([invalid";
+        cond.Operator = MatchOperator.Contains; // not a pattern, so any text is fine
+        Assert.Null(cond.PatternError);
+    }
+
+    [Fact]
+    public void A_regex_error_is_not_saved_with_the_settings() =>
+        Assert.DoesNotContain(nameof(RuleCondition.PatternError), System.Text.Json.JsonSerializer.Serialize(
+            new RuleCondition { Operator = MatchOperator.Regex, Value = "(" }));
+
+    [Fact]
     public void Missing_field_never_matches()
     {
         var cond = new RuleCondition { Field = MatchField.Playlist, Operator = MatchOperator.Regex, Value = ".*" };

@@ -59,7 +59,7 @@
           <ItemsControl ItemsSource="{Binding SelectedRule.Conditions}">
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="m:RuleCondition">
-                <Grid ColumnDefinitions="140,130,*,Auto" Margin="0,3">
+                <Grid ColumnDefinitions="140,130,*,Auto" RowDefinitions="Auto,Auto" Margin="0,3">
                   <ComboBox ItemsSource="{x:Static vm:RulesViewModel.Fields}" SelectedItem="{Binding Field}" HorizontalAlignment="Stretch" />
                   <ComboBox Grid.Column="1" ItemsSource="{x:Static vm:RulesViewModel.Operators}" SelectedItem="{Binding Operator}"
                             HorizontalAlignment="Stretch" Margin="4,0" />
@@ -67,6 +67,8 @@
                   <Button Grid.Column="3" Classes="small" Content="✕" Margin="4,0,0,0" VerticalAlignment="Center"
                           Command="{Binding $parent[ItemsControl].((vm:RulesViewModel)DataContext).RemoveConditionCommand}"
                           CommandParameter="{Binding}" />
+                  <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding PatternError}" Classes="error" FontSize="12" Margin="0,2,0,0"
+                             TextWrapping="Wrap" IsVisible="{Binding PatternError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                 </Grid>
               </DataTemplate>
             </ItemsControl.ItemTemplate>

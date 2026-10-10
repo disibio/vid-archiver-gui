@@ -1,4 +1,6 @@
 using System.Collections.ObjectModel;
+using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace VidArchiverGui.Core.Models;
@@ -33,8 +35,37 @@ public enum MatchMode
 public partial class RuleCondition : ObservableObject
 {
     [ObservableProperty] private MatchField _field = MatchField.Channel;
-    [ObservableProperty] private MatchOperator _operator = MatchOperator.Equals;
-    [ObservableProperty] private string _value = "";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(PatternError))]
+    private MatchOperator _operator = MatchOperator.Equals;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(PatternError))]
+    private string _value = "";
+
+    /// <summary>Why a Regex condition's pattern can't be used (it then never matches), or null.</summary>
+    [JsonIgnore]
+    public string? PatternError
+    {
+        get
+        {
+            if (Operator != MatchOperator.Regex || string.IsNullOrWhiteSpace(Value))
+            {
+                return null;
+            }
+
+            try
+            {
+                _ = new Regex(Value.Trim());
+                return null;
+            }
+            catch (ArgumentException e)
+            {
+                return "Not a valid regular expression, so this condition never matches: " + e.Message;
+            }
+        }
+    }
 
     public RuleCondition Clone() => new() { Field = Field, Operator = Operator, Value = Value };
 }
