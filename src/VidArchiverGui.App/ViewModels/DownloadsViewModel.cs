@@ -222,7 +222,7 @@ public partial class DownloadsViewModel : ObservableObject
             item.IsIndeterminate = false;
             if (item.State == DownloadState.Failed)
             {
-                _batch.Add(item); // counts in the "all done" notification, like a download that failed
+                AddToBatch(item); // counts in the "all done" notification, like a download that failed
             }
 
             AdvanceQueue(); // look up the next one, whether this one is in line, failed or was stopped
@@ -333,11 +333,20 @@ public partial class DownloadsViewModel : ObservableObject
 
         if (item.State is DownloadState.Completed or DownloadState.Skipped or DownloadState.Failed)
         {
-            _batch.Add(item);
+            AddToBatch(item);
         }
 
         AdvanceQueue();
         NotifyIfQueueDone();
+    }
+
+    /// <summary>Counts a download that ended in the next "all done" notification, once even if it's tried again meanwhile.</summary>
+    private void AddToBatch(DownloadItemViewModel item)
+    {
+        if (!_batch.Contains(item))
+        {
+            _batch.Add(item);
+        }
     }
 
     private void NotifyIfQueueDone()

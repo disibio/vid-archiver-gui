@@ -412,4 +412,34 @@ public sealed class DownloadsViewModelTests : DownloadListTests
         Assert.Equal(DownloadState.Failed, item.State);
         Assert.Equal(["Downloads finished, with errors: Failed: https://fake.test/video/private"], _t.Dialogs.Notifications);
     });
+
+    [Fact]
+    public Task A_download_that_fails_twice_while_others_run_counts_once() => Headless.Run(() => Slowly(async () =>
+    {
+        _t.Settings.NotifyWhenDone = true;
+        _t.Dialogs.IsWindowActive = false;
+        var running = await AddAsync("https://fake.test/video/long");
+        running.StartCommand.Execute(null);
+        await Headless.WaitUntil(() => running.State == DownloadState.Downloading, "it starts");
+
+        var failing = await AddAsync("https://fake.test/video/private");
+        Environment.SetEnvironmentVariable("FAKEYTDLP_INFO_FAIL", "1");
+        try
+        {
+            for (var i = 0; i < 2; i++)
+            {
+                failing.StartCommand.Execute(null);
+                await WaitUntilStopped(failing);
+                Assert.Equal(DownloadState.Failed, failing.State);
+            }
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("FAKEYTDLP_INFO_FAIL", null);
+        }
+
+        Assert.Equal(DownloadState.Downloading, running.State); // both failures happened while it ran
+        await Headless.WaitUntil(() => running.State == DownloadState.Completed, "it finishes");
+        Assert.Equal(["Downloads finished, with errors: 1 finished, 1 failed."], _t.Dialogs.Notifications);
+    }));
 }

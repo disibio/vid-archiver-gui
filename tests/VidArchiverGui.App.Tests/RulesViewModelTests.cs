@@ -4,6 +4,9 @@ using VidArchiverGui.Core.Services;
 
 namespace VidArchiverGui.App.Tests;
 
+// Test a URL runs FakeYtDlp, which the download list tests configure through environment variables, so not at the
+// same time as them.
+[Collection(nameof(DownloadListTests))]
 public sealed class RulesViewModelTests : IDisposable
 {
     private readonly TestHost _t = new();
