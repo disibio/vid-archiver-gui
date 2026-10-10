@@ -11,6 +11,23 @@ public sealed class SettingsTests : IDisposable
     public void Dispose() => Directory.Delete(_dir, recursive: true);
 
     [Fact]
+    public void Only_one_store_at_a_time_can_lock_the_same_settings()
+    {
+        var path = Path.Combine(_dir, "settings.json");
+        var first = new SettingsStore(path).TryLock();
+        Assert.NotNull(first);
+        Assert.Null(new SettingsStore(path).TryLock());
+        using (var other = new SettingsStore(Path.Combine(_dir, "other", "settings.json")).TryLock())
+        {
+            Assert.NotNull(other); // another data folder, such as a second portable copy
+        }
+
+        first.Dispose();
+        using var again = new SettingsStore(path).TryLock();
+        Assert.NotNull(again);
+    }
+
+    [Fact]
     public void Settings_load_waits_out_a_brief_lock()
     {
         var path = Path.Combine(_dir, "settings.json");

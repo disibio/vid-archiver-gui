@@ -266,6 +266,9 @@ The Microsoft Store version keeps them in its own package folder (Settings > App
 file called `portable.txt` next to the program, as in the Windows zip, it keeps its data in a `data` folder there
 instead.
 
+Only one copy of the app can use the same settings at a time; opening it again just says it's already open. To run
+two at once, each with its own settings and downloads, unzip the Windows zip into two folders.
+
 ## Building
 
 ```

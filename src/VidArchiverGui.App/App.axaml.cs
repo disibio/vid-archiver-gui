@@ -2,7 +2,10 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
+using Avalonia.Layout;
 using Avalonia.Markup.Xaml;
+using Avalonia.Media;
+using Avalonia.Platform;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using VidArchiverGui.App.Services;
@@ -26,6 +29,14 @@ public partial class App : Application
             settingsFile = SnapshotSettingsFile(settingsFile);
 #endif
             var store = new SettingsStore(settingsFile);
+            _settingsLock = store.TryLock();
+            if (_settingsLock is null)
+            {
+                desktop.MainWindow = AlreadyOpenWindow();
+                base.OnFrameworkInitializationCompleted();
+                return;
+            }
+
             var settings = store.Load();
             ApplyTheme(settings.Theme);
             settings.PropertyChanged += (_, e) =>
@@ -71,6 +82,41 @@ public partial class App : Application
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    // Held for as long as the app runs (see SettingsStore.TryLock).
+    private static IDisposable? _settingsLock;
+
+    /// <summary>What a second copy shows, instead of the app, when one using the same settings is already open.</summary>
+    private static Window AlreadyOpenWindow()
+    {
+        var ok = new Button { Content = "OK", IsDefault = true, IsCancel = true, HorizontalAlignment = HorizontalAlignment.Right };
+        var window = new Window
+        {
+            Title = "Vid Archiver GUI",
+            Icon = new WindowIcon(AssetLoader.Open(new Uri("avares://VidArchiverGui/Assets/icon.ico"))),
+            SizeToContent = SizeToContent.WidthAndHeight,
+            CanResize = false,
+            WindowStartupLocation = WindowStartupLocation.CenterScreen,
+            Content = new StackPanel
+            {
+                Margin = new Thickness(20),
+                Spacing = 16,
+                MaxWidth = 460,
+                Children =
+                {
+                    new TextBlock
+                    {
+                        Text = "Vid Archiver GUI is already open. It may be minimized or on another desktop. Only one copy " +
+                               "can use the same settings and download list at a time.",
+                        TextWrapping = TextWrapping.Wrap,
+                    },
+                    ok,
+                },
+            },
+        };
+        ok.Click += (_, _) => window.Close();
+        return window;
     }
 
     private void ApplyTheme(AppTheme theme) => RequestedThemeVariant = theme switch

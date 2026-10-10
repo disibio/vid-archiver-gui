@@ -22,6 +22,42 @@ public sealed class SettingsStore(string path)
     /// <summary>Where <see cref="Load"/> kept a settings file it couldn't read, before starting with the defaults.</summary>
     public string? CorruptCopy { get; private set; }
 
+    /// <summary>
+    /// Claims the settings for this process, or returns null if another copy of the app already has. Two copies using
+    /// the same settings would overwrite each other's changes and download the same unfinished downloads at once. Dispose
+    /// the result to let go; the system also lets go when the process ends, even if it crashes.
+    /// </summary>
+    public IDisposable? TryLock()
+    {
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
+            return new FileStream(FilePath + ".lock", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+        }
+        catch (IOException e) when (IsInUse(e))
+        {
+            return null;
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            // Couldn't lock it for some other reason, such as a read-only folder: carry on rather than refuse to start
+            // (saving will say what's wrong).
+            return Stream.Null;
+        }
+    }
+
+    /// <summary>
+    /// Whether the file is locked by another process: a sharing or lock violation on Windows; elsewhere .NET reports
+    /// the lock being taken (EWOULDBLOCK) with the error number as the HResult.
+    /// </summary>
+    private static bool IsInUse(IOException e) => (e.HResult & 0xFFFF) switch
+    {
+        32 or 33 => OperatingSystem.IsWindows(),
+        11 => OperatingSystem.IsLinux(),
+        35 => OperatingSystem.IsMacOS(),
+        _ => false,
+    };
+
     public AppSettings Load()
     {
         AppSettings? settings = null;
