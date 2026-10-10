@@ -95,6 +95,7 @@ public class RoutingTests
         var changed = new List<string?>();
         cond.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
         Assert.StartsWith("Not a valid regular expression", cond.PatternError);
+        Assert.DoesNotContain(nameof(RuleCondition.PatternError), System.Text.Json.JsonSerializer.Serialize(cond)); // not saved
 
         cond.Value = "(valid)";
         Assert.Null(cond.PatternError);
@@ -104,11 +105,6 @@ public class RoutingTests
         cond.Operator = MatchOperator.Contains; // not a pattern, so any text is fine
         Assert.Null(cond.PatternError);
     }
-
-    [Fact]
-    public void A_regex_error_is_not_saved_with_the_settings() =>
-        Assert.DoesNotContain(nameof(RuleCondition.PatternError), System.Text.Json.JsonSerializer.Serialize(
-            new RuleCondition { Operator = MatchOperator.Regex, Value = "(" }));
 
     [Fact]
     public void Missing_field_never_matches()

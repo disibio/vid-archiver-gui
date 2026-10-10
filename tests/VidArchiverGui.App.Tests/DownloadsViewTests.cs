@@ -56,23 +56,18 @@ public sealed class DownloadsViewTests : DownloadListTests
     }
 
     [Fact]
-    public Task Picture_of_the_list() => Headless.Run(async () =>
+    public Task A_finished_downloads_row_shows_its_thumbnail() => Headless.Run(async () =>
     {
         Show();
         _t.Settings.DefaultPreset.Arguments = "--write-thumbnail";
         var done = await AddAsync("https://fake.test/video/Finished with a thumbnail");
         done.StartCommand.Execute(null);
         await Headless.WaitUntil(() => done.Thumbnail is not null, "the thumbnail shows");
-        var paused = await AddAsync("https://fake.test/playlist/4");
-        await Slowly(async () =>
-        {
-            paused.StartCommand.Execute(null);
-            await Headless.WaitUntil(() => paused.Progress > 30, "it's into the second item");
-            paused.PauseCommand.Execute(null);
-            await Headless.WaitUntil(() => paused.State == DownloadState.Paused, "it pauses");
-        });
         await AddAsync("https://fake.test/video/Ready to start");
         await Settle();
+
+        Assert.Contains(_window.GetVisualDescendants().OfType<Image>(),
+            i => i.Source == done.Thumbnail && i.IsEffectivelyVisible && i.Bounds.Width > 0);
         Headless.Capture(_window, "list");
     });
 
