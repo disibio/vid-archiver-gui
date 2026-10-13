@@ -33,8 +33,9 @@ It's a from-scratch rewrite in C# (.NET 10 and Avalonia), not a fork, and it doe
 Grab the latest build from [Releases](https://github.com/disibio/vid-archiver-gui/releases).
 
 - **Windows:** get it from the [Microsoft Store](https://apps.microsoft.com/detail/9NDN8K16996C?mode=direct). It's signed and updates itself. Or download the
-  standalone `.exe` in a `.zip` from Releases. That one isn't code-signed, so SmartScreen may complain the first
-  time. Click **More info**, then **Run anyway**. The zip version is portable: it keeps its settings in a `data`
+  standalone `.exe` in a `.zip` from Releases: `win-x64` for most PCs, `win-arm64` for ARM ones such as Snapdragon
+  laptops (Settings > System > About shows which under **System type**). That one isn't code-signed, so SmartScreen
+  may complain the first time. Click **More info**, then **Run anyway**. The zip version is portable: it keeps its settings in a `data`
   folder next to the `.exe`, so to update it, replace the `.exe` and keep that folder. Unzip it somewhere you can
   write to (not Program Files), or it keeps its settings in `%APPDATA%` instead.
 - **Linux:** an `.AppImage` for x64 and arm64. Make it executable (`chmod +x Vid-Archiver-GUI-*.AppImage`) and run
@@ -281,7 +282,7 @@ The packaged builds are self-contained, so people don't need .NET installed.
 
 | Target | Command | Output |
 |---|---|---|
-| Windows | `run.bat publish`, or `powershell -ExecutionPolicy Bypass -File packaging\package-windows.ps1` for the release zip | `publish/win-x64/VidArchiverGui.exe` plus license files; the script makes `publish/windows/Vid-Archiver-GUI-<version>-win-x64.zip` |
+| Windows | `run.bat publish`, or `powershell -ExecutionPolicy Bypass -File packaging\package-windows.ps1` for the release zip | `publish/win-x64/VidArchiverGui.exe` plus license files; the script makes `publish/windows/Vid-Archiver-GUI-<version>-win-x64-portable.zip` and `…-win-arm64-portable.zip` |
 | Linux | `packaging/package-linux.sh` (on Linux, or in WSL using the Windows `dotnet.exe`) | `publish/linux/*.AppImage` and `publish/linux/*.tar.gz` for x64 and arm64 (appimagetool is downloaded on first use). Unpack a `.tar.gz` and run `./install.sh` to add a menu entry, or `./install.sh --remove` to uninstall. |
 | Microsoft Store | `powershell -ExecutionPolicy Bypass -File packaging\package-msix.ps1` (needs the Windows SDK; fill in `packaging/msix/store-identity.json` from Partner Center first, and add `-Sign` for a local test install) | `publish/msix/*.msixbundle` for x64 and arm64. Listing text is in `packaging/msix/store-listing.md`. |
 | macOS | `packaging/package-macos.sh`, run on a Mac (Apple Silicon needs the ad-hoc signature it applies) | `publish/macos/Vid-Archiver-GUI-<version>-macOS-Apple-Silicon.zip` and `…-macOS-Intel.zip`, each with `Vid Archiver GUI.app`. Upload both to the release. |
