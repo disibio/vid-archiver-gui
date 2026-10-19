@@ -223,6 +223,15 @@ public sealed class SettingsStore(string path)
     private static void Normalize(AppSettings s)
     {
         var defaults = CreateDefaults();
+        // These properties are initialized for new settings, but System.Text.Json accepts explicit JSON nulls and
+        // assigns them anyway. Treat null collections as empty so older or hand-edited files can still be normalized.
+        s.Presets ??= [];
+        s.Rules ??= [];
+        s.Downloaders ??= [];
+        s.SkippedVersions ??= [];
+        s.CookieSources ??= [];
+        s.UnfinishedDownloads ??= [];
+
         if (s.Presets.Count == 0)
         {
             foreach (var p in defaults.Presets)

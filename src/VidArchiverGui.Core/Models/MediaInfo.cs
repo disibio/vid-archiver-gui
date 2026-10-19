@@ -85,7 +85,7 @@ public sealed record MediaInfo
             Site = SiteName(Str(root, "extractor_key") ?? Str(root, "ie_key"), Str(root, "extractor")),
             Domain = NormalizeDomain(pageUrl) ?? NormalizeDomain(url),
             Channel = Str(root, "channel") ?? Str(root, "uploader") ?? FromEntry("channel") ?? FromEntry("uploader"),
-            ChannelId = Str(root, "channel_id") ?? Str(root, "uploader_id") ?? FromEntry("channel_id"),
+            ChannelId = Str(root, "channel_id") ?? Str(root, "uploader_id") ?? FromEntry("channel_id") ?? FromEntry("uploader_id"),
             Playlist = isPlaylist ? Str(root, "title") : Str(root, "playlist_title") ?? Str(root, "playlist"),
             IsPlaylist = isPlaylist,
             EntryCount = count,
