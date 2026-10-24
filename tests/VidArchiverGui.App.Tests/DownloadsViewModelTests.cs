@@ -28,6 +28,54 @@ public sealed class DownloadsViewModelTests : DownloadListTests
     });
 
     [Fact]
+    public Task Adding_a_failed_link_again_tries_it_with_the_cookies_now_picked_over_a_rule() => Headless.Run(async () =>
+    {
+        var cookieFile = Path.GetTempFileName();
+        try
+        {
+            var url = "https://fake.test/video/members-only?members";
+            var item = await AddAsync(url);
+            item.StartCommand.Execute(null);
+            await WaitUntilStopped(item);
+            Assert.Equal(DownloadState.Failed, item.State);
+
+            var mine = new CookieSource { Name = "Mine", Value = cookieFile };
+            var ruled = new CookieSource { Name = "Rule's", Value = cookieFile };
+            _t.Settings.CookieSources.Add(mine);
+            _t.Settings.CookieSources.Add(ruled);
+            _t.Settings.Rules.Add(new RoutingRule
+            {
+                Destination = _folder,
+                CookieId = ruled.Id,
+                Conditions = [new RuleCondition { Field = MatchField.Domain, Operator = MatchOperator.Equals, Value = "fake.test" }],
+            });
+            _t.Settings.LastCookieId = mine.Id;
+            Assert.Same(item, await AddAsync(url));
+            Assert.Equal([item], _vm.Items);
+
+            item.StartCommand.Execute(null);
+            await WaitUntilStopped(item);
+            Assert.Equal(DownloadState.Completed, item.State);
+            Assert.Equal(mine.Id, item.CookieId);
+        }
+        finally
+        {
+            File.Delete(cookieFile);
+        }
+    });
+
+    [Fact]
+    public Task Adding_a_link_that_has_not_started_again_leaves_it_as_it_is() => Headless.Run(async () =>
+    {
+        var item = await AddAsync("https://fake.test/video/waiting");
+        item.Destination = _folder;
+
+        Assert.Equal(0, _vm.AddUrls(item.Url));
+        Assert.Equal([item], _vm.Items);
+        Assert.True(item.DestinationEdited);
+    });
+
+    [Fact]
     public Task A_playlist_bar_shows_the_whole_playlist_and_never_goes_back() => Headless.Run(async () =>
     {
         var item = await AddAsync("https://fake.test/playlist/3");
@@ -124,7 +172,7 @@ public sealed class DownloadsViewModelTests : DownloadListTests
         _vm.StartAllCommand.Execute(null);
         await Headless.WaitUntil(() => first.State == DownloadState.Completed && second.State == DownloadState.Completed,
             () => $"both finish (first: {first.State} {first.Error}; second: {second.State} {second.Error})", 60);
-    }));
+    }, stepMs: 500)); // about 10 seconds per video, so the first is still downloading when paused on a slow CI machine
 
     [Fact]
     public Task A_paused_download_is_still_paused_after_a_restart() => Headless.Run(async () =>

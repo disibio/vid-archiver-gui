@@ -10,7 +10,10 @@ namespace VidArchiverGui.App.Tests;
 /// </summary>
 public static class Headless
 {
-    private static readonly HeadlessUnitTestSession Session = HeadlessUnitTestSession.StartNew(typeof(Headless));
+    // One dispatcher for every test: by default each Run gets a new one, so a download a test cancels, still finishing
+    // as the next Run starts, would post to a dispatcher already torn down (crashing the test host on macOS).
+    private static readonly HeadlessUnitTestSession Session =
+        HeadlessUnitTestSession.StartNew(typeof(Headless), AvaloniaTestIsolationLevel.PerAssembly);
 
     /// <summary>The real app's styles (it opens no window without a desktop lifetime), drawn with Skia so frames can be captured.</summary>
     public static AppBuilder BuildAvaloniaApp() =>

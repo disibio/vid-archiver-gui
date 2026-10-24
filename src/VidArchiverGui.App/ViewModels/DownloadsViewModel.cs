@@ -129,15 +129,29 @@ public partial class DownloadsViewModel : ObservableObject
         UrlInput = "";
     }
 
-    /// <summary>Adds every link in <paramref name="text"/> (typed, pasted or dropped). Returns how many were new.</summary>
+    /// <summary>
+    /// Adds every link in <paramref name="text"/> (typed, pasted or dropped). A link already in the list that failed is
+    /// tried again with the preset and cookies picked now, which rules don't change. Returns how many were added or
+    /// tried again.
+    /// </summary>
     public int AddUrls(string text)
     {
         var preset = SelectedPreset ?? _host.Settings.DefaultPreset;
         var added = 0;
         foreach (var url in DownloadQueue.ExtractUrls(text))
         {
-            if (Items.Any(i => i.Url == url && !i.IsFinished && i.State != DownloadState.Cancelled))
+            if (Items.FirstOrDefault(i => i.Url == url && !i.IsFinished && i.State != DownloadState.Cancelled) is { } existing)
             {
+                if (existing.State == DownloadState.Failed)
+                {
+                    existing.Preset = preset;
+                    existing.CookieId = _host.Settings.LastCookieId;
+                    existing.Restored = true; // keeps these when its info is read again
+                    _batch.Remove(existing);
+                    QueueIfStartOnAdd(existing);
+                    added++;
+                }
+
                 continue;
             }
 

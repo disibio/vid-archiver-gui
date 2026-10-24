@@ -40,10 +40,12 @@ public abstract class DownloadListTests : IDisposable
     public void Dispose()
     {
         // On the UI thread, like everything else that changes the list (a shown view is bound to it).
-        Headless.Run(() =>
+        // Then waits for the downloaders to exit, so none is still writing to the folder deleted below.
+        Headless.Run(async () =>
         {
             _vm.CancelEverything();
-            return Task.CompletedTask;
+            await Headless.WaitUntil(() => _vm.Items.All(i => i.State is not (DownloadState.Downloading or DownloadState.Resolving)),
+                "the downloads stop", 15);
         }).GetAwaiter().GetResult();
         _t.Dispose();
         try

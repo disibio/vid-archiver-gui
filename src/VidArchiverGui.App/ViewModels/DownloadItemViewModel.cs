@@ -123,7 +123,10 @@ public partial class DownloadItemViewModel : ObservableObject
         }
     }
 
-    /// <summary>Put back from last session and its info not read yet: its preset and cookies were already chosen, so rules don't change them.</summary>
+    /// <summary>
+    /// Put back from last session, or a failed one added again, and its info not read yet: its preset and cookies were
+    /// already chosen, so rules don't change them.
+    /// </summary>
     internal bool Restored { get; set; }
 
     /// <summary>
